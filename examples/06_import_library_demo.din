@@ -1,0 +1,53 @@
+// ===================================
+// examples/06_import_library_demo.din
+// Import and Library System Demo
+// ===================================
+//
+// This example demonstrates the import functionality
+// in Uddin-Lang for creating reusable libraries.
+//
+
+// Import a simple math library
+import "examples/math_library.din"
+
+fun main():
+    print("===================================")
+    print("UDDIN-LANG LIBRARY IMPORT DEMO")
+    print("===================================")
+    print("Demonstrating the 'import' statement")
+    print("to import functions from other .din files")
+    print("")
+
+    print("=== MATHEMATICAL FUNCTIONS ===")
+
+    // Test loaded functions
+    n = 5
+    print("Using functions from imported library:")
+    print("square(" + str(n) + ") =", square(n))
+    print("cube(" + str(n) + ") =", cube(n))
+    print("isEven(" + str(n) + ") =", isEven(n))
+    print("isOdd(" + str(n) + ") =", isOdd(n))
+    print("")
+
+    // Test with different numbers
+    numbers = [2, 7, 10, 13]
+    print("Testing with array:", numbers)
+
+    for (num in numbers):
+        print("Number:", num)
+        print("  square =", square(num))
+        print("  cube =", cube(num))
+        print("  isEven =", isEven(num))
+        print("  isOdd =", isOdd(num))
+        print("")
+    end
+
+    print("===================================")
+    print("🎉 IMPORT FUNCTIONALITY WORKS!")
+    print("===================================")
+    print("The 'import' statement successfully")
+    print("imported functions from an external")
+    print(".din file, making code modular and")
+    print("reusable across different scripts.")
+    print("===================================")
+end

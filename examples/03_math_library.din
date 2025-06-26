@@ -1,0 +1,272 @@
+// ===================================
+// 03_math_library.kv
+// Uddin-Lang Math Library
+// ===================================
+//
+// This file contains a collection of mathematical functions that can be used
+// as a module/library for other programs. Includes:
+// - Mathematical constants (PI, E)
+// - Basic operations (power, factorial, square root)
+// - Geometry (circle, triangle, rectangle)
+// - Other mathematical utilities
+//
+
+// =========== MATHEMATICAL CONSTANTS ===========
+
+// Pi constant (π) - ratio of circle circumference to diameter
+PI = 3.14159265359
+
+// Euler constant (e) - base of natural logarithm
+E = 2.71828182846
+
+// =========== BASIC MATHEMATICAL OPERATIONS ===========
+
+// Function to calculate power (base^exponent)
+// Input: base (number), exponent (non-negative integer)
+// Output: power result
+fun power(base, exponent):
+    if (exponent == 0) then:
+        return 1
+    end
+
+    if (exponent < 0) then:
+        print("Error: Negative exponent not supported")
+        return 0
+    end
+
+    result = 1
+    i = 0
+    while (i < exponent):
+        result = result * base
+        i = i + 1
+    end
+
+    return result
+end
+
+// Function to calculate factorial (n!)
+// Input: n (non-negative integer)
+// Output: factorial of n
+fun factorial(n):
+    if (n < 0) then:
+        print("Error: Factorial for negative numbers is undefined")
+        return 0
+    end
+
+    if (n <= 1) then:
+        return 1
+    end
+
+    result = 1
+    i = 2
+    while (i <= n):
+        result = result * i
+        i = i + 1
+    end
+
+    return result
+end
+
+// Function to calculate square root using Newton-Raphson method
+// Input: n (positive number)
+// Output: square root of n
+fun squareRoot(n):
+    if (n < 0) then:
+        print("Error: Square root of negative number is not real")
+        return 0
+    end
+
+    if (n == 0) then:
+        return 0
+    end
+
+    // Initial guess
+    x = n
+
+    // Newton-Raphson iteration: x = (x + n/x) / 2
+    i = 0
+    while (i < 15):  // 15 iterations for good precision
+        new_x = (x + n / x) / 2
+
+        // Check convergence (very small difference)
+        diff = new_x - x
+        if (diff < 0) then:
+            diff = -diff  // Absolute value
+        end
+
+        if (diff < 0.000001) then:
+            return new_x
+        end
+
+        x = new_x
+        i = i + 1
+    end
+
+    return x
+end
+
+// =========== CIRCLE GEOMETRY ===========
+
+// Function to calculate circle area (πr²)
+// Input: radius (number)
+// Output: circle area
+fun circleArea(radius):
+    if (radius < 0) then:
+        print("Error: Radius cannot be negative")
+        return 0
+    end
+
+    return PI * radius * radius
+end
+
+// Function to calculate circle perimeter (2πr)
+// Input: radius (number)
+// Output: circle perimeter
+fun circlePerimeter(radius):
+    if (radius < 0) then:
+        print("Error: Radius cannot be negative")
+        return 0
+    end
+
+    return 2 * PI * radius
+end
+
+// =========== TRIANGLE GEOMETRY ===========
+
+// Function to calculate triangle area using Heron's formula
+// Input: a, b, c (number) - side lengths of triangle
+// Output: triangle area
+fun triangleArea(a, b, c):
+    // Validate triangle (triangle inequality)
+    if (a + b <= c) then:
+        print("Error: Side lengths do not form a valid triangle")
+        return 0
+    end
+
+    if (a + c <= b) then:
+        print("Error: Side lengths do not form a valid triangle")
+        return 0
+    end
+
+    if (b + c <= a) then:
+        print("Error: Side lengths do not form a valid triangle")
+        return 0
+    end
+
+    // Semi-perimeter
+    s = (a + b + c) / 2
+
+    // Heron's formula: Area = √[s(s-a)(s-b)(s-c)]
+    area_squared = s * (s - a) * (s - b) * (s - c)
+
+    return squareRoot(area_squared)
+end
+
+// Function to calculate triangle perimeter
+// Input: a, b, c (number) - side lengths
+// Output: triangle perimeter
+fun trianglePerimeter(a, b, c):
+    return a + b + c
+end
+
+// =========== RECTANGLE GEOMETRY ===========
+
+// Function to calculate rectangle area
+// Input: length (number), width (number)
+// Output: rectangle area
+fun rectangleArea(length, width):
+    if (length < 0) then:
+        print("Error: Length and width cannot be negative")
+        return 0
+    end
+
+    if (width < 0) then:
+        print("Error: Length and width cannot be negative")
+        return 0
+    end
+
+    return length * width
+end
+
+// Function to calculate rectangle perimeter
+// Input: length (number), width (number)
+// Output: rectangle perimeter
+fun rectanglePerimeter(length, width):
+    if (length < 0) then:
+        print("Error: Length and width cannot be negative")
+        return 0
+    end
+
+    if (width < 0) then:
+        print("Error: Length and width cannot be negative")
+        return 0
+    end
+
+    return 2 * (length + width)
+end
+
+// =========== MATHEMATICAL UTILITIES ===========
+
+// Function to find maximum value of two numbers
+// Input: a, b (number)
+// Output: maximum value
+fun max(a, b):
+    if (a > b) then:
+        return a
+    else:
+        return b
+    end
+end
+
+// Function to find minimum value of two numbers
+// Input: a, b (number)
+// Output: minimum value
+fun min(a, b):
+    if (a < b) then:
+        return a
+    else:
+        return b
+    end
+end
+
+// Function to calculate absolute value
+// Input: x (number)
+// Output: absolute value of x
+fun abs(x):
+    if (x < 0) then:
+        return -x
+    else:
+        return x
+    end
+end
+
+// =========== UNIT CONVERSION ===========
+
+// Function to convert degrees to radians
+// Input: degrees (number)
+// Output: value in radians
+fun degreesToRadians(degrees):
+    return degrees * PI / 180
+end
+
+// Function to convert radians to degrees
+// Input: radians (number)
+// Output: value in degrees
+fun radiansToDegrees(radians):
+    return radians * 180 / PI
+end
+
+// =========== LOADING MESSAGE ===========
+
+print("========================================")
+print("Uddin-Lang Math Library successfully loaded!")
+print("========================================")
+print("Available functions:")
+print("- Basic Operations: power(), factorial(), squareRoot()")
+print("- Circle: circleArea(), circlePerimeter()")
+print("- Triangle: triangleArea(), trianglePerimeter()")
+print("- Rectangle: rectangleArea(), rectanglePerimeter()")
+print("- Utilities: max(), min(), abs()")
+print("- Conversion: degreesToRadians(), radiansToDegrees()")
+print("- Constants: PI, E")
+print("========================================")

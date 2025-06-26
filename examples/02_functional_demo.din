@@ -1,0 +1,155 @@
+// ===================================
+// 02_functional_demo.kv
+// Uddin-Lang Functional Programming Demo
+// ===================================
+//
+// This file demonstrates functional programming features
+// in Uddin-Lang including recursion, error handling, arrays, and objects.
+//
+
+// =========== MATHEMATICAL FUNCTIONS ===========
+
+// Function to calculate factorial using recursion
+// Input: n (integer) - non-negative number
+// Output: factorial of n========================
+// 02_functional_demo.kv
+// Demo Functional Programming Uddin-Lang
+// ===================================
+//
+// File ini mendemonstrasikan fitur-fitur functional programming
+// di Uddin-Lang termasuk rekursi, error handling, array, dan objek.
+//
+
+// =========== FUNGSI MATEMATIKA ===========
+
+// Fungsi untuk menghitung faktorial menggunakan rekursi
+// Input: n (integer) - bilangan non-negatif
+// Output: faktorial dari n
+fun factorial(n):
+    if (n <= 1) then:
+        return 1
+    else:
+        return n * factorial(n - 1)
+    end
+end
+
+// Function to calculate Fibonacci sequence
+// Input: n (integer) - position in fibonacci sequence
+// Output: fibonacci value at position n
+fun fibonacci(n):
+    if (n <= 0) then:
+        return 0
+    else:
+        if (n == 1) then:
+            return 1
+        else:
+            return fibonacci(n - 1) + fibonacci(n - 2)
+        end
+    end
+end
+
+// =========== OBJECT MANIPULATION ===========
+
+// Function to create person object
+// Input: name (string), age (string/number)
+// Output: object with name and age properties
+fun createPerson(name, age):
+    return {
+        "name": name,
+        "age": age
+    }
+end
+
+// Function to generate person description
+// Input: person (object) - object with name and age properties
+// Output: description string
+fun getPersonDescription(person):
+    return "Name: " + person["name"] + ", Age: " + person["age"] + " years"
+end
+
+// =========== ERROR HANDLING ===========
+
+// Function to demonstrate error handling
+fun demoErrorHandling():    print("--- Error Handling Demo ---")
+    try:
+        // Example error: division by zero
+        x = 10 / 0
+        print("This will never be executed")
+    catch (e):
+        print("Error successfully caught: " + str(e))
+    end
+    print("Program continues after error")
+end
+
+// =========== ARRAY MANIPULATION ===========
+
+// Function to demonstrate array operations
+fun demoArray():
+    print("--- Array Operations Demo ---")
+
+    // Create array with various data types
+    numbers = [1, 2, 3, 4, 5]
+    print("Number array: " + join(numbers, ", "))
+    // Array with strings
+    fruits = ["apple", "orange", "mango"]
+    print("Fruit array: " + join(fruits, ", "))
+
+    return numbers
+end
+
+// =========== UTILITY FUNCTIONS ===========
+
+// Function to print separator
+fun printSeparator(title):
+    print("")
+    print("============ " + title + " ============")
+end
+
+// =========== MAIN PROGRAM ===========
+
+// Main function that runs all demos
+fun main():
+    print("===================================")
+    print("FUNCTIONAL PROGRAMMING DEMO")
+    print("Uddin-Lang Programming Language")
+    print("===================================")
+
+    // Demo 1: Recursive Mathematical Functions
+    printSeparator("RECURSIVE MATHEMATICS")
+
+    // Calculate factorial
+    n = 5
+    fact_result = factorial(n)
+    print("Factorial of " + str(n) + " = " + str(fact_result))
+
+    // Calculate Fibonacci
+    fib_n = 7
+    fib_result = fibonacci(fib_n)
+    print("Fibonacci at " + str(fib_n) + " = " + str(fib_result))
+
+    // Demo 2: Object Manipulation
+    printSeparator("OBJECT MANIPULATION")
+
+    // Create and display person objects
+    person1 = createPerson("Khinda", "25")
+    person2 = createPerson("John", "30")
+
+    print(getPersonDescription(person1))
+    print(getPersonDescription(person2))
+
+    // Demo 3: Array Operations
+    printSeparator("ARRAY OPERATIONS")
+    numbers = demoArray()
+
+    // Demo 4: Error Handling
+    printSeparator("ERROR HANDLING")
+    demoErrorHandling()
+
+    // Closing
+    print("")
+    print("===================================")
+    print("Demo completed!")
+    print("All functional programming features")
+    print("have been successfully executed.")
+    print("===================================")
+end

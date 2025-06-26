@@ -1,0 +1,199 @@
+// ===================================
+// 04_simple_calculator.kv
+// Simple Math Calculator
+// ===================================
+//
+// This program demonstrates various mathematical
+// calculations with simple implementations.
+//
+
+// =========== MATHEMATICAL CONSTANTS ===========
+PI = 3.14159
+
+// =========== BASIC MATHEMATICAL FUNCTIONS ===========
+
+// Simple power function (for positive exponents)
+fun power(base, exponent):
+    if (exponent == 0) then:
+        return 1
+    end
+
+    result = 1
+    i = 0
+    while (i < exponent):
+        result = result * base
+        i = i + 1
+    end
+    return result
+end
+
+// Factorial
+fun factorial(n):
+    if (n <= 1) then:
+        return 1
+    end
+    result = 1
+    i = 2
+    while (i <= n):
+        result = result * i
+        i = i + 1
+    end
+    return result
+end
+
+// Circle area
+fun circleArea(radius):
+    return PI * radius * radius
+end
+
+// Circle perimeter
+fun circlePerimeter(radius):
+    return 2 * PI * radius
+end
+
+// Rectangle area
+fun rectangleArea(length, width):
+    return length * width
+end
+
+// Rectangle perimeter
+fun rectanglePerimeter(length, width):
+    return 2 * (length + width)
+end
+
+// =========== DISPLAY UTILITY FUNCTIONS ===========
+
+// Display results with neat formatting
+fun displayResult(label, value):
+    print(label + ": " + str(value))
+end
+
+// Display results with units
+fun displayResultWithUnit(label, value, unit):
+    print(label + ": " + str(value) + " " + unit)
+end
+
+// Display separator
+fun printSeparator(title):
+    print("")
+    print("========== " + title + " ==========")
+end
+
+// =========== CALCULATION DEMOS ===========
+
+// Demo basic mathematical operations
+fun demoBasicMath():
+    printSeparator("BASIC MATHEMATICAL OPERATIONS")
+
+    // Power calculations
+    print("Power Calculations:")
+    displayResult("  2^3", power(2, 3))
+    displayResult("  3^4", power(3, 4))
+    displayResult("  5^2", power(5, 2))
+
+    print("")
+
+    // Factorial calculations
+    print("Factorial Calculations:")
+    displayResult("  5!", factorial(5))
+    displayResult("  6!", factorial(6))
+    displayResult("  0!", factorial(0))
+end
+
+// Demo geometry
+fun demoGeometry():
+    printSeparator("GEOMETRY")
+
+    // Circle
+    print("Circle Calculations:")
+    radius = 5
+    print("  Input: radius = " + str(radius))
+    displayResultWithUnit("  Circle area", circleArea(radius), "unit²")
+    displayResultWithUnit("  Circle perimeter", circlePerimeter(radius), "unit")
+
+    print("")
+
+    // Rectangle
+    print("Rectangle Calculations:")
+    length = 8
+    width = 6
+    print("  Input: length = " + str(length) + ", width = " + str(width))
+    displayResultWithUnit("  Rectangle area", rectangleArea(length, width), "unit²")
+    displayResultWithUnit("  Rectangle perimeter", rectanglePerimeter(length, width), "unit")
+
+    print("")
+
+    // Square (special case)
+    print("Square Calculations:")
+    side = 4
+    print("  Input: side = " + str(side))
+    displayResultWithUnit("  Square area", rectangleArea(side, side), "unit²")
+    displayResultWithUnit("  Square perimeter", rectanglePerimeter(side, side), "unit")
+end
+
+// Demo simple volume calculations
+fun demoVolume():
+    printSeparator("3D VOLUME")
+
+    // Cube volume
+    print("Cube Volume Calculation:")
+    side = 3
+    volume = power(side, 3)
+    print("  Input: side = " + str(side))
+    displayResultWithUnit("  Cube volume", volume, "unit³")
+
+    print("")
+
+    // Simple cylinder volume
+    print("Cylinder Volume Calculation:")
+    radius = 4
+    height = 7
+    base_area = circleArea(radius)
+    volume = base_area * height
+    print("  Input: radius = " + str(radius) + ", height = " + str(height))
+    displayResultWithUnit("  Cylinder volume", volume, "unit³")
+end
+
+// Demo constants
+fun demoConstants():
+    printSeparator("MATHEMATICAL CONSTANTS")
+
+    displayResult("  π (Pi)", PI)
+    displayResult("  π²", PI * PI)
+    displayResult("  2π", 2 * PI)
+end
+
+// =========== MAIN PROGRAM ===========
+
+fun main():
+    print("===================================")
+    print("UDDIN-LANG MATH CALCULATOR")
+    print("===================================")
+    print("This program demonstrates")
+    print("various mathematical calculations.")
+    print("")
+
+    // Demo 1: Basic Math
+    demoBasicMath()
+
+    // Demo 2: Geometry
+    demoGeometry()
+
+    // Demo 3: Volume
+    demoVolume()
+
+    // Demo 4: Constants
+    demoConstants()
+
+    // Closing
+    print("")
+    print("===================================")
+    print("🎉 CALCULATOR DEMO COMPLETED!")
+    print("===================================")
+    print("Features demonstrated:")
+    print("✓ Basic operations (power, factorial)")
+    print("✓ 2D Geometry (circle, square)")
+    print("✓ 3D Volume (cube, cylinder)")
+    print("✓ Mathematical constants")
+    print("===================================")
+end

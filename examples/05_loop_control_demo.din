@@ -1,0 +1,150 @@
+// ===================================
+// 05_loop_control_demo.kv
+// Loop Control Demo (break & continue)
+// ===================================
+//
+// This program demonstrates break and continue statements
+// in while and for loops in Uddin-Lang.
+//
+
+// =========== UTILITY FUNCTIONS ===========
+
+// Function to print separator
+fun printSeparator(title):
+    print("")
+    print("========== " + title + " ==========")
+end
+
+// =========== WHILE LOOP WITH BREAK ===========
+
+fun demoWhileBreak():
+    printSeparator("WHILE LOOP WITH BREAK")
+
+    print("Counting from 1 to 10, but break at 5:")
+    i = 1
+    while (i <= 10):
+        if (i == 5) then:
+            print("Breaking at " + str(i))
+            break
+        end
+        print("Count: " + str(i))
+        i = i + 1
+    end
+    print("Loop ended")
+end
+
+// =========== WHILE LOOP WITH CONTINUE ===========
+
+fun demoWhileContinue():
+    printSeparator("WHILE LOOP WITH CONTINUE")
+
+    print("Counting from 1 to 10, but skip even numbers:")
+    i = 0
+    while (i < 10):
+        i = i + 1
+        if (i % 2 == 0) then:
+            print("Skipping even number: " + str(i))
+            continue
+        end
+        print("Odd number: " + str(i))
+    end
+    print("Loop ended")
+end
+
+// =========== FOR LOOP WITH BREAK ===========
+
+fun demoForBreak():
+    printSeparator("FOR LOOP WITH BREAK")
+
+    print("Iterating through numbers [1,2,3,4,5,6,7,8,9,10], break at 6:")
+    numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    for (num in numbers):
+        if (num == 6) then:
+            print("Breaking at " + str(num))
+            break
+        end
+        print("Processing: " + str(num))
+    end
+    print("Loop ended")
+end
+
+// =========== FOR LOOP WITH CONTINUE ===========
+
+fun demoForContinue():
+    printSeparator("FOR LOOP WITH CONTINUE")
+
+    print("Iterating through numbers [1,2,3,4,5,6,7,8,9,10], skip multiples of 3:")
+    numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    for (num in numbers):
+        if (num % 3 == 0) then:
+            print("Skipping multiple of 3: " + str(num))
+            continue
+        end
+        print("Processing: " + str(num))
+    end
+    print("Loop ended")
+end
+
+// =========== NESTED LOOPS WITH BREAK ===========
+
+fun demoNestedBreak():
+    printSeparator("NESTED LOOPS WITH BREAK")
+
+    print("Nested loops - break only affects inner loop:")
+    i = 1
+    while (i <= 3):
+        print("Outer loop i = " + str(i))
+        j = 1
+        while (j <= 5):
+            if (j == 3) then:
+                print("  Breaking inner loop at j = " + str(j))
+                break
+            end
+            print("  Inner loop j = " + str(j))
+            j = j + 1
+        end
+        print("  Inner loop ended")
+        i = i + 1
+    end
+    print("Outer loop ended")
+end
+
+// =========== MAIN PROGRAM ===========
+
+fun main():
+    print("===================================")
+    print("UDDIN-LANG LOOP CONTROL DEMO")
+    print("===================================")
+    print("Demonstrating break and continue")
+    print("statements in loops.")
+
+    // Demo 1: While loop with break
+    demoWhileBreak()
+
+    // Demo 2: While loop with continue
+    demoWhileContinue()
+
+    // Demo 3: For loop with break
+    demoForBreak()
+
+    // Demo 4: For loop with continue
+    demoForContinue()
+
+    // Demo 5: Nested loops with break
+    demoNestedBreak()
+
+    // Closing
+    print("")
+    print("===================================")
+    print("🎉 LOOP CONTROL DEMO COMPLETED!")
+    print("===================================")
+    print("Features demonstrated:")
+    print("✓ break statement in while loop")
+    print("✓ continue statement in while loop")
+    print("✓ break statement in for loop")
+    print("✓ continue statement in for loop")
+    print("✓ break in nested loops")
+    print("===================================")
+end

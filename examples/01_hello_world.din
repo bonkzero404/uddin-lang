@@ -1,0 +1,23 @@
+// =============================================================================
+// 01_hello_world.kv - Simple Hello World program for Uddin-Lang
+// =============================================================================
+
+// Main program function
+fun main():
+    print("Welcome to Uddin-Lang!")
+    print("Hello, World!")
+
+    // Example variables and basic operations
+    name = "Uddin-Lang"
+    version = "1.0"
+
+    print("Programming language: " + name)
+    print("Version: " + version)
+
+    // Example mathematical operations
+    a = 10
+    b = 5
+    result = a + b
+
+    print("Result of " + str(a) + " + " + str(b) + " = " + str(result))
+end

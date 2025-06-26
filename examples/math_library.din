@@ -1,0 +1,45 @@
+// ===================================
+// examples/math_library.din
+// Mathematical Functions Library
+// ===================================
+//
+// A collection of basic mathematical functions
+// that can be loaded by other Uddin-Lang scripts
+//
+
+// Function to calculate square
+fun square(n):
+    return n * n
+end
+
+// Function to calculate cube
+fun cube(n):
+    return n * n * n
+end
+
+// Function to check if number is even
+fun isEven(n):
+    return n % 2 == 0
+end
+
+// Function to check if number is odd
+fun isOdd(n):
+    return n % 2 != 0
+end
+
+// Function to calculate greatest common divisor
+fun gcd(a, b):
+    while (b != 0):
+        temp = b
+        b = a % b
+        a = temp
+    end
+    return a
+end
+
+// Function to calculate least common multiple
+fun lcm(a, b):
+    return (a * b) / gcd(a, b)
+end
+
+print("📚 Math library loaded successfully!")
