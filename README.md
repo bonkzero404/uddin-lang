@@ -1090,14 +1090,14 @@ end
 #### Utility Functions
 
 | Function             | Description                | Example                         |
-| -------------------- | -------------------------- | ------------------------------- | --------- |
-| `sign(x)`            | Sign of number (-1, 0, 1)  | `sign(-5)` → `-1`               | int       |
-| `clamp(x, min, max)` | Clamp value to range       | `clamp(15, 1, 10)` → `10`       | int/float |
-| `lerp(a, b, t)`      | Linear interpolation       | `lerp(0, 10, 0.5)` → `5.0`      | float     |
-| `degrees(radians)`   | Convert radians to degrees | `degrees(PI)` → `180.0`         | float     |
-| `radians(degrees)`   | Convert degrees to radians | `radians(180)` → `3.14159`      | float     |
-| `is_nan(x)`          | Check if value is NaN      | `is_nan(0.0/0.0)` → `true`      | bool      |
-| `is_infinite(x)`     | Check if value is infinite | `is_infinite(1.0/0.0)` → `true` | bool      |
+| -------------------- | -------------------------- | ------------------------------- | ----- |
+| `sign(x)`            | Sign of number (-1, 0, 1)  | `sign(-5)` → `-1`               |
+| `clamp(x, min, max)` | Clamp value to range       | `clamp(15, 1, 10)` → `10`       |
+| `lerp(a, b, t)`      | Linear interpolation       | `lerp(0, 10, 0.5)` → `5.0`      | float |
+| `degrees(radians)`   | Convert radians to degrees | `degrees(PI)` → `180.0`         | float |
+| `radians(degrees)`   | Convert degrees to radians | `radians(180)` → `3.14159`      | float |
+| `is_nan(x)`          | Check if value is NaN      | `is_nan(0.0/0.0)` → `true`      | bool  |
+| `is_infinite(x)`     | Check if value is infinite | `is_infinite(1.0/0.0)` → `true` | bool  |
 
 ### I/O Functions
 
