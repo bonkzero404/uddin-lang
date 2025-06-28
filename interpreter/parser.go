@@ -94,15 +94,17 @@ func (p *parser) statement() Statement {
 	}
 	pos := p.pos
 	expr := p.expression()
-	if p.tok == ASSIGN {
+	if p.tok == ASSIGN || p.tok == PLUSEQUAL || p.tok == MINUSEQUAL ||
+	   p.tok == TIMESEQUAL || p.tok == DIVIDEEQUAL || p.tok == MODULOEQUAL {
+		operator := p.tok
 		pos = p.pos
 		switch expr.(type) {
 		case *Variable, *Subscript:
 			p.next()
 			value := p.expression()
-			return &Assign{pos, expr, value}
+			return &Assign{pos, expr, value, operator}
 		default:
-			p.error("expected name, subscript, or dot expression on left side of =")
+			p.error("expected name or subscript on left side of assignment")
 		}
 	}
 	return &ExpressionStatement{pos, expr}

@@ -44,6 +44,11 @@ const (
 	GTE
 	LTE
 	NOTEQUAL
+	PLUSEQUAL
+	MINUSEQUAL
+	TIMESEQUAL
+	DIVIDEEQUAL
+	MODULOEQUAL
 
 	// Three-character tokens
 	ELLIPSIS
@@ -126,10 +131,15 @@ var tokenNames = map[Token]string{
 
 	END: "end",
 
-	EQUAL:    "==",
-	GTE:      ">=",
-	LTE:      "<=",
-	NOTEQUAL: "!=",
+	EQUAL:       "==",
+	GTE:         ">=",
+	LTE:         "<=",
+	NOTEQUAL:    "!=",
+	PLUSEQUAL:   "+=",
+	MINUSEQUAL:  "-=",
+	TIMESEQUAL:  "*=",
+	DIVIDEEQUAL: "/=",
+	MODULOEQUAL: "%=",
 
 	ELLIPSIS: "...",
 
@@ -351,7 +361,12 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 	case ',':
 		token = COMMA
 	case '/':
-		token = DIVIDE
+		if t.ch == '=' {
+			t.next()
+			token = DIVIDEEQUAL
+		} else {
+			token = DIVIDE
+		}
 	case '{':
 		token = LBRACE
 	case '[':
@@ -359,11 +374,26 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 	case '(':
 		token = LPAREN
 	case '-':
-		token = MINUS
+		if t.ch == '=' {
+			t.next()
+			token = MINUSEQUAL
+		} else {
+			token = MINUS
+		}
 	case '%':
-		token = MODULO
+		if t.ch == '=' {
+			t.next()
+			token = MODULOEQUAL
+		} else {
+			token = MODULO
+		}
 	case '+':
-		token = PLUS
+		if t.ch == '=' {
+			t.next()
+			token = PLUSEQUAL
+		} else {
+			token = PLUS
+		}
 	case '}':
 		token = RBRACE
 	case ']':
@@ -371,7 +401,12 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 	case ')':
 		token = RPAREN
 	case '*':
-		token = TIMES
+		if t.ch == '=' {
+			t.next()
+			token = TIMESEQUAL
+		} else {
+			token = TIMES
+		}
 	case '?':
 		token = QUESTION
 

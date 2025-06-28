@@ -38,16 +38,30 @@ type Statement interface {
 
 // Assign represents an assignment statement (target = value).
 type Assign struct {
-	pos    Position   // Source position
-	Target Expression // Left-hand side of the assignment
-	Value  Expression // Right-hand side of the assignment
+	pos      Position   // Source position
+	Target   Expression // Left-hand side of the assignment
+	Value    Expression // Right-hand side of the assignment
+	Operator Token      // Assignment operator (ASSIGN, PLUSEQUAL, etc.)
 }
 
 func (s *Assign) Position() Position { return s.pos }
 
 // String returns a string representation of the assignment.
 func (s *Assign) String() string {
-	return fmt.Sprintf("%s = %s", s.Target, s.Value)
+	opStr := "="
+	switch s.Operator {
+	case PLUSEQUAL:
+		opStr = "+="
+	case MINUSEQUAL:
+		opStr = "-="
+	case TIMESEQUAL:
+		opStr = "*="
+	case DIVIDEEQUAL:
+		opStr = "/="
+	case MODULOEQUAL:
+		opStr = "%="
+	}
+	return fmt.Sprintf("%s %s %s", s.Target, opStr, s.Value)
 }
 
 // OuterAssign represents an assignment to an outer scope variable.
@@ -417,8 +431,8 @@ func (s *Import) String() string {
 }
 
 // NewAssign creates a new assignment statement
-func NewAssign(pos Position, target Expression, value Expression) *Assign {
-	return &Assign{pos: pos, Target: target, Value: value}
+func NewAssign(pos Position, target Expression, value Expression, operator Token) *Assign {
+	return &Assign{pos: pos, Target: target, Value: value, Operator: operator}
 }
 
 // NewIf creates a new if statement

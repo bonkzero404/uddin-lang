@@ -722,18 +722,87 @@ func (interp *interpreter) assignSubscript(pos Position, container, subscript, v
 	}
 }
 
+// evaluateAssignmentValue evaluates assignment operators like +=, -=, etc.
+func (interp *interpreter) evaluateAssignmentValue(operator Token, target interface{}, value Expression) Value {
+	rightValue := interp.evaluate(value)
+
+	// For simple assignment, just return the right value
+	if operator == ASSIGN {
+		return rightValue
+	}
+
+	// For compound assignments, get current value and perform operation
+	var currentValue Value
+	switch t := target.(type) {
+	case string: // Variable name
+		if v, ok := interp.lookup(t); ok {
+			currentValue = v
+		} else {
+			panic(nameError(value.Position(), "name %q not found", t))
+		}
+	default:
+		panic("unsupported assignment target type")
+	}
+
+	// Perform the compound operation
+	switch operator {
+	case PLUSEQUAL:
+		return evalPlus(value.Position(), currentValue, rightValue)
+	case MINUSEQUAL:
+		return evalMinus(value.Position(), currentValue, rightValue)
+	case TIMESEQUAL:
+		return evalTimes(value.Position(), currentValue, rightValue)
+	case DIVIDEEQUAL:
+		return evalDivide(value.Position(), currentValue, rightValue)
+	case MODULOEQUAL:
+		return evalModulo(value.Position(), currentValue, rightValue)
+	default:
+		panic(fmt.Sprintf("unknown assignment operator %v", operator))
+	}
+}
+
+// evaluateSubscriptAssignmentValue evaluates assignment operators for subscripts
+func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, container, subscript Value, value Expression) Value {
+	rightValue := interp.evaluate(value)
+
+	// For simple assignment, just return the right value
+	if operator == ASSIGN {
+		return rightValue
+	}
+
+	// For compound assignments, get current value and perform operation
+	currentValue := evalSubscript(value.Position(), container, subscript)
+
+	// Perform the compound operation
+	switch operator {
+	case PLUSEQUAL:
+		return evalPlus(value.Position(), currentValue, rightValue)
+	case MINUSEQUAL:
+		return evalMinus(value.Position(), currentValue, rightValue)
+	case TIMESEQUAL:
+		return evalTimes(value.Position(), currentValue, rightValue)
+	case DIVIDEEQUAL:
+		return evalDivide(value.Position(), currentValue, rightValue)
+	case MODULOEQUAL:
+		return evalModulo(value.Position(), currentValue, rightValue)
+	default:
+		panic(fmt.Sprintf("unknown assignment operator %v", operator))
+	}
+}
+
 func (interp *interpreter) executeStatement(s Statement) {
 	interp.stats.Ops++
 	switch s := s.(type) {
 	case *Assign:
 		switch target := s.Target.(type) {
 		case *Variable:
-			interp.assign(target.Name, interp.evaluate(s.Value))
+			newValue := interp.evaluateAssignmentValue(s.Operator, target.Name, s.Value)
+			interp.assign(target.Name, newValue)
 		case *Subscript:
 			container := interp.evaluate(target.Container)
 			subscript := interp.evaluate(target.Subscript)
-			value := interp.evaluate(s.Value)
-			interp.assignSubscript(target.Subscript.Position(), container, subscript, value)
+			newValue := interp.evaluateSubscriptAssignmentValue(s.Operator, container, subscript, s.Value)
+			interp.assignSubscript(target.Subscript.Position(), container, subscript, newValue)
 		default:
 			// Parser should never get us here
 			panic("can only assign to variable or subscript")

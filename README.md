@@ -96,6 +96,7 @@ graph TD
 -   ✅ **Module System** with import statement for importing .din files
 -   ✅ **Functional Programming** paradigms
 -   ✅ **Memory Safe** with garbage collection
+-   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
 
 ---
 
@@ -146,6 +147,21 @@ Run it:
 go run main.go hello.din
 ```
 
+### Explore Examples
+
+The language comes with comprehensive examples showcasing all features:
+
+```bash
+# List all available examples
+./uddinlang --examples
+
+# Run specific examples
+./uddinlang examples/12_logical_operators.din     # XOR and logical operations
+./uddinlang examples/13_assignment_operators.din  # Compound assignments (+=, -=, etc.)
+./uddinlang examples/01_hello_world.din          # Basic syntax
+./uddinlang examples/03_math_library.din         # Mathematical functions
+```
+
 ---
 
 ## 📝 Language Grammar
@@ -168,7 +184,8 @@ statement      = expression_stmt
                | try_catch_stmt
 
 expression_stmt = expression
-assignment     = IDENTIFIER "=" expression
+assignment     = IDENTIFIER ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expression
+               | subscript ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expression
 if_stmt        = "if" "(" expression ")" "then:" block
                  { "else" "if" "(" expression ")" "then:" block }
                  [ "else:" block ] "end"
@@ -219,18 +236,18 @@ CHARACTER      = any character except '"' or "'"
 
 ### Operator Precedence (Highest to Lowest)
 
-| Precedence | Operators         | Associativity | Description                                  |
-| ---------- | ----------------- | ------------- | -------------------------------------------- |
-| 1          | `()` `[]` `.`     | Left          | Function call, Array access, Property access |
-| 2          | `not` `-` (unary) | Right         | Logical NOT, Unary minus                     |
-| 3          | `*` `/` `%`       | Left          | Multiplication, Division, Modulo             |
-| 4          | `+` `-`           | Left          | Addition, Subtraction                        |
-| 5          | `<` `<=` `>` `>=` | Left          | Relational operators                         |
-| 6          | `==` `!=`         | Left          | Equality operators                           |
-| 7          | `and`             | Left          | Logical AND                                  |
-| 8          | `xor`             | Left          | Logical XOR (exclusive or)                   |
-| 9          | `or`              | Left          | Logical OR                                   |
-| 10         | `=`               | Right         | Assignment                                   |
+| Precedence | Operators                    | Associativity | Description                                  |
+| ---------- | ---------------------------- | ------------- | -------------------------------------------- |
+| 1          | `()` `[]` `.`                | Left          | Function call, Array access, Property access |
+| 2          | `not` `-` (unary)            | Right         | Logical NOT, Unary minus                     |
+| 3          | `*` `/` `%`                  | Left          | Multiplication, Division, Modulo             |
+| 4          | `+` `-`                      | Left          | Addition, Subtraction                        |
+| 5          | `<` `<=` `>` `>=`            | Left          | Relational operators                         |
+| 6          | `==` `!=`                    | Left          | Equality operators                           |
+| 7          | `and`                        | Left          | Logical AND                                  |
+| 8          | `xor`                        | Left          | Logical XOR (exclusive or)                   |
+| 9          | `or`                         | Left          | Logical OR                                   |
+| 10         | `=` `+=` `-=` `*=` `/=` `%=` | Right         | Assignment and compound assignment           |
 
 ---
 
@@ -395,6 +412,37 @@ stars = "*" * 5 // "*****"
 
 // Membership
 has_world = "World" in message // true
+```
+
+#### Assignment Operators
+
+```go
+// Basic assignment
+x = 10
+name = "Alice"
+
+// Compound assignment operators
+x += 5   // x = x + 5       (addition assignment)
+x -= 3   // x = x - 3       (subtraction assignment)
+x *= 2   // x = x * 2       (multiplication assignment)
+x /= 4   // x = x / 4       (division assignment)
+x %= 3   // x = x % 3       (modulo assignment)
+
+// Works with different data types
+message = "Hello"
+message += " World"  // "Hello World"
+
+arr = [1, 2, 3]
+arr += [4, 5]       // [1, 2, 3, 4, 5]
+arr *= 2            // [1, 2, 3, 4, 5, 1, 2, 3, 4, 5]
+
+// Works with array/object subscripts
+scores = [10, 20, 30]
+scores[0] += 5      // scores becomes [15, 20, 30]
+
+player = {"level": 1, "score": 100}
+player["score"] += 50   // player becomes {"level": 1, "score": 150}
+player["level"] *= 2    // player becomes {"level": 2, "score": 150}
 ```
 
 ### 🎯 Functions

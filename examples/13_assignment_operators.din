@@ -1,0 +1,198 @@
+// ===================================
+// 13_assignment_operators.din
+// Assignment Operators Examples
+// ===================================
+//
+// This example demonstrates assignment operators in Uddin-Lang:
+// - += (addition assignment)
+// - -= (subtraction assignment)
+// - *= (multiplication assignment)
+// - /= (division assignment)
+// - %= (modulo assignment)
+
+fun calculate_stats(scores):
+    // Calculate statistics using assignment operators
+    total = 0
+    count = len(scores)
+
+    // Sum using += operator
+    for (score in scores):
+        total += score
+    end
+
+    average = total / count
+
+    // Find min and max
+    min_score = scores[0]
+    max_score = scores[0]
+
+    for (score in scores):
+        if (score < min_score) then:
+            min_score = score
+        end
+        if (score > max_score) then:
+            max_score = score
+        end
+    end
+
+    return {
+        "total": total,
+        "count": count,
+        "average": average,
+        "min": min_score,
+        "max": max_score
+    }
+end
+
+fun inventory_management():
+    // Inventory system using assignment operators
+    print("=== Inventory Management System ===")
+
+    inventory = {
+        "apples": 100,
+        "bananas": 75,
+        "oranges": 50
+    }
+
+    print("Initial inventory:", inventory)
+
+    // Restock using += operator
+    print("\n1. Restocking:")
+    inventory["apples"] += 50
+    inventory["bananas"] += 25
+    inventory["oranges"] += 30
+    print("After restocking:", inventory)
+
+    // Sales using -= operator
+    print("\n2. Sales:")
+    inventory["apples"] -= 20
+    inventory["bananas"] -= 15
+    inventory["oranges"] -= 10
+    print("After sales:", inventory)
+
+    // Bulk discount - reduce by 10% using *= operator
+    print("\n3. 10% discount applied:")
+    inventory["apples"] *= 0.9
+    inventory["bananas"] *= 0.9
+    inventory["oranges"] *= 0.9
+    print("After discount:", inventory)
+
+    return inventory
+end
+
+fun compound_interest_calculator(principal, rate, years):
+    // Calculate compound interest using assignment operators
+    print("=== Compound Interest Calculator ===")
+    print("Principal: $" + str(principal))
+    print("Rate: " + str(rate * 100) + "%")
+    print("Years: " + str(years))
+    print()
+
+    amount = principal
+    year = 1
+
+    while (year <= years):
+        // Apply compound interest using *= operator
+        amount *= (1 + rate)
+        interest = amount - principal
+
+        print("Year " + str(year) + ": $" + str(round(amount, 2)) +
+              " (Interest: $" + str(round(interest, 2)) + ")")
+
+        year += 1
+    end
+
+    return round(amount, 2)
+end
+
+fun array_operations_demo():
+    // Array operations using assignment operators
+    print("=== Array Operations Demo ===")
+
+    // Start with base arrays
+    numbers = [1, 2, 3]
+    letters = ["a", "b", "c"]
+
+    print("Initial numbers:", numbers)
+    print("Initial letters:", letters)
+
+    // Extend arrays using += operator
+    print("\n1. Extending arrays:")
+    numbers += [4, 5, 6]
+    letters += ["d", "e", "f"]
+    print("Extended numbers:", numbers)
+    print("Extended letters:", letters)
+
+    // Duplicate arrays using *= operator
+    print("\n2. Duplicating arrays:")
+    small_numbers = [1, 2]
+    small_numbers *= 3
+    print("Duplicated [1, 2] * 3:", small_numbers)
+
+    // Modify individual elements
+    print("\n3. Modifying elements:")
+    scores = [85, 90, 78, 92, 88]
+    print("Original scores:", scores)
+
+    // Apply bonus points using += on subscripts
+    bonus = 5
+    i = 0
+    while (i < len(scores)):
+        scores[i] += bonus
+        i += 1
+    end
+    print("After " + str(bonus) + " bonus points:", scores)
+
+    return scores
+end
+
+fun string_operations_demo():
+    // String operations using assignment operators
+    print("=== String Operations Demo ===")
+
+    message = "Hello"
+    print("Initial message: '" + message + "'")
+
+    // Build message using += operator
+    message += " "
+    message += "World"
+    message += "!"
+    print("Final message: '" + message + "'")
+
+    // Create a repeated pattern
+    pattern = "*"
+    pattern *= 5
+    print("Pattern: '" + pattern + "'")
+
+    return message
+end
+
+fun main():
+    print("=== Assignment Operators Demonstration ===")
+
+    // Test statistics calculation
+    print("\n" + "=" * 50)
+    test_scores = [85, 92, 78, 96, 88, 91, 83, 87]
+    stats = calculate_stats(test_scores)
+    print("Test Scores:", test_scores)
+    print("Statistics:", stats)
+
+    // Test inventory management
+    print("\n" + "=" * 50)
+    final_inventory = inventory_management()
+
+    // Test compound interest
+    print("\n" + "=" * 50)
+    final_amount = compound_interest_calculator(1000, 0.05, 3)
+    print("Final amount: $" + str(final_amount))
+
+    // Test array operations
+    print("\n" + "=" * 50)
+    final_scores = array_operations_demo()
+
+    // Test string operations
+    print("\n" + "=" * 50)
+    final_message = string_operations_demo()
+
+    print("\n=== Assignment operators examples completed! ===")
+end
