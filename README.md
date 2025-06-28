@@ -30,6 +30,7 @@
 -   [Language Grammar](#language-grammar)
 -   [Architecture Overview](#architecture-overview)
 -   [Syntax Reference](#syntax-reference)
+-   [Error Reporting & Debugging](#-error-reporting--debugging)
 -   [Module System](#module-system)
 -   [Built-in Functions](#built-in-functions)
 -   [Examples](#examples)
@@ -50,6 +51,7 @@ Uddin-Lang is a modern, interpreted programming language designed with simplicit
 -   **Functional**: First-class functions and closures
 -   **Dynamic**: Dynamic typing with runtime type checking
 -   **Safe**: Built-in error handling and null safety concepts
+-   **Developer-Friendly**: Clear error messages with precise location indicators
 -   **Modern**: Contemporary language features
 
 ---
@@ -92,6 +94,7 @@ graph TD
 -   ✅ **Built-in Data Structures** (Arrays, Maps/Objects)
 -   ✅ **Rich Built-in Functions** including enhanced `range()` with Python-like syntax
 -   ✅ **Exception Handling** with try-catch blocks
+-   ✅ **Advanced Error Reporting** with precise error location and clear explanations
 -   ✅ **Loop Control** (break, continue statements)
 -   ✅ **Module System** with import statement for importing .din files
 -   ✅ **Functional Programming** paradigms
@@ -756,7 +759,174 @@ end
 
 ---
 
-## 🔧 Built-in Functions
+## 🚨 Error Reporting & Debugging
+
+Uddin-Lang features a sophisticated error reporting system designed to provide clear, actionable feedback when syntax or runtime errors occur. Every error message includes:
+
+-   **Clear, descriptive error messages** in plain English
+-   **Visual error indicators** with a caret (^) pointing to the exact error location
+-   **Source line display** showing the problematic code
+-   **Context-specific explanations** tailored to the type of error
+
+### Error Message Format
+
+```
+Error: <clear description of the problem>
+----------------------------------------
+Line <number>: <source code line>
+               <spaces>^
+               <additional context or suggestions>
+```
+
+### Syntax Error Examples
+
+#### Missing Block Delimiter
+
+```go
+// ❌ Incorrect syntax
+if (x > 5) then
+    print("x is greater than 5")  // Missing ':'
+end
+
+// Error output:
+Error: expected ':' after 'then' keyword to start block, got 'print'
+----------------------------------------
+Line 2: if (x > 5) then
+                    ^
+Expected ':' to indicate the start of the block.
+```
+
+#### Missing Comma in Function Parameters
+
+```go
+// ❌ Incorrect syntax
+fun calculate(a b c):  // Missing commas
+    return a + b + c
+end
+
+// Error output:
+Error: missing comma ',' between function parameters
+----------------------------------------
+Line 1: fun calculate(a b c):
+                        ^
+Function parameters must be separated by commas.
+```
+
+#### Invalid Assignment Target
+
+```go
+// ❌ Incorrect syntax
+10 = x  // Cannot assign to literal
+
+// Error output:
+Error: invalid assignment target: only variables and array/object elements can be assigned to
+----------------------------------------
+Line 1: 10 = x
+        ^
+Only variables (like 'x') and subscripted expressions (like 'arr[0]' or 'obj.key') can be assigned to.
+```
+
+### Runtime Error Examples
+
+#### Array Index Out of Bounds
+
+```go
+// ❌ Runtime error
+arr = [1, 2, 3]
+print(arr[5])  // Index 5 doesn't exist
+
+// Error output:
+Error: array index out of bounds: index 5, length 3
+----------------------------------------
+Line 2: print(arr[5])
+                  ^
+Array indices must be between 0 and 2 (length-1).
+```
+
+#### Division by Zero
+
+```go
+// ❌ Runtime error
+result = 10 / 0
+
+// Error output:
+Error: division by zero
+----------------------------------------
+Line 1: result = 10 / 0
+                     ^
+Cannot divide by zero.
+```
+
+### Error Types Covered
+
+#### Parser Errors
+
+-   Missing colons (`:`) after control structure keywords
+-   Missing commas in parameter/argument lists
+-   Invalid assignment targets
+-   Malformed expressions and statements
+-   Incorrect block syntax
+-   Missing parentheses or brackets
+
+#### Runtime Errors
+
+-   Array/object index out of bounds
+-   Division by zero
+-   Undefined variables or functions
+-   Type mismatches in operations
+-   Function argument count mismatches
+
+### Best Practices for Error Handling
+
+1. **Read the error message carefully** - Each message is designed to explain exactly what went wrong
+2. **Look at the caret position** - The `^` symbol points to the exact location of the problem
+3. **Check the expected syntax** - Error messages often suggest what was expected
+4. **Use try-catch for runtime errors** - Wrap potentially failing code in try-catch blocks
+5. **Validate inputs** - Check user inputs and function parameters before using them
+
+### Error-Free Code Examples
+
+```go
+// ✅ Correct syntax with proper error handling
+fun safe_divide(a, b):
+    if (b == 0) then:
+        return null
+    else:
+        return a / b
+    end
+end
+
+fun safe_array_access(arr, index):
+    if (index >= 0 and index < len(arr)) then:
+        return arr[index]
+    else:
+        return null
+    end
+end
+
+// Using try-catch for robust error handling
+try:
+    result = safe_divide(10, user_input)
+    if (result != null) then:
+        print("Result:", result)
+    else:
+        print("Cannot divide by zero!")
+    end
+catch (error):
+    print("Unexpected error:", error)
+end
+```
+
+### Development Tips
+
+-   **Use descriptive variable names** to make error messages more helpful
+-   **Test edge cases** like empty arrays, null values, and boundary conditions
+-   **Implement validation functions** for complex operations
+-   **Use meaningful error messages** in your own functions when throwing errors
+
+---
+
+## 📚 Built-in Functions
 
 ### Type Conversion Functions
 
