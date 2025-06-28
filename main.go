@@ -11,16 +11,38 @@ import (
 
 // CLI represents the command line interface
 type CLI struct {
-	args []string
+	args    []string
+	profile bool
+	analyze bool
 }
 
 // NewCLI creates a new CLI instance
 func NewCLI(args []string) *CLI {
-	return &CLI{args: args}
+	return &CLI{args: args, profile: false, analyze: false}
 }
 
 // Run executes the CLI with the given arguments
 func (c *CLI) Run() error {
+	if len(c.args) < 2 {
+		c.printUsage()
+		return nil
+	}
+
+	// Check for flags first
+	for i := len(c.args) - 1; i >= 0; i-- {
+		arg := c.args[i]
+		if arg == "--profile" || arg == "-p" {
+			c.profile = true
+			// Remove the flag from args
+			c.args = append(c.args[:i], c.args[i+1:]...)
+		} else if arg == "--analyze" || arg == "-a" {
+			c.analyze = true
+			// Remove the flag from args
+			c.args = append(c.args[:i], c.args[i+1:]...)
+		}
+	}
+
+	// Re-check args length after potential flag removal
 	if len(c.args) < 2 {
 		c.printUsage()
 		return nil
@@ -45,9 +67,15 @@ func (c *CLI) printUsage() {
 	fmt.Println("Uddin-Lang Interpreter")
 	fmt.Println("Usage:")
 	fmt.Println("  uddinlang <filename.din>   - Run a Uddin-Lang script file")
+	fmt.Println("  uddinlang --profile <filename.din> - Run with performance profiling")
+	fmt.Println("  uddinlang --analyze <filename.din> - Analyze syntax without execution")
 	fmt.Println("  uddinlang --examples       - List available example files")
 	fmt.Println("  uddinlang --version        - Show version information")
 	fmt.Println("  uddinlang --help           - Show this help message")
+	fmt.Println()
+	fmt.Println("Flags:")
+	fmt.Println("  --profile, -p              - Enable performance profiling output")
+	fmt.Println("  --analyze, -a              - Analyze syntax only (no execution)")
 }
 
 func (c *CLI) printVersion() {
@@ -92,8 +120,23 @@ func (c *CLI) runScript(filename string) error {
 		return fmt.Errorf("error reading file %s: %w", filename, err)
 	}
 
-	// Execute the program
-	success, output := interpreter.RunProgram(string(content))
+	// If analyze flag is set, only perform syntax analysis
+	if c.analyze {
+		success, output := interpreter.AnalyzeSyntax(string(content))
+		fmt.Print(output)
+		if !success {
+			return fmt.Errorf("syntax analysis failed")
+		}
+		return nil
+	}
+
+	// Create options based on profile flag
+	options := &interpreter.RunProgramOptions{
+		ShowProfiling: c.profile,
+	}
+
+	// Execute the program with options
+	success, output := interpreter.RunProgramWithOptions(string(content), options)
 
 	if success {
 		fmt.Print(output)
