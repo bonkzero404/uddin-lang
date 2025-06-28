@@ -37,6 +37,7 @@
 -   [Development](#development)
 -   [Contributing](#contributing)
 -   [License](#license)
+-   [Acknowledgments](#acknowledgments)
 
 ---
 
@@ -1079,7 +1080,7 @@ end
 
 ---
 
-## 📚 Examples
+## 📝 Examples
 
 ### Example 1: Factorial Calculator
 
@@ -1899,4 +1900,101 @@ end
 # - Complex number operations
 # - Statistical analysis
 # - Linear regression with predictions
+```
+
+---
+
+## 🛠️ Development
+
+### Setting Up Development Environment
+
+```bash
+# Clone the repository
+git clone https://github.com/bonkzero404/uddin-lang.git
+cd uddin-lang
+
+# Install Go dependencies
+go mod tidy
+
+# Run tests
+go test ./...
+
+# Build the interpreter
+go build -o uddinlang main.go
+```
+
+### Development Commands
+
+```bash
+# Run with file
+go run main.go script.din
+
+# Run tests with coverage
+go test -cover ./...
+
+# Run specific test
+go test -run TestLoopControl ./interpreter
+
+# Format code
+go fmt ./...
+
+# Lint code (requires golangci-lint)
+golangci-lint run
+
+# Generate documentation
+godoc -http=:6060
+```
+
+### Testing
+
+The project includes comprehensive tests:
+
+-   **Unit Tests**: Test individual components
+-   **Integration Tests**: Test component interaction
+-   **Example Tests**: Validate example programs
+-   **Benchmark Tests**: Performance measurements
+
+```bash
+# Run all tests
+go test ./...
+
+# Run tests with verbose output
+go test -v ./...
+
+# Run tests with coverage report
+go test -cover ./... -coverprofile=coverage.out
+go tool cover -html=coverage.out
+```
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Here's how to get started:
+
+### 1. Fork & Clone
+
+```bash
+git clone https://github.com/bonkzero404/uddin-lang.git
+cd uddin-lang
+```
+
+### 2. Create Feature Branch
+
+```bash
+git checkout -b feature/my-new-feature
+```
+
+### 3. Make Changes
+
+-   Follow Go coding conventions
+-   Add tests for new features
+-   Update documentation and examples
+-   Ensure all tests pass
+
+### 4. Submit Pull Request
+
+```bash
+git commit -m "Add my new feature"
+git push origin feature/my-new-feature
 ```
