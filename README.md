@@ -185,7 +185,8 @@ block          = { statement }
 parameter_list = IDENTIFIER { "," IDENTIFIER }
 
 expression     = logical_or
-logical_or     = logical_and { "or" logical_and }
+logical_or     = logical_xor { "or" logical_xor }
+logical_xor    = logical_and { "xor" logical_and }
 logical_and    = ternary { "and" ternary }
 ternary        = equality [ "?" expression ":" expression ]
 equality       = comparison { ( "==" | "!=" ) comparison }
@@ -227,8 +228,9 @@ CHARACTER      = any character except '"' or "'"
 | 5          | `<` `<=` `>` `>=` | Left          | Relational operators                         |
 | 6          | `==` `!=`         | Left          | Equality operators                           |
 | 7          | `and`             | Left          | Logical AND                                  |
-| 8          | `or`              | Left          | Logical OR                                   |
-| 9          | `=`               | Right         | Assignment                                   |
+| 8          | `xor`             | Left          | Logical XOR (exclusive or)                   |
+| 9          | `or`              | Left          | Logical OR                                   |
+| 10         | `=`               | Right         | Assignment                                   |
 
 ---
 
@@ -375,6 +377,7 @@ b = false
 
 print(a and b)  // false - Logical AND
 print(a or b)   // true  - Logical OR
+print(a xor b)  // true  - Logical XOR (exclusive or)
 print(not a)    // false - Logical NOT
 ```
 

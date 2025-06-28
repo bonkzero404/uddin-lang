@@ -1,0 +1,176 @@
+// ===================================
+// 12_logical_operators.din
+// Logical Operators: AND, OR, XOR
+// ===================================
+//
+// This example demonstrates the logical operators available in Uddin-Lang:
+// - AND (and): returns true if both operands are true
+// - OR (or): returns true if at least one operand is true
+// - XOR (xor): returns true if exactly one operand is true (exclusive or)
+
+fun test_logical_operators():
+    print("=== Logical Operators Truth Tables ===")
+
+    // AND truth table
+    print("\n1. AND Truth Table:")
+    print("  false and false =", false and false)
+    print("  false and true  =", false and true)
+    print("  true  and false =", true and false)
+    print("  true  and true  =", true and true)
+
+    // OR truth table
+    print("\n2. OR Truth Table:")
+    print("  false or false =", false or false)
+    print("  false or true  =", false or true)
+    print("  true  or false =", true or false)
+    print("  true  or true  =", true or true)
+
+    // XOR truth table
+    print("\n3. XOR Truth Table:")
+    print("  false xor false =", false xor false)
+    print("  false xor true  =", false xor true)
+    print("  true  xor false =", true xor false)
+    print("  true  xor true  =", true xor true)
+end
+
+fun validate_user_input(username, password, email):
+    // Input validation using logical operators
+    has_username = username != ""
+    has_password = password != ""
+    has_email = email != ""
+
+    valid_username = has_username and len(username) >= 3
+    valid_password = has_password and len(password) >= 8
+    valid_email = has_email and contains(email, "@") and contains(email, ".")
+
+    // Check validation results
+    print("=== User Input Validation ===")
+    print("Username:", username)
+    print("Password:", password)
+    print("Email:", email)
+    print()
+
+    print("Validation Results:")
+    print("  Valid username:", valid_username)
+    print("  Valid password:", valid_password)
+    print("  Valid email:", valid_email)
+
+    // Overall validation
+    all_valid = valid_username and valid_password and valid_email
+    any_valid = valid_username or valid_password or valid_email
+    exactly_one_valid = (valid_username xor valid_password xor valid_email) and not all_valid
+
+    print()
+    print("Summary:")
+    print("  All fields valid:", all_valid)
+    print("  At least one valid:", any_valid)
+    print("  Exactly one field valid:", exactly_one_valid)
+
+    return {
+        "username_valid": valid_username,
+        "password_valid": valid_password,
+        "email_valid": valid_email,
+        "all_valid": all_valid,
+        "recommendation": all_valid ? "Account can be created" :
+                        any_valid ? "Please fix invalid fields" :
+                        "All fields need correction"
+    }
+end
+
+fun access_control(is_admin, is_owner, is_member):
+    // Access control logic using logical operators
+    print("=== Access Control System ===")
+    print("Is Admin:", is_admin)
+    print("Is Owner:", is_owner)
+    print("Is Member:", is_member)
+    print()
+
+    // Different access levels
+    can_read = is_admin or is_owner or is_member
+    can_write = is_admin or is_owner
+    can_delete = is_admin or is_owner
+    can_admin = is_admin
+
+    // Special cases using XOR
+    guest_access = not (is_admin or is_owner or is_member)
+    exclusive_admin = is_admin xor is_owner xor is_member
+
+    print("Permissions:")
+    print("  Can read:", can_read)
+    print("  Can write:", can_write)
+    print("  Can delete:", can_delete)
+    print("  Can admin:", can_admin)
+    print("  Guest access:", guest_access)
+    print("  Has exactly one role:", exclusive_admin)
+
+    return {
+        "read": can_read,
+        "write": can_write,
+        "delete": can_delete,
+        "admin": can_admin,
+        "role": is_admin ? "admin" : is_owner ? "owner" : is_member ? "member" : "guest"
+    }
+end
+
+fun feature_flags(debug_mode, beta_features, admin_override):
+    // Feature flag system using logical operators
+    print("=== Feature Flag System ===")
+    print("Debug mode:", debug_mode)
+    print("Beta features:", beta_features)
+    print("Admin override:", admin_override)
+    print()
+
+    // Feature availability
+    show_debug_info = debug_mode or admin_override
+    enable_beta_features = beta_features or admin_override
+    show_admin_panel = admin_override
+
+    // Complex conditions
+    development_mode = debug_mode and not admin_override
+    production_safe = not debug_mode and not beta_features
+    mixed_environment = debug_mode xor beta_features
+
+    print("Feature Availability:")
+    print("  Show debug info:", show_debug_info)
+    print("  Enable beta features:", enable_beta_features)
+    print("  Show admin panel:", show_admin_panel)
+    print("  Development mode:", development_mode)
+    print("  Production safe:", production_safe)
+    print("  Mixed environment:", mixed_environment)
+
+    return {
+        "debug": show_debug_info,
+        "beta": enable_beta_features,
+        "admin": show_admin_panel,
+        "environment": production_safe ? "production" :
+                      development_mode ? "development" :
+                      mixed_environment ? "mixed" : "testing"
+    }
+end
+
+fun main():
+    print("=== Logical Operators Demonstration ===")
+
+    // Test basic operators
+    test_logical_operators()
+
+    print("\n" + "=" * 50)
+
+    // Test user validation
+    validation_result = validate_user_input("john", "password123", "john@email.com")
+    print("Recommendation:", validation_result["recommendation"])
+
+    print("\n" + "=" * 50)
+
+    // Test access control
+    access_result = access_control(false, true, false)
+    print("User role:", access_result["role"])
+
+    print("\n" + "=" * 50)
+
+    // Test feature flags
+    feature_result = feature_flags(true, false, false)
+    print("Environment:", feature_result["environment"])
+
+    print("\n=== Logical operators examples completed! ===")
+end

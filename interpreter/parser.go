@@ -294,9 +294,14 @@ func (p *parser) binary(parseFunc func() Expression, operators ...Token) Express
 	return expr
 }
 
-// expression = and (OR and)*
+// expression = xor (OR xor)*
 func (p *parser) expression() Expression {
-	return p.binary(p.and, OR)
+	return p.binary(p.xor, OR)
+}
+
+// xor = and (XOR and)*
+func (p *parser) xor() Expression {
+	return p.binary(p.and, XOR)
 }
 
 // and = not (AND not)*

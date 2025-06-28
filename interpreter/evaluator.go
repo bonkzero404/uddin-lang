@@ -81,6 +81,14 @@ func (e *Evaluator) evaluateBinary(node *Binary) Value {
 		}
 		right := e.EvaluateExpression(node.Right)
 		return IsTruthy(right)
+
+	case XOR:
+		left := e.EvaluateExpression(node.Left)
+		right := e.EvaluateExpression(node.Right)
+		// XOR returns true if exactly one operand is truthy
+		leftTruthy := IsTruthy(left)
+		rightTruthy := IsTruthy(right)
+		return leftTruthy != rightTruthy
 	}
 
 	// Evaluate both operands for other operators

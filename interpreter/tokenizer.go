@@ -68,6 +68,7 @@ const (
 	TRUE
 	TRY
 	WHILE
+	XOR
 
 	// Literals and identifiers
 	INT
@@ -97,6 +98,7 @@ var keywordTokens = map[string]Token{
 	"true":     TRUE,
 	"try":      TRY,
 	"while":    WHILE,
+	"xor":      XOR,
 }
 
 var tokenNames = map[Token]string{
@@ -150,6 +152,7 @@ var tokenNames = map[Token]string{
 	TRUE:     "true",
 	TRY:      "try",
 	WHILE:    "while",
+	XOR:      "xor",
 
 	INT:   "int",
 	FLOAT: "float",

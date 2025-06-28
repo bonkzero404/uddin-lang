@@ -522,6 +522,18 @@ func (interp *interpreter) evalOr(pos Position, le, re Expression) Value {
 	}
 }
 
+func (interp *interpreter) evalXor(pos Position, le, re Expression) Value {
+	l := interp.evaluate(le)
+	r := interp.evaluate(re)
+
+	// Convert to boolean values using IsTruthy for consistency with evaluator
+	leftTruthy := IsTruthy(l)
+	rightTruthy := IsTruthy(r)
+
+	// XOR returns true if exactly one operand is truthy
+	return Value(leftTruthy != rightTruthy)
+}
+
 func (interp *interpreter) callFunction(pos Position, f functionType, args []Value) (ret Value) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -545,6 +557,8 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 			return interp.evalAnd(e.Position(), e.Left, e.Right)
 		} else if e.Operator == OR {
 			return interp.evalOr(e.Position(), e.Left, e.Right)
+		} else if e.Operator == XOR {
+			return interp.evalXor(e.Position(), e.Left, e.Right)
 		}
 		// Parser should never give us this
 		panic(fmt.Sprintf("unknown binary operator %v", e.Operator))
@@ -610,7 +624,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		closure := interp.vars[len(interp.vars)-1]
 		return &userFunction{"", e.Parameters, e.Ellipsis, e.Body, closure}
 	default:
-		// Parser should never give us this
+		// Parser should never get us here
 		panic(fmt.Sprintf("unexpected expression type %T", expr))
 	}
 }
