@@ -253,20 +253,50 @@ func (t *Tokenizer) skipWhitespaceAndComments() {
 			t.next()
 		}
 
-		// Check if we're at the start of a comment (//)
-		if !(t.ch == '/' && t.offset < len(t.input) && t.input[t.offset] == '/') {
-			break
+		// Check for comments starting with '/'
+		if t.ch == '/' && t.offset < len(t.input) {
+			nextChar := rune(t.input[t.offset])
+
+			// Single-line comment (//)
+			if nextChar == '/' {
+				t.next() // Skip first '/'
+				t.next() // Skip second '/'
+
+				// Skip everything until end of line or end of input
+				for t.ch != '\n' && t.ch >= 0 {
+					t.next()
+				}
+				t.next() // Skip the newline character
+				continue
+			}
+
+			// Multi-line comment (/* */)
+			if nextChar == '*' {
+				t.next() // Skip '/'
+				t.next() // Skip '*'
+
+				// Skip everything until we find */
+				for {
+					if t.ch < 0 {
+						// Reached end of input without closing comment
+						t.errorMsg = "unterminated multiline comment"
+						return
+					}
+
+					if t.ch == '*' && t.offset < len(t.input) && rune(t.input[t.offset]) == '/' {
+						t.next() // Skip '*'
+						t.next() // Skip '/'
+						break
+					}
+
+					t.next()
+				}
+				continue
+			}
 		}
 
-		// Skip //-prefixed comment (to end of line or end of input)
-		t.next() // Skip first '/'
-		t.next() // Skip second '/'
-
-		// Skip everything until end of line or end of input
-		for t.ch != '\n' && t.ch >= 0 {
-			t.next()
-		}
-		t.next() // Skip the newline character
+		// No more comments or whitespace to skip
+		break
 	}
 }
 

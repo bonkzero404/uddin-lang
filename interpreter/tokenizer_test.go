@@ -50,6 +50,26 @@ func TestTokenizer(t *testing.T) {
 			expected: []Token{TRY, COLON, NAME, ASSIGN, INT, DIVIDE, INT, CATCH, LPAREN, NAME, RPAREN, COLON, NAME, LPAREN, NAME, RPAREN, END, EOF},
 			values:   []string{"", "", "x", "", "1", "", "0", "", "", "err", "", "", "print", "", "err", "", "", ""},
 		},
+		{
+			input:    "/* This is a multiline comment */ x = 5",
+			expected: []Token{NAME, ASSIGN, INT, EOF},
+			values:   []string{"x", "", "5", ""},
+		},
+		{
+			input:    "x = 5 /* inline comment */ + 3",
+			expected: []Token{NAME, ASSIGN, INT, PLUS, INT, EOF},
+			values:   []string{"x", "", "5", "", "3", ""},
+		},
+		{
+			input:    "/* \n multiline \n comment \n */ x = 10",
+			expected: []Token{NAME, ASSIGN, INT, EOF},
+			values:   []string{"x", "", "10", ""},
+		},
+		{
+			input:    "// single line\n/* multiline */ x = 1",
+			expected: []Token{NAME, ASSIGN, INT, EOF},
+			values:   []string{"x", "", "1", ""},
+		},
 	}
 
 	for i, test := range tests {
@@ -164,5 +184,27 @@ func TestTokenizerNumberLiterals(t *testing.T) {
 		if test.value != "" && value != test.value {
 			t.Errorf("Test %d: expected value '%s', got '%s'", i, test.value, value)
 		}
+	}
+}
+
+// TestUnterminatedMultilineComment tests that unterminated multiline comments produce errors
+func TestUnterminatedMultilineComment(t *testing.T) {
+	input := "x = 5 /* this comment never ends"
+	tokenizer := NewTokenizer([]byte(input))
+
+	// Skip the valid tokens first
+	tokenizer.Next() // NAME
+	tokenizer.Next() // ASSIGN
+	tokenizer.Next() // INT
+
+	// This should trigger the unterminated comment error
+	_, token, value := tokenizer.Next()
+
+	if token != ILLEGAL {
+		t.Errorf("Expected ILLEGAL token for unterminated comment, got %s", token)
+	}
+
+	if value != "unterminated multiline comment" {
+		t.Errorf("Expected error message 'unterminated multiline comment', got '%s'", value)
 	}
 }
