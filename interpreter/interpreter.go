@@ -522,7 +522,7 @@ func (interp *interpreter) evalOr(pos Position, le, re Expression) Value {
 	}
 }
 
-func (interp *interpreter) evalXor(pos Position, le, re Expression) Value {
+func (interp *interpreter) evalXor(_ Position, le, re Expression) Value {
 	l := interp.evaluate(le)
 	r := interp.evaluate(re)
 
