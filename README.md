@@ -23,21 +23,19 @@
 
 ## 📖 Table of Contents
 
--   [About Uddin-Lang](#about-uddin-lang)
--   [Language Philosophy & Inspiration](#language-philosophy--inspiration)
--   [Key Features](#key-features)
--   [Quick Start](#quick-start)
--   [Language Grammar](#language-grammar)
--   [Architecture Overview](#architecture-overview)
--   [Syntax Reference](#syntax-reference)
+-   [About Uddin-Lang](#-about-uddin-lang)
+-   [Language Philosophy & Inspiration](#-language-philosophy--inspiration)
+-   [Key Features](#-key-features)
+-   [Quick Start](#-quick-start)
+-   [Language Grammar](#-language-grammar)
+-   [Architecture Overview](#️-architecture-overview)
+-   [Syntax Reference](#-syntax-reference)
 -   [Error Reporting & Debugging](#-error-reporting--debugging)
 -   [Module System](#module-system)
--   [Built-in Functions](#built-in-functions)
--   [Examples](#examples)
--   [Development](#development)
--   [Contributing](#contributing)
--   [License](#license)
--   [Acknowledgments](#acknowledgments)
+-   [Built-in Functions](#-built-in-functions)
+-   [Examples](#-examples)
+-   [Development](#️-development)
+-   [Contributing](#-contributing)
 
 ---
 
