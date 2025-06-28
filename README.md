@@ -27,6 +27,8 @@
 -   [Language Philosophy & Inspiration](#-language-philosophy--inspiration)
 -   [Key Features](#-key-features)
 -   [Quick Start](#-quick-start)
+    -   [CLI Features & Development Tools](#️-cli-features--development-tools)
+    -   [Development Workflow Use Cases](#-development-workflow-use-cases)
 -   [Language Grammar](#-language-grammar)
 -   [Architecture Overview](#️-architecture-overview)
 -   [Syntax Reference](#-syntax-reference)
@@ -40,7 +42,14 @@
 
 ## 🌟 About Uddin-Lang
 
-Uddin-Lang is a modern, interpreted programming language designed with simplicity, expressiveness, and functional programming principles in mind. It combines the best features of dynamic languages with a clean, readable syntax that makes programming enjoyable and productive.
+Uddin-Lang is a modern, interpreted scripting language designed with simplicity, expressiveness, and functional programming principles in mind. It combines the best features of dynamic languages with a clean, readable syntax that makes programming enjoyable and productive.
+
+**Key Highlights:**
+
+-   🚀 **Fast Development Cycle** with built-in syntax analysis and profiling tools
+-   🛠️ **Developer-Centric CLI** with comprehensive development workflow support
+-   📊 **Performance Monitoring** through integrated profiling capabilities
+-   🔍 **Smart Error Reporting** with precise location indicators and context
 
 ### 🎭 Language Category
 
@@ -49,7 +58,8 @@ Uddin-Lang can be categorized as:
 -   **Primary**: Scripting Language (like Python, JavaScript, Ruby)
 -   **Architecture**: Interpreted Language (no compilation required)
 -   **Paradigm**: Multi-paradigm (functional, procedural concepts)
--   **Use Cases**: Automation scripts, rapid prototyping, embedded scripting, general programming, rule engine
+-   **Use Cases**: Automation scripts, rapid prototyping, embedded scripting, general programming
+-   **Development**: CLI-first with integrated development tools
 
 ### 🎯 Design Goals
 
@@ -60,6 +70,7 @@ Uddin-Lang can be categorized as:
 -   **Safe**: Built-in error handling and null safety concepts
 -   **Developer-Friendly**: Clear error messages with precise location indicators
 -   **Modern**: Contemporary language features
+-   **Tooling-First**: Integrated development tools for enhanced productivity
 
 ---
 
@@ -108,6 +119,14 @@ graph TD
 -   ✅ **Functional Programming** paradigms
 -   ✅ **Memory Safe** with garbage collection
 -   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
+
+### 🛠️ Developer Tools
+
+-   ✅ **Syntax Analysis** (`--analyze`) - Fast syntax checking without execution
+-   ✅ **Performance Profiling** (`--profile`) - Detailed execution metrics and timing
+-   ✅ **Interactive CLI** with comprehensive help and examples
+-   ✅ **Developer-Friendly Error Messages** with source code context
+-   ✅ **Multiple Execution Modes** - Analysis, profiling, and standard execution
 
 ---
 
@@ -171,6 +190,122 @@ The language comes with comprehensive examples showcasing all features:
 ./uddinlang examples/13_assignment_operators.din  # Compound assignments (+=, -=, etc.)
 ./uddinlang examples/01_hello_world.din          # Basic syntax
 ./uddinlang examples/03_math_library.din         # Mathematical functions
+```
+
+### 🛠️ CLI Features & Development Tools
+
+Uddin-Lang provides powerful command-line tools for development workflow:
+
+#### Syntax Analysis
+
+Check your code syntax without execution - perfect for development and CI/CD:
+
+```bash
+# Analyze syntax only (fast feedback)
+./uddinlang --analyze script.din
+./uddinlang -a script.din
+
+# Example output for valid syntax:
+# ✓ Syntax analysis passed - No syntax errors found
+
+# Example output for syntax errors:
+# -----------------------------------------------------------
+#     if (true):
+#              ^
+# -----------------------------------------------------------
+# Syntax Error: parse error at 6:14: expected then, but got :
+```
+
+#### Performance Profiling
+
+Monitor execution performance and optimization metrics:
+
+```bash
+# Run with performance profiling
+./uddinlang --profile script.din
+./uddinlang -p script.din
+
+# Example profiling output:
+# Time Program Execution: 254.166µs
+# Elapsed Operation: 53 Ops (208525/s)
+# Builtin Calls: 8 (31475/s)
+# User Calls: 1 (3934/s)
+```
+
+#### Available CLI Commands
+
+| Command      | Short | Description                       |
+| ------------ | ----- | --------------------------------- |
+| `--help`     | `-h`  | Show usage information            |
+| `--version`  | `-v`  | Display version information       |
+| `--examples` | `-e`  | List all available example files  |
+| `--analyze`  | `-a`  | Syntax analysis without execution |
+| `--profile`  | `-p`  | Enable performance profiling      |
+
+#### Usage Examples
+
+```bash
+# Basic execution
+./uddinlang script.din
+
+# Development workflow
+./uddinlang --analyze script.din    # Check syntax first
+./uddinlang --profile script.din    # Run with performance monitoring
+
+# Flexible flag positioning
+./uddinlang script.din --analyze    # Flags can be placed after filename
+./uddinlang -a -p script.din        # Multiple flags (analyze takes priority)
+
+# Get help and examples
+./uddinlang --help                  # Show usage
+./uddinlang --examples              # List example files
+./uddinlang --version               # Show version info
+```
+
+---
+
+## 🎯 Development Workflow Use Cases
+
+Uddin-Lang CLI tools support various development scenarios:
+
+#### 🔍 **Syntax Validation in CI/CD**
+
+```bash
+# Validate all scripts in a project
+find . -name "*.din" -exec ./uddinlang --analyze {} \;
+
+# Exit code integration for CI/CD pipelines
+./uddinlang --analyze script.din && echo "Syntax OK" || echo "Syntax Error"
+```
+
+#### 📊 **Performance Optimization**
+
+```bash
+# Before optimization
+./uddinlang --profile slow_script.din
+
+# After optimization
+./uddinlang --profile optimized_script.din
+
+# Compare execution metrics to measure improvements
+```
+
+#### 🚀 **Rapid Development**
+
+```bash
+# Edit-check-run cycle
+vim script.din                      # Edit script
+./uddinlang --analyze script.din     # Quick syntax check
+./uddinlang script.din               # Run if syntax is valid
+```
+
+#### 🧪 **IDE/Editor Integration**
+
+```bash
+# Language servers can use syntax analysis
+./uddinlang --analyze file.din 2>&1 | parse_errors
+
+# Real-time syntax highlighting based on analysis results
 ```
 
 ---
