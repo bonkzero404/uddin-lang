@@ -125,11 +125,19 @@ func evalEqual(pos Position, l, r Value) Value {
 		if r, ok := r.(int); ok {
 			return Value(l == r)
 		}
+		// Mixed int/float equality
+		if r, ok := r.(float64); ok {
+			return Value(float64(l) == r)
+		}
 
 	case float64:
 		// Float equality
 		if r, ok := r.(float64); ok {
 			return Value(l == r)
+		}
+		// Mixed float/int equality
+		if r, ok := r.(int); ok {
+			return Value(l == float64(r))
 		}
 
 	case string:
@@ -246,11 +254,19 @@ func evalLess(pos Position, l, r Value) Value {
 		if r, ok := r.(int); ok {
 			return Value(l < r)
 		}
+		// Mixed int/float comparison
+		if r, ok := r.(float64); ok {
+			return Value(float64(l) < r)
+		}
 
 	case float64:
 		// Float comparison
 		if r, ok := r.(float64); ok {
 			return Value(l < r)
+		}
+		// Mixed float/int comparison
+		if r, ok := r.(int); ok {
+			return Value(l < float64(r))
 		}
 
 	case string:
