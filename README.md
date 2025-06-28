@@ -1087,18 +1087,6 @@ end
 | `SQRT2`  | Square root of 2        | `1.41421356237` |
 | `SQRT3`  | Square root of 3        | `1.73205080757` |
 
-#### Utility Functions
-
-| Function             | Description                | Example                         |
-| -------------------- | -------------------------- | ------------------------------- | ----- |
-| `sign(x)`            | Sign of number (-1, 0, 1)  | `sign(-5)` → `-1`               |
-| `clamp(x, min, max)` | Clamp value to range       | `clamp(15, 1, 10)` → `10`       |
-| `lerp(a, b, t)`      | Linear interpolation       | `lerp(0, 10, 0.5)` → `5.0`      | float |
-| `degrees(radians)`   | Convert radians to degrees | `degrees(PI)` → `180.0`         | float |
-| `radians(degrees)`   | Convert degrees to radians | `radians(180)` → `3.14159`      | float |
-| `is_nan(x)`          | Check if value is NaN      | `is_nan(0.0/0.0)` → `true`      | bool  |
-| `is_infinite(x)`     | Check if value is infinite | `is_infinite(1.0/0.0)` → `true` | bool  |
-
 ### I/O Functions
 
 | Function                    | Description       | Example                           |
@@ -1110,12 +1098,19 @@ end
 
 ### Utility Functions
 
-| Function                 | Description       | Example                                 |
-| ------------------------ | ----------------- | --------------------------------------- |
-| `date_now()`             | Current timestamp | `date_now()` → `"2025-06-26T14:30:00Z"` |
-| `date_format(date, fmt)` | Format date       | `date_format(date_now(), "YYYY-MM-DD")` |
-| `exit(code)`             | Exit program      | `exit(0)`                               |
-| `sleep(seconds)`         | Pause execution   | `sleep(1.5)`                            |
+| Function                 | Description                | Example                                 |
+| ------------------------ | -------------------------- | --------------------------------------- |
+| `sign(x)`                | Sign of number (-1, 0, 1)  | `sign(-5)` → `-1`                       |
+| `clamp(x, min, max)`     | Clamp value to range       | `clamp(15, 1, 10)` → `10`               |
+| `lerp(a, b, t)`          | Linear interpolation       | `lerp(0, 10, 0.5)` → `5.0`              |
+| `degrees(radians)`       | Convert radians to degrees | `degrees(PI)` → `180.0`                 |
+| `radians(degrees)`       | Convert degrees to radians | `radians(180)` → `3.14159`              |
+| `is_nan(x)`              | Check if value is NaN      | `is_nan(0.0/0.0)` → `true`              |
+| `is_infinite(x)`         | Check if value is infinite | `is_infinite(1.0/0.0)` → `true`         |
+| `date_now()`             | Current timestamp          | `date_now()` → `"2025-06-26T14:30:00Z"` |
+| `date_format(date, fmt)` | Format date                | `date_format(date_now(), "YYYY-MM-DD")` |
+| `exit(code)`             | Exit program               | `exit(0)`                               |
+| `sleep(seconds)`         | Pause execution            | `sleep(1.5)`                            |
 
 ---
 
