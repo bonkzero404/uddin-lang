@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"strings"
 )
@@ -322,22 +323,18 @@ func evalMinus(pos Position, l, r Value) Value {
 	if li, ok := l.(int); ok {
 		if ri, ok := r.(int); ok {
 			return Value(li - ri)
+		} else if rf, ok := r.(float64); ok {
+			return Value(float64(li) - rf)
 		}
 	} else if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
 			return Value(lf - rf)
-		}
-	} else if li, ok := l.(int); ok {
-		if rf, ok := r.(float64); ok {
-			return Value(float64(li) - rf)
-		}
-	} else if lf, ok := l.(float64); ok {
-		if ri, ok := r.(int); ok {
+		} else if ri, ok := r.(int); ok {
 			return Value(lf - float64(ri))
 		}
 	}
 
-	panic(typeError(pos, "- requires two floats or integers"))
+	panic(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
 }
 
 func evalTimes(pos Position, l, r Value) Value {
@@ -883,6 +880,17 @@ func newInterpreter(config *Config) *interpreter {
 	for k, v := range builtins {
 		interp.assign(k, v)
 	}
+
+	// Add mathematical constants
+	interp.assign("PI", Value(math.Pi))
+	interp.assign("E", Value(math.E))
+	interp.assign("TAU", Value(2 * math.Pi))
+	interp.assign("PHI", Value((1 + math.Sqrt(5)) / 2))  // Golden ratio
+	interp.assign("LN2", Value(math.Ln2))
+	interp.assign("LN10", Value(math.Ln10))
+	interp.assign("SQRT2", Value(math.Sqrt2))
+	interp.assign("SQRT3", Value(math.Sqrt(3)))
+
 	for k, v := range config.Vars {
 		interp.assign(k, v)
 	}

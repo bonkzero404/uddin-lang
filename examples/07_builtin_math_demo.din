@@ -1,0 +1,103 @@
+// ===================================
+// 07_builtin_math_demo.din
+// Built-in Math Functions Demo
+// ===================================
+//
+// This example demonstrates the comprehensive built-in mathematical
+// functions available in Uddin-Lang, including basic operations,
+// trigonometry, statistics, and mathematical constants.
+
+fun main():
+    print("=== Built-in Mathematical Functions Demo ===")
+
+    // =========== MATHEMATICAL CONSTANTS ===========
+    print("\n1. Mathematical Constants:")
+    print("  PI =", PI)
+    print("  E =", E)
+    print("  TAU (2π) =", TAU)
+    print("  PHI (Golden Ratio) =", PHI)
+    print("  LN2 =", LN2)
+    print("  SQRT2 =", SQRT2)
+
+    // =========== BASIC MATH OPERATIONS ===========
+    print("\n2. Basic Math Operations:")
+    print("  abs(-15) =", abs(-15))
+    print("  max(10, 25, 7, 33) =", max(10, 25, 7, 33))
+    print("  min(10, 25, 7, 33) =", min(10, 25, 7, 33))
+    print("  pow(2, 8) =", pow(2, 8))
+    print("  sqrt(64) =", sqrt(64))
+    print("  cbrt(125) =", cbrt(125))
+
+    // =========== ROUNDING FUNCTIONS ===========
+    print("\n3. Rounding Functions:")
+    value = 3.14159
+    print("  Original value:", value)
+    print("  round(value) =", round(value))
+    print("  round(value, 2) =", round(value, 2))
+    print("  floor(value) =", floor(value))
+    print("  ceil(value) =", ceil(value))
+    print("  trunc(value) =", trunc(value))
+
+    // =========== TRIGONOMETRIC FUNCTIONS ===========
+    print("\n4. Trigonometric Functions:")
+    angles = [0, 30, 45, 60, 90]
+    for (angle in angles):
+        rad = radians(angle)
+        print("  " + str(angle) + "° -> sin=" + str(round(sin(rad), 4)) +
+              ", cos=" + str(round(cos(rad), 4)))
+    end
+
+    // =========== LOGARITHMIC FUNCTIONS ===========
+    print("\n5. Logarithmic Functions:")
+    print("  log(E) =", round(log(E), 4))
+    print("  log10(1000) =", log10(1000))
+    print("  log2(256) =", log2(256))
+    print("  exp(2) =", round(exp(2), 4))
+    print("  exp2(3) =", exp2(3))
+
+    // =========== ARRAY STATISTICAL FUNCTIONS ===========
+    print("\n6. Statistical Functions:")
+    data = [10, 15, 20, 25, 30, 35, 40]
+    print("  Data:", data)
+    print("  sum =", sum(data))
+    print("  mean =", round(mean(data), 2))
+    print("  median =", median(data))
+    print("  std_dev =", round(std_dev(data), 2))
+    print("  min =", min(data))
+    print("  max =", max(data))
+
+    // =========== NUMBER THEORY ===========
+    print("\n7. Number Theory Functions:")
+    print("  factorial(7) =", factorial(7))
+    print("  fibonacci(15) =", fibonacci(15))
+    print("  gcd(48, 18) =", gcd(48, 18))
+    print("  lcm(12, 15) =", lcm(12, 15))
+    print("  is_prime(97) =", is_prime(97))
+    print("  prime_factors(60) =", prime_factors(60))
+
+    // =========== UTILITY FUNCTIONS ===========
+    print("\n8. Utility Functions:")
+    print("  sign(-10) =", sign(-10))
+    print("  sign(0) =", sign(0))
+    print("  sign(10) =", sign(10))
+    print("  clamp(150, 0, 100) =", clamp(150, 0, 100))
+    print("  lerp(0, 100, 0.3) =", lerp(0, 100, 0.3))
+    print("  degrees(PI/4) =", degrees(PI/4))
+
+    // =========== RANDOM FUNCTIONS ===========
+    print("\n9. Random Functions:")
+    seed_random(42)  // For reproducible results
+    print("  random() =", round(random(), 3))
+    print("  random_int(1, 20) =", random_int(1, 20))
+    print("  random_float(1.0, 5.0) =", round(random_float(1.0, 5.0), 3))
+
+    choices = ["red", "green", "blue", "yellow"]
+    print("  random_choice from", choices, "=", random_choice(choices))
+
+    numbers = [1, 2, 3, 4, 5]
+    print("  Before shuffle:", numbers)
+    shuffle(numbers)
+    print("  After shuffle:", numbers)
+
+    print("\n=== Demo completed! ===")
+end

@@ -1,0 +1,144 @@
+// ===================================
+// 08_statistics_analysis.din
+// Statistical Analysis Example
+// ===================================
+//
+// This example demonstrates statistical analysis capabilities
+// using built-in mathematical functions for data analysis.
+
+fun analyze_dataset(name, data):
+    print("=== Analysis of", name, "===")
+    print("Dataset:", data)
+    print("Count:", len(data))
+
+    // Basic statistics
+    print("\nBasic Statistics:")
+    print("  Sum:", sum(data))
+    print("  Mean:", round(mean(data), 2))
+    print("  Median:", median(data))
+    print("  Min:", min(data))
+    print("  Max:", max(data))
+    print("  Range:", max(data) - min(data))
+
+    // Variability measures
+    print("\nVariability:")
+    print("  Standard Deviation:", round(std_dev(data), 2))
+    print("  Variance:", round(variance(data), 2))
+
+    // Find outliers (values more than 2 standard deviations from mean)
+    avg = mean(data)
+    std = std_dev(data)
+    outliers = []
+
+    for (value in data):
+        if (abs(value - avg) > 2 * std) then:
+            append(outliers, value)
+        end
+    end
+
+    if (len(outliers) > 0) then:
+        print("  Outliers (>2σ):", outliers)
+    else:
+        print("  No outliers detected")
+    end
+end
+
+fun compare_datasets(name1, data1, name2, data2):
+    print("\n=== Comparing", name1, "vs", name2, "===")
+
+    mean1 = mean(data1)
+    mean2 = mean(data2)
+    std1 = std_dev(data1)
+    std2 = std_dev(data2)
+
+    print("Mean comparison:")
+    print(" ", name1 + ":", round(mean1, 2))
+    print(" ", name2 + ":", round(mean2, 2))
+    print("  Difference:", round(abs(mean1 - mean2), 2))
+
+    print("Variability comparison:")
+    print(" ", name1, "std dev:", round(std1, 2))
+    print(" ", name2, "std dev:", round(std2, 2))
+
+    if (std1 > std2) then:
+        print(" ", name1, "is more variable")
+    else if (std2 > std1) then:
+        print(" ", name2, "is more variable")
+    else:
+        print("  Both datasets have similar variability")
+    end
+end
+
+fun distribution_analysis(data):
+    print("\n=== Distribution Analysis ===")
+
+    // Calculate quartiles
+    sorted_data = data
+    sort(sorted_data)
+    n = len(sorted_data)
+
+    q1_idx = n / 4
+    q3_idx = 3 * n / 4
+
+    print("Quartiles:")
+    print("  Q1 (25%):", sorted_data[floor(q1_idx)])
+    print("  Q2 (50%, Median):", median(sorted_data))
+    print("  Q3 (75%):", sorted_data[floor(q3_idx)])
+
+    // Skewness indicator (simple check)
+    avg = mean(data)
+    med = median(data)
+
+    if (avg > med) then:
+        print("Distribution: Right-skewed (positive skew)")
+    else if (avg < med) then:
+        print("Distribution: Left-skewed (negative skew)")
+    else:
+        print("Distribution: Approximately symmetric")
+    end
+end
+
+fun main():
+    print("=== Statistical Analysis Demo ===")
+
+    // Sample datasets
+    test_scores = [78, 85, 92, 88, 76, 95, 82, 89, 91, 87, 79, 94]
+    temperatures = [22.5, 24.1, 23.8, 25.2, 21.9, 26.3, 23.1, 24.7, 22.8, 25.0]
+    sales_data = [120, 135, 98, 156, 142, 89, 167, 134, 145, 178, 125, 91]
+
+    // Analyze each dataset
+    analyze_dataset("Test Scores", test_scores)
+    analyze_dataset("Daily Temperatures (°C)", temperatures)
+    analyze_dataset("Weekly Sales", sales_data)
+
+    // Compare datasets
+    compare_datasets("Test Scores", test_scores, "Sales Data", sales_data)
+
+    // Distribution analysis
+    distribution_analysis(test_scores)
+
+    // Generate sample data with different distributions
+    print("\n=== Generating Sample Data ===")
+
+    // Normal-like distribution using central limit theorem
+    seed_random(123)
+    normal_sample = []
+    for (i in range(100)):
+        // Sum of 12 uniform random numbers approximates normal distribution
+        sum_val = 0
+        for (j in range(12)):
+            sum_val = sum_val + random()
+        end
+        // Center and scale
+        value = (sum_val - 6) * 10 + 50
+        append(normal_sample, round(value, 1))
+    end
+
+    print("Generated normal-like sample (n=100):")
+    print("  Mean:", round(mean(normal_sample), 2))
+    print("  Std Dev:", round(std_dev(normal_sample), 2))
+    print("  Min:", min(normal_sample))
+    print("  Max:", max(normal_sample))
+
+    print("\n=== Analysis completed! ===")
+end

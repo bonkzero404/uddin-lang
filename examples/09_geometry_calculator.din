@@ -1,0 +1,208 @@
+// ===================================
+// 09_geometry_calculator.din
+// Geometric Calculations Example
+// ===================================
+//
+// This example demonstrates geometric calculations using
+// built-in trigonometric and mathematical functions.
+
+fun calculate_circle(radius):
+    print("=== Circle with radius", radius, "===")
+
+    area = PI * pow(radius, 2)
+    circumference = 2 * PI * radius
+    diameter = 2 * radius
+
+    print("  Diameter:", diameter)
+    print("  Circumference:", round(circumference, 2))
+    print("  Area:", round(area, 2))
+
+    return {
+        "radius": radius,
+        "diameter": diameter,
+        "circumference": circumference,
+        "area": area
+    }
+end
+
+fun calculate_triangle(a, b, c):
+    print("=== Triangle with sides", a, ",", b, ",", c, "===")
+
+    // Check if it's a valid triangle
+    if (a + b <= c or a + c <= b or b + c <= a) then:
+        print("  Error: Invalid triangle (triangle inequality violated)")
+        return null
+    end
+
+    // Calculate perimeter
+    perimeter = a + b + c
+
+    // Calculate area using Heron's formula
+    s = perimeter / 2
+    area_squared = s * (s - a) * (s - b) * (s - c)
+    area = sqrt(area_squared)
+
+    // Calculate angles using law of cosines
+    // cos(A) = (b² + c² - a²) / (2bc)
+    cos_A = (pow(b, 2) + pow(c, 2) - pow(a, 2)) / (2 * b * c)
+    cos_B = (pow(a, 2) + pow(c, 2) - pow(b, 2)) / (2 * a * c)
+    cos_C = (pow(a, 2) + pow(b, 2) - pow(c, 2)) / (2 * a * b)
+
+    angle_A = degrees(acos(cos_A))
+    angle_B = degrees(acos(cos_B))
+    angle_C = degrees(acos(cos_C))
+
+    print("  Perimeter:", perimeter)
+    print("  Area:", round(area, 2))
+    print("  Angles:")
+    print("    A:", round(angle_A, 1), "°")
+    print("    B:", round(angle_B, 1), "°")
+    print("    C:", round(angle_C, 1), "°")
+    print("    Sum:", round(angle_A + angle_B + angle_C, 1), "°")
+
+    // Classify triangle
+    if (abs(angle_A - 90.0) < 0.1 or abs(angle_B - 90.0) < 0.1 or abs(angle_C - 90.0) < 0.1) then:
+        print("  Type: Right triangle")
+    else if (angle_A > 90.0 or angle_B > 90.0 or angle_C > 90.0) then:
+        print("  Type: Obtuse triangle")
+    else:
+        print("  Type: Acute triangle")
+    end
+
+    return {
+        "sides": [a, b, c],
+        "perimeter": perimeter,
+        "area": area,
+        "angles": [angle_A, angle_B, angle_C]
+    }
+end
+
+fun calculate_rectangle(length, width):
+    print("=== Rectangle", length, "x", width, "===")
+
+    area = length * width
+    perimeter = 2 * (length + width)
+    diagonal = sqrt(pow(length, 2) + pow(width, 2))
+
+    print("  Area:", area)
+    print("  Perimeter:", perimeter)
+    print("  Diagonal:", round(diagonal, 2))
+
+    if (length == width) then:
+        print("  Type: Square")
+    else:
+        ratio = max(length, width) / min(length, width)
+        print("  Aspect ratio:", str(round(ratio, 2)) + ":1")
+    end
+
+    return {
+        "length": length,
+        "width": width,
+        "area": area,
+        "perimeter": perimeter,
+        "diagonal": diagonal
+    }
+end
+
+fun calculate_sphere(radius):
+    print("=== Sphere with radius", radius, "===")
+
+    volume = (4.0 / 3.0) * PI * pow(radius, 3)
+    surface_area = 4 * PI * pow(radius, 2)
+
+    print("  Volume:", round(volume, 2))
+    print("  Surface Area:", round(surface_area, 2))
+
+    return {
+        "radius": radius,
+        "volume": volume,
+        "surface_area": surface_area
+    }
+end
+
+fun distance_between_points(x1, y1, x2, y2):
+    dx = x2 - x1
+    dy = y2 - y1
+    distance = sqrt(pow(dx, 2) + pow(dy, 2))
+
+    print("Distance between (" + str(x1) + "," + str(y1) + ") and (" +
+          str(x2) + "," + str(y2) + ") = " + str(round(distance, 2)))
+
+    return distance
+end
+
+fun angle_from_horizontal(x1, y1, x2, y2):
+    dx = x2 - x1
+    dy = y2 - y1
+
+    if (dx == 0) then:
+        if (dy > 0) then:
+            return 90.0
+        else:
+            return -90.0
+        end
+    end
+
+    angle_rad = atan(dy / dx)
+    angle_deg = degrees(angle_rad)
+
+    // Adjust for quadrant
+    if (dx < 0) then:
+        angle_deg = angle_deg + 180
+    end
+
+    return angle_deg
+end
+
+fun main():
+    print("=== Geometric Calculator Demo ===")
+
+    // Circle calculations
+    calculate_circle(5)
+    calculate_circle(12.5)
+
+    // Triangle calculations
+    calculate_triangle(3, 4, 5)      // Right triangle
+    calculate_triangle(5, 5, 5)      // Equilateral triangle
+    calculate_triangle(7, 10, 15)    // Scalene triangle
+
+    // Rectangle calculations
+    calculate_rectangle(10, 6)
+    calculate_rectangle(8, 8)        // Square
+
+    // Sphere calculations
+    calculate_sphere(3)
+    calculate_sphere(7.5)
+
+    // Distance and angle calculations
+    print("\n=== Coordinate Geometry ===")
+    distance_between_points(0, 0, 3, 4)
+    distance_between_points(-2, 1, 4, -3)
+
+    angle1 = angle_from_horizontal(0, 0, 1, 1)
+    angle2 = angle_from_horizontal(0, 0, -1, 1)
+    print("Angle from (0,0) to (1,1):", round(angle1, 1), "°")
+    print("Angle from (0,0) to (-1,1):", round(angle2, 1), "°")
+
+    // Special triangles demonstration
+    print("\n=== Special Triangles ===")
+
+    // 30-60-90 triangle
+    print("30-60-90 triangle properties:")
+    side = 2
+    short_side = side
+    long_side = side * sqrt(3)
+    hypotenuse = 2 * side
+    print("  If short side =", short_side)
+    print("  Then long side =", round(long_side, 2))
+    print("  And hypotenuse =", hypotenuse)
+
+    // 45-45-90 triangle
+    print("\n45-45-90 triangle properties:")
+    leg = 3
+    hyp_45 = leg * sqrt(2)
+    print("  If leg =", leg)
+    print("  Then hypotenuse =", round(hyp_45, 2))
+
+    print("\n=== Geometry calculations completed! ===")
+end

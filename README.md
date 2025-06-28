@@ -765,18 +765,117 @@ for (i in range(1, 11)):
 end
 ```
 
-### Math Functions (Planned)
+### Math Functions
 
-| Function         | Description      | Example              |
-| ---------------- | ---------------- | -------------------- |
-| `abs(x)`         | Absolute value   | `abs(-5)` → `5`      |
-| `max(a, b, ...)` | Maximum value    | `max(1, 5, 3)` → `5` |
-| `min(a, b, ...)` | Minimum value    | `min(1, 5, 3)` → `1` |
-| `pow(base, exp)` | Power function   | `pow(2, 3)` → `8`    |
-| `sqrt(x)`        | Square root      | `sqrt(16)` → `4`     |
-| `round(x)`       | Round to nearest | `round(3.7)` → `4`   |
-| `floor(x)`       | Round down       | `floor(3.7)` → `3`   |
-| `ceil(x)`        | Round up         | `ceil(3.2)` → `4`    |
+#### Basic Math Operations
+
+| Function         | Description    | Example              | Return Type |
+| ---------------- | -------------- | -------------------- | ----------- |
+| `abs(x)`         | Absolute value | `abs(-5)` → `5`      | int/float   |
+| `max(a, b, ...)` | Maximum value  | `max(1, 5, 3)` → `5` | int/float   |
+| `min(a, b, ...)` | Minimum value  | `min(1, 5, 3)` → `1` | int/float   |
+| `pow(base, exp)` | Power function | `pow(2, 3)` → `8`    | int/float   |
+| `sqrt(x)`        | Square root    | `sqrt(16)` → `4.0`   | float       |
+| `cbrt(x)`        | Cube root      | `cbrt(27)` → `3.0`   | float       |
+
+#### Rounding Functions
+
+| Function      | Description               | Example                      | Return Type |
+| ------------- | ------------------------- | ---------------------------- | ----------- |
+| `round(x)`    | Round to nearest integer  | `round(3.7)` → `4`           | int         |
+| `round(x, n)` | Round to n decimal places | `round(3.14159, 2)` → `3.14` | float       |
+| `floor(x)`    | Round down (floor)        | `floor(3.7)` → `3`           | int         |
+| `ceil(x)`     | Round up (ceiling)        | `ceil(3.2)` → `4`            | int         |
+| `trunc(x)`    | Truncate decimal part     | `trunc(3.7)` → `3`           | int         |
+
+#### Trigonometric Functions
+
+| Function      | Description                   | Example                  | Return Type |
+| ------------- | ----------------------------- | ------------------------ | ----------- |
+| `sin(x)`      | Sine (radians)                | `sin(PI/2)` → `1.0`      | float       |
+| `cos(x)`      | Cosine (radians)              | `cos(0)` → `1.0`         | float       |
+| `tan(x)`      | Tangent (radians)             | `tan(PI/4)` → `1.0`      | float       |
+| `asin(x)`     | Arc sine (returns radians)    | `asin(1)` → `1.5708`     | float       |
+| `acos(x)`     | Arc cosine (returns radians)  | `acos(1)` → `0.0`        | float       |
+| `atan(x)`     | Arc tangent (returns radians) | `atan(1)` → `0.7854`     | float       |
+| `atan2(y, x)` | Arc tangent of y/x            | `atan2(1, 1)` → `0.7854` | float       |
+
+#### Hyperbolic Functions
+
+| Function  | Description        | Example           | Return Type |
+| --------- | ------------------ | ----------------- | ----------- |
+| `sinh(x)` | Hyperbolic sine    | `sinh(0)` → `0.0` | float       |
+| `cosh(x)` | Hyperbolic cosine  | `cosh(0)` → `1.0` | float       |
+| `tanh(x)` | Hyperbolic tangent | `tanh(0)` → `0.0` | float       |
+
+#### Logarithmic Functions
+
+| Function        | Description                | Example                | Return Type |
+| --------------- | -------------------------- | ---------------------- | ----------- |
+| `log(x)`        | Natural logarithm (ln)     | `log(E)` → `1.0`       | float       |
+| `log10(x)`      | Base-10 logarithm          | `log10(100)` → `2.0`   | float       |
+| `log2(x)`       | Base-2 logarithm           | `log2(8)` → `3.0`      | float       |
+| `logb(x, base)` | Logarithm with custom base | `logb(125, 5)` → `3.0` | float       |
+| `exp(x)`        | Exponential function (e^x) | `exp(1)` → `2.718...`  | float       |
+| `exp2(x)`       | Base-2 exponential (2^x)   | `exp2(3)` → `8.0`      | float       |
+
+#### Statistical Functions
+
+| Function          | Description               | Example                           | Return Type |
+| ----------------- | ------------------------- | --------------------------------- | ----------- |
+| `sum(array)`      | Sum of array elements     | `sum([1, 2, 3, 4])` → `10`        | int/float   |
+| `mean(array)`     | Arithmetic mean (average) | `mean([1, 2, 3, 4])` → `2.5`      | float       |
+| `median(array)`   | Median value              | `median([1, 2, 3, 4, 5])` → `3.0` | float       |
+| `mode(array)`     | Most frequent value       | `mode([1, 2, 2, 3])` → `2`        | any         |
+| `std_dev(array)`  | Standard deviation        | `std_dev([1, 2, 3, 4])` → `1.29`  | float       |
+| `variance(array)` | Variance                  | `variance([1, 2, 3, 4])` → `1.67` | float       |
+
+#### Number Theory Functions
+
+| Function           | Description              | Example                         | Return Type |
+| ------------------ | ------------------------ | ------------------------------- | ----------- |
+| `gcd(a, b)`        | Greatest common divisor  | `gcd(12, 8)` → `4`              | int         |
+| `lcm(a, b)`        | Least common multiple    | `lcm(12, 8)` → `24`             | int         |
+| `factorial(n)`     | Factorial (n!)           | `factorial(5)` → `120`          | int         |
+| `fibonacci(n)`     | Nth Fibonacci number     | `fibonacci(7)` → `13`           | int         |
+| `is_prime(n)`      | Check if number is prime | `is_prime(17)` → `true`         | bool        |
+| `prime_factors(n)` | List of prime factors    | `prime_factors(12)` → `[2,2,3]` | array       |
+
+#### Random Number Functions
+
+| Function                 | Description                  | Example                           | Return Type |
+| ------------------------ | ---------------------------- | --------------------------------- | ----------- |
+| `random()`               | Random float between 0 and 1 | `random()` → `0.7234`             | float       |
+| `random_int(min, max)`   | Random integer in range      | `random_int(1, 10)` → `7`         | int         |
+| `random_float(min, max)` | Random float in range        | `random_float(1.0, 2.0)` → `1.45` | float       |
+| `random_choice(array)`   | Random element from array    | `random_choice([1,2,3])` → `2`    | any         |
+| `shuffle(array)`         | Shuffle array in place       | `shuffle([1,2,3])` → `[3,1,2]`    | array       |
+| `seed_random(seed)`      | Set random seed              | `seed_random(42)`                 | null        |
+
+#### Mathematical Constants
+
+| Constant | Description             | Value           |
+| -------- | ----------------------- | --------------- |
+| `PI`     | Pi (π)                  | `3.14159265359` |
+| `E`      | Euler's number (e)      | `2.71828182846` |
+| `TAU`    | Tau (2π)                | `6.28318530718` |
+| `PHI`    | Golden ratio (φ)        | `1.61803398875` |
+| `LN2`    | Natural logarithm of 2  | `0.69314718056` |
+| `LN10`   | Natural logarithm of 10 | `2.30258509299` |
+| `SQRT2`  | Square root of 2        | `1.41421356237` |
+| `SQRT3`  | Square root of 3        | `1.73205080757` |
+
+#### Utility Functions
+
+| Function             | Description                | Example                         |
+| -------------------- | -------------------------- | ------------------------------- | --------- |
+| `sign(x)`            | Sign of number (-1, 0, 1)  | `sign(-5)` → `-1`               | int       |
+| `clamp(x, min, max)` | Clamp value to range       | `clamp(15, 1, 10)` → `10`       | int/float |
+| `lerp(a, b, t)`      | Linear interpolation       | `lerp(0, 10, 0.5)` → `5.0`      | float     |
+| `degrees(radians)`   | Convert radians to degrees | `degrees(PI)` → `180.0`         | float     |
+| `radians(degrees)`   | Convert degrees to radians | `radians(180)` → `3.14159`      | float     |
+| `is_nan(x)`          | Check if value is NaN      | `is_nan(0.0/0.0)` → `true`      | bool      |
+| `is_infinite(x)`     | Check if value is infinite | `is_infinite(1.0/0.0)` → `true` | bool      |
 
 ### I/O Functions
 
@@ -905,7 +1004,7 @@ end
 
 fun main():
     // Sample data
-    numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    numbers = [1, 2, 3, 4, 5]
 
     // Filter even numbers
     is_even = fun(x):
@@ -1011,13 +1110,301 @@ fun main():
 end
 ```
 
-### Example 5: Module System with Import
+### Example 6: Advanced Mathematical Operations
+
+```go
+// advanced_math.din - Comprehensive math library usage
+
+fun main():
+    print("=== Advanced Mathematical Operations ===")
+
+    // Basic math operations
+    numbers = [-5, 3.7, 16, 27]
+    print("Numbers:", numbers)
+
+    for (num in numbers):
+        print("abs(" + str(num) + ") =", abs(num))
+        print("sqrt(" + str(num) + ") =", sqrt(abs(num)))
+    end
+
+    // Statistical operations
+    data = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    print("\nStatistical Analysis of:", data)
+    print("Sum:", sum(data))
+    print("Mean:", mean(data))
+    print("Median:", median(data))
+    print("Standard Deviation:", std_dev(data))
+    print("Variance:", variance(data))
+
+    // Trigonometric functions
+    print("\n=== Trigonometric Functions ===")
+    angles = [0, PI/6, PI/4, PI/3, PI/2]
+
+    for (angle in angles):
+        degrees_val = degrees(angle)
+        print("Angle:", degrees_val, "degrees")
+        print("  sin:", round(sin(angle), 4))
+        print("  cos:", round(cos(angle), 4))
+        print("  tan:", round(tan(angle), 4))
+    end
+
+    // Number theory functions
+    print("\n=== Number Theory ===")
+    test_numbers = [17, 25, 100]
+
+    for (num in test_numbers):
+        print("Number:", num)
+        print("  Is Prime:", is_prime(num))
+        print("  Factorial:", factorial(min(num, 10))) // Limit for performance
+        print("  Prime Factors:", prime_factors(num))
+    end
+
+    // Random number generation
+    print("\n=== Random Numbers ===")
+    seed_random(42) // Set seed for reproducible results
+
+    print("Random float (0-1):", random())
+    print("Random int (1-100):", random_int(1, 100))
+    print("Random float (1.0-10.0):", random_float(1.0, 10.0))
+
+    choices = ["apple", "banana", "cherry", "date"]
+    print("Random choice:", random_choice(choices))
+
+    // Shuffle demonstration
+    original = [1, 2, 3, 4, 5]
+    shuffled = original // Copy array
+    shuffle(shuffled)
+    print("Original:", original)
+    print("Shuffled:", shuffled)
+
+    // Mathematical constants
+    print("\n=== Mathematical Constants ===")
+    print("PI =", PI)
+    print("E =", E)
+    print("TAU =", TAU)
+    print("PHI (Golden Ratio) =", PHI)
+    print("SQRT2 =", SQRT2)
+
+    // Logarithmic functions
+    print("\n=== Logarithmic Functions ===")
+    values = [1, 2, 10, 100, 1000]
+
+    for (val in values):
+        print("Value:", val)
+        print("  ln(" + str(val) + ") =", round(log(val), 4))
+        print("  log10(" + str(val) + ") =", round(log10(val), 4))
+        print("  log2(" + str(val) + ") =", round(log2(val), 4))
+    end
+
+    // Utility functions
+    print("\n=== Utility Functions ===")
+    test_vals = [-10, 0, 5, 15, 25]
+
+    for (val in test_vals):
+        clamped = clamp(val, 0, 10)
+        print("clamp(" + str(val) + ", 0, 10) =", clamped)
+    end
+
+    // Linear interpolation
+    print("Linear interpolation between 0 and 100:")
+    for (t in [0.0, 0.25, 0.5, 0.75, 1.0]):
+        result = lerp(0, 100, t)
+        print("  t=" + str(t) + " -> " + str(result))
+    end
+end
+```
+
+### Example 7: Scientific Calculator
+
+```go
+// calculator.din - Advanced scientific calculator
+
+fun calculate_statistics(data):
+    if (len(data) == 0) then:
+        return null
+    end
+
+    sorted_data = sort(data)
+    n = len(data)
+
+    return {
+        "count": n,
+        "sum": sum(data),
+        "mean": mean(data),
+        "median": median(sorted_data),
+        "min": min(data),
+        "max": max(data),
+        "range": max(data) - min(data),
+        "std_dev": std_dev(data),
+        "variance": variance(data)
+    }
+end
+
+fun solve_quadratic(a, b, c):
+    // Solve ax² + bx + c = 0
+    discriminant = b * b - 4 * a * c
+
+    if (discriminant < 0) then:
+        return {
+            "real_solutions": 0,
+            "complex": true,
+            "message": "Complex roots"
+        }
+    else if (discriminant == 0) then:
+        root = -b / (2 * a)
+        return {
+            "real_solutions": 1,
+            "root": root,
+            "roots": [root]
+        }
+    else:
+        sqrt_disc = sqrt(discriminant)
+        root1 = (-b + sqrt_disc) / (2 * a)
+        root2 = (-b - sqrt_disc) / (2 * a)
+        return {
+            "real_solutions": 2,
+            "roots": [root1, root2]
+        }
+    end
+end
+
+fun calculate_fibonacci_sequence(n):
+    if (n <= 0) then:
+        return []
+    else if (n == 1) then:
+        return [0]
+    else if (n == 2) then:
+        return [0, 1]
+    end
+
+    sequence = [0, 1]
+    for (i in range(2, n)):
+        next_fib = sequence[i-1] + sequence[i-2]
+        append(sequence, next_fib)
+    end
+
+    return sequence
+end
+
+fun prime_sieve(limit):
+    // Sieve of Eratosthenes
+    if (limit < 2) then:
+        return []
+    end
+
+    // Initialize boolean array
+    is_prime = []
+    for (i in range(limit + 1)):
+        append(is_prime, true)
+    end
+
+    is_prime[0] = false
+    is_prime[1] = false
+
+    // Sieve algorithm
+    p = 2
+    while (p * p <= limit):
+        if (is_prime[p]) then:
+            // Mark multiples as not prime
+            multiple = p * p
+            while (multiple <= limit):
+                is_prime[multiple] = false
+                multiple = multiple + p
+            end
+        end
+        p = p + 1
+    end
+
+    // Collect prime numbers
+    primes = []
+    for (i in range(2, limit + 1)):
+        if (is_prime[i]) then:
+            append(primes, i)
+        end
+    end
+
+    return primes
+end
+
+fun main():
+    print("=== Scientific Calculator ===")
+
+    // Statistical analysis
+    print("\n1. Statistical Analysis")
+    sample_data = [12, 15, 18, 20, 22, 25, 28, 30, 32, 35]
+    stats = calculate_statistics(sample_data)
+
+    print("Data:", sample_data)
+    print("Statistics:")
+    print("  Count:", stats["count"])
+    print("  Sum:", stats["sum"])
+    print("  Mean:", round(stats["mean"], 2))
+    print("  Median:", stats["median"])
+    print("  Range:", stats["range"])
+    print("  Std Dev:", round(stats["std_dev"], 2))
+
+    // Quadratic equation solver
+    print("\n2. Quadratic Equation Solver")
+    equations = [
+        [1, -5, 6],   // x² - 5x + 6 = 0
+        [1, -2, 1],   // x² - 2x + 1 = 0
+        [1, 0, 1]     // x² + 1 = 0
+    ]
+
+    for (eq in equations):
+        a = eq[0]
+        b = eq[1]
+        c = eq[2]
+
+        print("Solving " + str(a) + "x² + " + str(b) + "x + " + str(c) + " = 0")
+        solution = solve_quadratic(a, b, c)
+
+        if (solution["real_solutions"] == 0) then:
+            print("  " + solution["message"])
+        else if (solution["real_solutions"] == 1) then:
+            print("  One root: x =", round(solution["root"], 4))
+        else:
+            roots = solution["roots"]
+            print("  Two roots: x₁ =", round(roots[0], 4), ", x₂ =", round(roots[1], 4))
+        end
+    end
+
+    // Fibonacci sequence
+    print("\n3. Fibonacci Sequence")
+    fib_15 = calculate_fibonacci_sequence(15)
+    print("First 15 Fibonacci numbers:", fib_15)
+
+    // Prime numbers
+    print("\n4. Prime Numbers")
+    primes_50 = prime_sieve(50)
+    print("Prime numbers up to 50:")
+    print(primes_50)
+    print("Count of primes up to 50:", len(primes_50))
+
+    // Trigonometric table
+    print("\n5. Trigonometric Table")
+    print("Angle (°) | Sin    | Cos    | Tan")
+    print("----------|--------|--------|--------")
+
+    for (deg in [0, 30, 45, 60, 90]):
+        rad = radians(deg)
+        sin_val = round(sin(rad), 4)
+        cos_val = round(cos(rad), 4)
+        tan_val = deg == 90 ? "undefined" : str(round(tan(rad), 4))
+
+        print(str(deg) + "°       | " + str(sin_val) + " | " + str(cos_val) + " | " + tan_val)
+    end
+end
+```
+
+### Example 8: Module System with Import
 
 **Library file (math_lib.din):**
 
 ```go
-// math_lib.din - Mathematical utilities library
+// math_lib.din - Comprehensive mathematical utilities library
 
+// Basic mathematical functions
 fun factorial(n):
     if (n <= 1) then:
         return 1
@@ -1047,35 +1434,289 @@ fun isPrime(n):
     return true
 end
 
-print("Math library loaded!")
+// Advanced mathematical operations
+fun gcd(a, b):
+    while (b != 0):
+        temp = b
+        b = a % b
+        a = temp
+    end
+    return abs(a)
+end
+
+fun lcm(a, b):
+    return abs(a * b) / gcd(a, b)
+end
+
+fun fibonacci(n):
+    if (n <= 0) then:
+        return 0
+    else if (n == 1) then:
+        return 1
+    else:
+        return fibonacci(n - 1) + fibonacci(n - 2)
+    end
+end
+
+// Matrix operations
+fun create_matrix(rows, cols, default_val):
+    matrix = []
+    for (i in range(rows)):
+        row = []
+        for (j in range(cols)):
+            append(row, default_val)
+        end
+        append(matrix, row)
+    end
+    return matrix
+end
+
+fun matrix_multiply(a, b):
+    rows_a = len(a)
+    cols_a = len(a[0])
+    cols_b = len(b[0])
+
+    result = create_matrix(rows_a, cols_b, 0)
+
+    for (i in range(rows_a)):
+        for (j in range(cols_b)):
+            for (k in range(cols_a)):
+                result[i][j] = result[i][j] + a[i][k] * b[k][j]
+            end
+        end
+    end
+
+    return result
+end
+
+// Complex number operations (represented as arrays [real, imaginary])
+fun complex_add(a, b):
+    return [a[0] + b[0], a[1] + b[1]]
+end
+
+fun complex_multiply(a, b):
+    real = a[0] * b[0] - a[1] * b[1]
+    imag = a[0] * b[1] + a[1] * b[0]
+    return [real, imag]
+end
+
+fun complex_magnitude(c):
+    return sqrt(c[0] * c[0] + c[1] * c[1])
+end
+
+print("Comprehensive Math library loaded!")
+```
+
+**Statistics library (stats_lib.din):**
+
+```go
+// stats_lib.din - Statistical analysis functions
+
+fun calculate_mean(data):
+    if (len(data) == 0) then:
+        return null
+    end
+    return sum(data) / len(data)
+end
+
+fun calculate_median(data):
+    if (len(data) == 0) then:
+        return null
+    end
+
+    sorted_data = sort(data)
+    n = len(sorted_data)
+
+    if (n % 2 == 0) then:
+        return (sorted_data[n/2 - 1] + sorted_data[n/2]) / 2
+    else:
+        return sorted_data[n/2]
+    end
+end
+
+fun calculate_mode(data):
+    if (len(data) == 0) then:
+        return null
+    end
+
+    frequency = {}
+    max_count = 0
+    mode_value = null
+
+    for (value in data):
+        if (frequency[str(value)] == null) then:
+            frequency[str(value)] = 1
+        else:
+            frequency[str(value)] = frequency[str(value)] + 1
+        end
+
+        if (frequency[str(value)] > max_count) then:
+            max_count = frequency[str(value)]
+            mode_value = value
+        end
+    end
+
+    return mode_value
+end
+
+fun calculate_standard_deviation(data):
+    if (len(data) <= 1) then:
+        return 0
+    end
+
+    mean_val = calculate_mean(data)
+    sum_squared_diff = 0
+
+    for (value in data):
+        diff = value - mean_val
+        sum_squared_diff = sum_squared_diff + diff * diff
+    end
+
+    variance = sum_squared_diff / (len(data) - 1)
+    return sqrt(variance)
+end
+
+fun linear_regression(x_data, y_data):
+    if (len(x_data) != len(y_data) or len(x_data) < 2) then:
+        return null
+    end
+
+    n = len(x_data)
+    sum_x = sum(x_data)
+    sum_y = sum(y_data)
+    sum_xy = 0
+    sum_x_squared = 0
+
+    for (i in range(n)):
+        sum_xy = sum_xy + x_data[i] * y_data[i]
+        sum_x_squared = sum_x_squared + x_data[i] * x_data[i]
+    end
+
+    slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x_squared - sum_x * sum_x)
+    intercept = (sum_y - slope * sum_x) / n
+
+    return {
+        "slope": slope,
+        "intercept": intercept,
+        "equation": "y = " + str(round(slope, 4)) + "x + " + str(round(intercept, 4))
+    }
+end
+
+print("Statistics library loaded!")
 ```
 
 **Main file (main.din):**
 
 ```go
-// main.din - Using the math library
+// main.din - Using multiple mathematical libraries
 
 // Import the mathematical utilities
 import "math_lib.din"
+import "stats_lib.din"
 
 fun main():
-    print("=== Module System Demo ===")
+    print("=== Comprehensive Math Demo ===")
 
-    // Use functions from the imported library
-    numbers = [5, 17, 20, 23]
+    // Basic math operations
+    print("\n1. Number Theory Operations:")
+    numbers = [5, 17, 20, 23, 24]
 
     for (num in numbers):
-        fact = factorial(num)
+        fact = factorial(min(num, 10))  // Limit factorial for performance
         prime = isPrime(num)
+        fib = fibonacci(min(num, 20))   // Limit fibonacci for performance
 
         print("Number:", num)
-        print("  Factorial:", fact)
+        print("  Factorial (if ≤10):", fact)
         print("  Is Prime:", prime)
+        print("  Fibonacci (if ≤20):", fib)
         print("")
     end
 
-    print("Library functions working perfectly!")
+    // GCD and LCM
+    print("2. GCD and LCM Operations:")
+    pairs = [[12, 8], [15, 25], [7, 13]]
+
+    for (pair in pairs):
+        a = pair[0]
+        b = pair[1]
+        gcd_val = gcd(a, b)
+        lcm_val = lcm(a, b)
+
+        print("GCD(" + str(a) + ", " + str(b) + ") =", gcd_val)
+        print("LCM(" + str(a) + ", " + str(b) + ") =", lcm_val)
+    end
+
+    // Matrix operations
+    print("\n3. Matrix Operations:")
+    matrix_a = [[1, 2], [3, 4]]
+    matrix_b = [[5, 6], [7, 8]]
+
+    print("Matrix A:", matrix_a)
+    print("Matrix B:", matrix_b)
+
+    result = matrix_multiply(matrix_a, matrix_b)
+    print("A × B =", result)
+
+    // Complex number operations
+    print("\n4. Complex Number Operations:")
+    complex1 = [3, 4]   // 3 + 4i
+    complex2 = [1, -2]  // 1 - 2i
+
+    print("Complex 1: " + str(complex1[0]) + " + " + str(complex1[1]) + "i")
+    print("Complex 2: " + str(complex2[0]) + " + " + str(complex2[1]) + "i")
+
+    sum_complex = complex_add(complex1, complex2)
+    product_complex = complex_multiply(complex1, complex2)
+    magnitude1 = complex_magnitude(complex1)
+
+    print("Sum:", sum_complex)
+    print("Product:", product_complex)
+    print("Magnitude of Complex 1:", round(magnitude1, 4))
+
+    // Statistical analysis
+    print("\n5. Statistical Analysis:")
+    sample_data = [12, 15, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40]
+
+    print("Sample data:", sample_data)
+    print("Mean:", round(calculate_mean(sample_data), 2))
+    print("Median:", calculate_median(sample_data))
+    print("Mode:", calculate_mode([1, 2, 2, 3, 4, 4, 4, 5]))
+    print("Standard Deviation:", round(calculate_standard_deviation(sample_data), 2))
+
+    // Linear regression
+    print("\n6. Linear Regression:")
+    x_values = [1, 2, 3, 4, 5]
+    y_values = [2, 4, 6, 8, 10]  // Perfect linear relationship
+
+    regression = linear_regression(x_values, y_values)
+    print("X values:", x_values)
+    print("Y values:", y_values)
+    print("Regression equation:", regression["equation"])
+    print("Slope:", round(regression["slope"], 4))
+    print("Intercept:", round(regression["intercept"], 4))
+
+    // Prediction using regression
+    predict_x = 6
+    predict_y = regression["slope"] * predict_x + regression["intercept"]
+    print("Prediction for x=" + str(predict_x) + ": y=" + str(round(predict_y, 2)))
+
+    print("\nAll mathematical libraries working perfectly!")
 end
+```
+
+**Usage:**
+
+```bash
+# Run the comprehensive math demo
+./uddinlang main.din
+
+# Expected output includes:
+# - Number theory calculations
+# - Matrix multiplication results
+# - Complex number operations
+# - Statistical analysis
+# - Linear regression with predictions
 ```
 
 ---
@@ -1100,6 +1741,88 @@ go build -o uddinlang main.go
 
 # Install globally (optional)
 go install
+```
+
+### Math Library Implementation
+
+The math functions are implemented as built-in functions in the interpreter. Here's how to extend the math library:
+
+#### Adding New Math Functions
+
+1. **Define the function in `interpreter/functions.go`:**
+
+```go
+// Add to the built-in functions map
+"sqrt": func(args []interface{}) (interface{}, error) {
+    if len(args) != 1 {
+        return nil, fmt.Errorf("sqrt() takes exactly 1 argument (%d given)", len(args))
+    }
+
+    num, err := convertToFloat(args[0])
+    if err != nil {
+        return nil, fmt.Errorf("sqrt() argument must be a number")
+    }
+
+    if num < 0 {
+        return nil, fmt.Errorf("sqrt() of negative number")
+    }
+
+    return math.Sqrt(num), nil
+},
+```
+
+2. **Add comprehensive tests in `interpreter/functions_test.go`:**
+
+```go
+func TestMathFunctions(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        expected interface{}
+    }{
+        {"sqrt positive", "sqrt(16)", 4.0},
+        {"sqrt decimal", "sqrt(2)", math.Sqrt(2)},
+        {"abs negative", "abs(-5)", 5},
+        {"abs positive", "abs(5)", 5},
+        // Add more test cases...
+    }
+
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, err := evaluateExpression(tt.input)
+            assert.NoError(t, err)
+            assert.Equal(t, tt.expected, result)
+        })
+    }
+}
+```
+
+3. **Update documentation and examples**
+
+#### Math Constants Implementation
+
+Constants are defined as global variables in the environment:
+
+```go
+// In interpreter/environment.go
+func NewGlobalEnvironment() *Environment {
+    env := &Environment{
+        store: make(map[string]interface{}),
+        outer: nil,
+    }
+
+    // Mathematical constants
+    env.Define("PI", math.Pi)
+    env.Define("E", math.E)
+    env.Define("TAU", 2 * math.Pi)
+    env.Define("PHI", (1 + math.Sqrt(5)) / 2) // Golden ratio
+    env.Define("LN2", math.Ln2)
+    env.Define("LN10", math.Ln10)
+    env.Define("SQRT2", math.Sqrt2)
+    env.Define("SQRT3", math.Sqrt(3))
+
+    return env
+}
 ```
 
 ### Development Commands

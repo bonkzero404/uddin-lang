@@ -167,7 +167,7 @@ func (e *Evaluator) evaluateList(node *List) Value {
 	for i, expr := range node.Values {
 		values[i] = e.EvaluateExpression(expr)
 	}
-	return values
+	return &values
 }
 
 // evaluateMap evaluates map literals
