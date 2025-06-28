@@ -43,6 +43,15 @@
 
 Uddin-Lang is a modern, interpreted programming language designed with simplicity, expressiveness, and functional programming principles in mind. It combines the best features of dynamic languages with a clean, readable syntax that makes programming enjoyable and productive.
 
+### 🎭 Language Category
+
+Uddin-Lang can be categorized as:
+
+-   **Primary**: Scripting Language (like Python, JavaScript, Ruby)
+-   **Architecture**: Interpreted Language (no compilation required)
+-   **Paradigm**: Multi-paradigm (functional, procedural concepts)
+-   **Use Cases**: Automation scripts, rapid prototyping, embedded scripting, general programming, rule engine
+
 ### 🎯 Design Goals
 
 -   **Simplicity**: Easy to learn and use syntax
