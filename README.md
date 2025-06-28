@@ -11,7 +11,7 @@
 
 <div align="center">
 
-![Uddin-Lang Logo](https://img.shields.io/badge/Uddin--Lang-v1.1-blue?style=for-the-badge&logo=data:image/svg+xmlbase64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA9TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)
+![Uddin-Lang Logo](https://img.shields.io/badge/Uddin--Lang-v1.0-blue?style=for-the-badge&logo=data:image/svg+xmlbase64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA9TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)
 
 **A Modern, Functional Programming Language with Clean Syntax**
 
@@ -97,6 +97,7 @@ graph TD
 -   ✅ **Advanced Error Reporting** with precise error location and clear explanations
 -   ✅ **Loop Control** (break, continue statements)
 -   ✅ **Module System** with import statement for importing .din files
+-   ✅ **Flexible Comment System** with both single-line (`//`) and multiline (`/* */`) comments
 -   ✅ **Functional Programming** paradigms
 -   ✅ **Memory Safe** with garbage collection
 -   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
@@ -204,37 +205,12 @@ try_catch_stmt = "try:" block "catch" "(" IDENTIFIER "):" block "end"
 block          = { statement }
 parameter_list = IDENTIFIER { "," IDENTIFIER }
 
-expression     = logical_or
-logical_or     = logical_xor { "or" logical_xor }
-logical_xor    = logical_and { "xor" logical_and }
-logical_and    = ternary { "and" ternary }
-ternary        = equality [ "?" expression ":" expression ]
-equality       = comparison { ( "==" | "!=" ) comparison }
-comparison     = term { ( ">" | ">=" | "<" | "<=" ) term }
-term           = factor { ( "+" | "-" ) factor }
-factor         = unary { ( "*" | "/" | "%" ) unary }
-unary          = ( "not" | "-" ) unary | call
-call           = primary { "(" [ argument_list ] ")" | "[" expression "]" | "." IDENTIFIER }
-primary        = NUMBER | STRING | BOOLEAN | "null" | IDENTIFIER
-               | "(" expression ")"
-               | array_literal
-               | object_literal
-               | function_literal
 
-array_literal  = "[" [ expression { "," expression } ] "]"
-object_literal = "{" [ object_pair { "," object_pair } ] "}"
-object_pair    = ( IDENTIFIER | STRING ) ":" expression
-function_literal = "fun" "(" [ parameter_list ] "):" block "end"
 
-argument_list  = expression { "," expression }
-
-IDENTIFIER     = LETTER { LETTER | DIGIT | "_" }
-NUMBER         = DIGIT { DIGIT } [ "." DIGIT { DIGIT } ]
-STRING         = '"' { CHARACTER } '"' | "'" { CHARACTER } "'"
-BOOLEAN        = "true" | "false"
-LETTER         = "a" ... "z" | "A" ... "Z"
-DIGIT          = "0" ... "9"
-CHARACTER      = any character except '"' or "'"
+// Lexical Elements
+comment        = single_line_comment | multiline_comment
+single_line_comment = "//" { any_character_except_newline }
+multiline_comment   = "/*" { any_character } "*/"
 ```
 
 ### Operator Precedence (Highest to Lowest)
@@ -316,16 +292,35 @@ sequenceDiagram
 
 ### 💬 Comments
 
-Comments start with `//` and continue to the end of the line:
+Uddin-Lang supports both single-line and multiline comments:
 
 ```go
 // This is a single-line comment
-// Multiple lines require multiple // symbols
+print("Hello") // End-of-line comment
+
+/* This is a multiline comment
+   that can span multiple lines
+   and is great for documentation */
+
+x = 10 /* inline multiline comment */ + 5
 
 /*
- * Multi-line comments are planned for future versions
+ * Block-style documentation comment
+ * with consistent formatting
  */
+fun calculate_area(radius):
+    /* Calculate circle area using π × r² */
+    return 3.14159 * radius * radius
+end
 ```
+
+**Comment Features:**
+
+-   **Single-line**: Use `//` for comments that extend to end of line
+-   **Multiline**: Use `/* */` for comments spanning multiple lines
+-   **Inline**: Both comment types can be used inline with code
+-   **Documentation**: Multiline comments are perfect for function/code documentation
+-   **No nesting**: Multiline comments cannot be nested inside other multiline comments
 
 ### 🔢 Variables & Data Types
 
@@ -518,7 +513,7 @@ print(counter2())  // 1 (separate closure)
 print(counter1())  // 3
 ```
 
-### � Module System
+### Module System
 
 #### Import Statement
 
@@ -576,7 +571,7 @@ end
 print("Math utilities imported!")
 ```
 
-### �🔄 Control Flow
+### 🔄 Control Flow
 
 #### If-Else Statements
 
@@ -917,13 +912,6 @@ catch (error):
 end
 ```
 
-### Development Tips
-
--   **Use descriptive variable names** to make error messages more helpful
--   **Test edge cases** like empty arrays, null values, and boundary conditions
--   **Implement validation functions** for complex operations
--   **Use meaningful error messages** in your own functions when throwing errors
-
 ---
 
 ## 📚 Built-in Functions
@@ -963,29 +951,6 @@ end
 | `range(n)` or `range(start, stop)` | Create range     | `range(3)` → `[0,1,2]`<br>`range(1, 4)` → `[1,2,3]` |
 | `find(array, value)`               | Find index       | `find([1,2,3], 2)` → `1`                            |
 | `contains(array, value)`           | Check membership | `contains([1,2,3], 2)` → `true`                     |
-
-#### Range Function Details
-
-The `range()` function is particularly useful for creating sequences of numbers:
-
-```go
-// Single argument: range(n) creates [0, 1, 2, ..., n-1]
-numbers = range(5)      // [0, 1, 2, 3, 4]
-print(numbers)
-
-// Two arguments: range(start, stop) creates [start, start+1, ..., stop-1]
-numbers = range(3, 8)   // [3, 4, 5, 6, 7]
-print(numbers)
-
-// Empty range when start >= stop
-empty = range(5, 5)     // []
-print(len(empty))       // 0
-
-// Common use in loops
-for (i in range(1, 11)):
-    print("Processing item", i)
-end
-```
 
 ### Math Functions
 
@@ -1893,7 +1858,7 @@ fun main():
 
     // Statistical analysis
     print("\n5. Statistical Analysis:")
-    sample_data = [12, 15, 18, 20, 22, 25, 28, 30, 32, 35, 38, 40]
+    sample_data = [12, 15, 18, 20, 22, 25, 28, 30, 32, 35]
 
     print("Sample data:", sample_data)
     print("Mean:", round(calculate_mean(sample_data), 2))
@@ -1934,186 +1899,4 @@ end
 # - Complex number operations
 # - Statistical analysis
 # - Linear regression with predictions
-```
-
----
-
-## 🔨 Development
-
-### Building from Source
-
-```bash
-# Clone repository
-git clone https://github.com/bonkzero404/uddin-lang.git
-cd uddin-lang
-
-# Install dependencies
-go mod tidy
-
-# Run tests
-go test ./...
-
-# Build executable
-go build -o uddinlang main.go
-
-# Install globally (optional)
-go install
-```
-
-### Math Library Implementation
-
-The math functions are implemented as built-in functions in the interpreter. Here's how to extend the math library:
-
-#### Adding New Math Functions
-
-1. **Define the function in `interpreter/functions.go`:**
-
-```go
-// Add to the built-in functions map
-"sqrt": func(args []interface{}) (interface{}, error) {
-    if len(args) != 1 {
-        return nil, fmt.Errorf("sqrt() takes exactly 1 argument (%d given)", len(args))
-    }
-
-    num, err := convertToFloat(args[0])
-    if err != nil {
-        return nil, fmt.Errorf("sqrt() argument must be a number")
-    }
-
-    if num < 0 {
-        return nil, fmt.Errorf("sqrt() of negative number")
-    }
-
-    return math.Sqrt(num), nil
-},
-```
-
-2. **Add comprehensive tests in `interpreter/functions_test.go`:**
-
-```go
-func TestMathFunctions(t *testing.T) {
-    tests := []struct {
-        name     string
-        input    string
-        expected interface{}
-    }{
-        {"sqrt positive", "sqrt(16)", 4.0},
-        {"sqrt decimal", "sqrt(2)", math.Sqrt(2)},
-        {"abs negative", "abs(-5)", 5},
-        {"abs positive", "abs(5)", 5},
-        // Add more test cases...
-    }
-
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            result, err := evaluateExpression(tt.input)
-            assert.NoError(t, err)
-            assert.Equal(t, tt.expected, result)
-        })
-    }
-}
-```
-
-3. **Update documentation and examples**
-
-#### Math Constants Implementation
-
-Constants are defined as global variables in the environment:
-
-```go
-// In interpreter/environment.go
-func NewGlobalEnvironment() *Environment {
-    env := &Environment{
-        store: make(map[string]interface{}),
-        outer: nil,
-    }
-
-    // Mathematical constants
-    env.Define("PI", math.Pi)
-    env.Define("E", math.E)
-    env.Define("TAU", 2 * math.Pi)
-    env.Define("PHI", (1 + math.Sqrt(5)) / 2) // Golden ratio
-    env.Define("LN2", math.Ln2)
-    env.Define("LN10", math.Ln10)
-    env.Define("SQRT2", math.Sqrt2)
-    env.Define("SQRT3", math.Sqrt(3))
-
-    return env
-}
-```
-
-### Development Commands
-
-```bash
-# Run with file
-go run main.go script.din
-
-# Run tests with coverage
-go test -cover ./...
-
-# Run specific test
-go test -run TestLoopControl ./interpreter
-
-# Format code
-go fmt ./...
-
-# Lint code (requires golangci-lint)
-golangci-lint run
-
-# Generate documentation
-godoc -http=:6060
-```
-
-### Testing
-
-The project includes comprehensive tests:
-
--   **Unit Tests**: Test individual components
--   **Integration Tests**: Test component interaction
--   **Example Tests**: Validate example programs
--   **Benchmark Tests**: Performance measurements
-
-```bash
-# Run all tests
-go test ./...
-
-# Run tests with verbose output
-go test -v ./...
-
-# Run tests with coverage report
-go test -cover ./... -coverprofile=coverage.out
-go tool cover -html=coverage.out
-```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Here's how to get started:
-
-### 1. Fork & Clone
-
-```bash
-git clone https://github.com/bonkzero404/uddin-lang.git
-cd uddin-lang
-```
-
-### 2. Create Feature Branch
-
-```bash
-git checkout -b feature/my-new-feature
-```
-
-### 3. Make Changes
-
--   Follow Go coding conventions
--   Add tests for new features
--   Update documentation
--   Ensure all tests pass
-
-### 4. Submit Pull Request
-
-```bash
-git commit -m "Add my new feature"
-git push origin feature/my-new-feature
 ```
