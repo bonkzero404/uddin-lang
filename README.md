@@ -186,7 +186,8 @@ parameter_list = IDENTIFIER { "," IDENTIFIER }
 
 expression     = logical_or
 logical_or     = logical_and { "or" logical_and }
-logical_and    = equality { "and" equality }
+logical_and    = ternary { "and" ternary }
+ternary        = equality [ "?" expression ":" expression ]
 equality       = comparison { ( "==" | "!=" ) comparison }
 comparison     = term { ( ">" | ">=" | "<" | "<=" ) term }
 term           = factor { ( "+" | "-" ) factor }
@@ -536,8 +537,8 @@ else:
     print("You are a child")
 end
 
-// Ternary-like expression (planned feature)
-// status = age >= 18 ? "adult" : "minor"
+// Ternary conditional expression
+status = age >= 18 ? "adult" : "minor"
 ```
 
 #### While Loops

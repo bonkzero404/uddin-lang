@@ -34,6 +34,9 @@ func (e *Evaluator) EvaluateExpression(expr Expression) Value {
 	case *Unary:
 		return e.evaluateUnary(node)
 
+	case *Ternary:
+		return e.evaluateTernary(node)
+
 	case *Call:
 		return e.evaluateCall(node)
 
@@ -125,6 +128,17 @@ func (e *Evaluator) evaluateUnary(node *Unary) Value {
 		return !IsTruthy(operand)
 	default:
 		panic(runtimeError(node.Position(), "unknown unary operator: %v", node.Operator))
+	}
+}
+
+// evaluateTernary evaluates ternary conditional expressions
+func (e *Evaluator) evaluateTernary(node *Ternary) Value {
+	condition := e.EvaluateExpression(node.Condition)
+
+	if IsTruthy(condition) {
+		return e.EvaluateExpression(node.TrueExpr)
+	} else {
+		return e.EvaluateExpression(node.FalseExpr)
 	}
 }
 

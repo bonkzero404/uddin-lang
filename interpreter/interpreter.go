@@ -538,6 +538,13 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		// Parser should never give us this
 		panic(fmt.Sprintf("unknown unary operator %v", e.Operator))
+	case *Ternary:
+		condition := interp.evaluate(e.Condition)
+		if IsTruthy(condition) {
+			return interp.evaluate(e.TrueExpr)
+		} else {
+			return interp.evaluate(e.FalseExpr)
+		}
 	case *Call:
 		function := interp.evaluate(e.Function)
 		if f, ok := function.(functionType); ok {

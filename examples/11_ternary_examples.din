@@ -1,0 +1,187 @@
+// ===================================
+// 11_ternary_examples.din
+// Ternary Operator Examples
+// ===================================
+//
+// This example demonstrates the ternary operator (condition ? true_value : false_value)
+// which provides a concise way to write conditional expressions.
+
+fun classify_number(n):
+    // Basic ternary usage
+    sign = n > 0 ? "positive" : n < 0 ? "negative" : "zero"
+    parity = n % 2 == 0 ? "even" : "odd"
+
+    return {
+        "number": n,
+        "sign": sign,
+        "parity": parity,
+        "absolute": n >= 0 ? n : -n
+    }
+end
+
+fun get_discount(age, is_student):
+    // Multiple conditions with ternary
+    student_discount = is_student ? 0.1 : 0.0
+    age_discount = age >= 65 ? 0.15 : age <= 12 ? 0.2 : 0.0
+
+    // Use maximum discount
+    discount = student_discount > age_discount ? student_discount : age_discount
+
+    return {
+        "age": age,
+        "is_student": is_student,
+        "student_discount": student_discount,
+        "age_discount": age_discount,
+        "final_discount": discount,
+        "description": is_student ? "Student discount applied" :
+                       age >= 65 ? "Senior discount applied" :
+                       age <= 12 ? "Child discount applied" : "No discount"
+    }
+end
+
+fun format_time(hours, minutes, use_24h):
+    // Ternary with string formatting
+    formatted_hours = use_24h ? hours :
+                      hours == 0 ? 12 :
+                      hours > 12 ? hours - 12 : hours
+
+    period = use_24h ? "" : hours >= 12 ? " PM" : " AM"
+
+    // Ensure two-digit formatting
+    h_str = formatted_hours < 10 ? "0" + str(formatted_hours) : str(formatted_hours)
+    m_str = minutes < 10 ? "0" + str(minutes) : str(minutes)
+
+    return h_str + ":" + m_str + period
+end
+
+fun calculate_shipping(weight, is_priority, distance):
+    // Complex ternary expressions
+    base_rate = weight <= 1 ? 5.0 : weight <= 5 ? 8.0 : 12.0
+    priority_multiplier = is_priority ? 1.5 : 1.0
+    distance_rate = distance > 1000 ? 1.2 : distance > 500 ? 1.1 : 1.0
+
+    total = base_rate * priority_multiplier * distance_rate
+
+    return {
+        "weight": weight,
+        "is_priority": is_priority,
+        "distance": distance,
+        "base_rate": base_rate,
+        "total_cost": round(total, 2),
+        "delivery_time": is_priority ?
+                        distance > 1000 ? "2-3 days" : "1-2 days" :
+                        distance > 1000 ? "5-7 days" : "3-5 days"
+    }
+end
+
+fun main():
+    print("=== Ternary Operator Examples ===")
+
+    // Number classification
+    print("\n1. Number Classification:")
+    numbers = [-5, 0, 3, 8, -12]
+    for (num in numbers):
+        info = classify_number(num)
+        print("  " + str(num) + " -> " + info["sign"] + ", " + info["parity"] +
+              " (abs: " + str(info["absolute"]) + ")")
+    end
+
+    // Discount calculation
+    print("\n2. Discount Calculation:")
+    customers = [
+        {"age": 25, "is_student": true},
+        {"age": 70, "is_student": false},
+        {"age": 8, "is_student": false},
+        {"age": 35, "is_student": false}
+    ]
+
+    for (customer in customers):
+        discount_info = get_discount(customer["age"], customer["is_student"])
+        print("  Age " + str(customer["age"]) +
+              (customer["is_student"] ? " (student)" : "") +
+              " -> " + str(round(discount_info["final_discount"] * 100, 1)) + "% " +
+              discount_info["description"])
+    end
+
+    // Time formatting
+    print("\n3. Time Formatting:")
+    times = [
+        {"hours": 0, "minutes": 30},
+        {"hours": 9, "minutes": 15},
+        {"hours": 13, "minutes": 45},
+        {"hours": 23, "minutes": 59}
+    ]
+
+    for (time in times):
+        h = time["hours"]
+        m = time["minutes"]
+        time_12h = format_time(h, m, false)
+        time_24h = format_time(h, m, true)
+        print("  " + str(h) + ":" + (m < 10 ? "0" : "") + str(m) +
+              " -> 12h: " + time_12h + ", 24h: " + time_24h)
+    end
+
+    // Shipping calculation
+    print("\n4. Shipping Cost Calculation:")
+    shipments = [
+        {"weight": 0.5, "priority": false, "distance": 200},
+        {"weight": 3.0, "priority": true, "distance": 800},
+        {"weight": 8.0, "priority": false, "distance": 1500},
+        {"weight": 1.5, "priority": true, "distance": 300}
+    ]
+
+    for (shipment in shipments):
+        cost_info = calculate_shipping(shipment["weight"],
+                                     shipment["priority"],
+                                     shipment["distance"])
+        print("  " + str(shipment["weight"]) + "kg, " +
+              str(shipment["distance"]) + "km" +
+              (shipment["priority"] ? " (priority)" : "") +
+              " -> $" + str(cost_info["total_cost"]) +
+              " (" + cost_info["delivery_time"] + ")")
+    end
+
+    // Mathematical expressions with ternary
+    print("\n5. Mathematical Expressions:")
+    x = 10
+    y = 7
+
+    print("  x =", x, ", y =", y)
+    print("  max(x, y) =", x > y ? x : y)
+    print("  min(x, y) =", x < y ? x : y)
+    print("  |x - y| =", x > y ? x - y : y - x)
+    print("  sign(x - y) =", x > y ? 1 : x < y ? -1 : 0)
+
+    // Array operations with ternary
+    print("\n6. Array Operations with Ternary:")
+    scores = [85, 92, 78, 96, 88]
+    print("  Scores:", scores)
+
+    // Grade assignment using ternary
+    grades = []
+    for (score in scores):
+        grade = score >= 90 ? "A" : score >= 80 ? "B" : score >= 70 ? "C" : "F"
+        append(grades, grade)
+    end
+    print("  Grades:", grades)
+
+    // Pass/fail with ternary
+    results = []
+    for (score in scores):
+        result = score >= 70 ? "PASS" : "FAIL"
+        append(results, result)
+    end
+    print("  Results:", results)
+
+    // Data type selection
+    print("\n7. Dynamic Data Type Selection:")
+    use_strings = false
+    sample_data = use_strings ? ["apple", "banana", "cherry"] : [1, 2, 3, 4, 5]
+    operation = use_strings ? len(sample_data) : sum(sample_data)
+
+    print("  Data:", sample_data)
+    print("  Operation result:", operation)
+    print("  Data type:", use_strings ? "strings" : "numbers")
+
+    print("\n=== Ternary operator examples completed! ===")
+end

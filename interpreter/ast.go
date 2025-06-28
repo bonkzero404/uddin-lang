@@ -364,12 +364,12 @@ func (e *Variable) String() string {
 	return e.Name
 }
 
-// Ternary represents a ternary conditional expression (condition ? trueExpr : falseExpr).
+// Ternary represents a ternary conditional expression (condition ? true_expr : false_expr).
 type Ternary struct {
-	pos       Position
-	Condition Expression
-	TrueExpr  Expression
-	FalseExpr Expression
+	pos       Position   // Source position
+	Condition Expression // The condition to evaluate
+	TrueExpr  Expression // Expression to return if condition is true
+	FalseExpr Expression // Expression to return if condition is false
 }
 
 func (e *Ternary) Position() Position { return e.pos }
@@ -444,6 +444,11 @@ func NewVariable(pos Position, name string) *Variable {
 // NewCall creates a new function call expression
 func NewCall(pos Position, function Expression, args []Expression) *Call {
 	return &Call{pos: pos, Function: function, Arguments: args}
+}
+
+// NewTernary creates a new ternary expression
+func NewTernary(pos Position, condition Expression, trueExpr Expression, falseExpr Expression) *Ternary {
+	return &Ternary{pos: pos, Condition: condition, TrueExpr: trueExpr, FalseExpr: falseExpr}
 }
 
 // IsExpression checks if a node is an expression
