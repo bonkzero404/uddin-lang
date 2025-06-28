@@ -38,7 +38,7 @@ func (p *parser) error(format string, args ...any) {
 
 func (p *parser) expect(tok Token) {
 	if p.tok != tok {
-		p.error("expected %s and not %s", tok, p.tok)
+		p.error("expected %s, but got %s", tok, p.tok)
 	}
 	p.next()
 }
@@ -104,7 +104,7 @@ func (p *parser) statement() Statement {
 			value := p.expression()
 			return &Assign{pos, expr, value, operator}
 		default:
-			p.error("expected name or subscript on left side of assignment")
+			p.error("invalid assignment target: only variables and array/object elements can be assigned to")
 		}
 	}
 	return &ExpressionStatement{pos, expr}
@@ -133,7 +133,7 @@ func (p *parser) block() Block {
 
             return statements
         default:
-            p.error("expected { or :, not %s", p.tok)
+            p.error("expected ':' to start block (after 'then', 'while(...)', 'for(...)', 'fun(...)', or 'try'), got %s", p.tok)
             return nil
 	}
 }
@@ -161,7 +161,7 @@ func (p *parser) if_() Statement {
             case IF:
                 elseBody = Block{p.if_()}
             default:
-                p.error("expected { or : or if after else, not %s", p.tok)
+                p.error("expected ':' or 'if' after 'else' keyword, got %s", p.tok)
             }
 	}
 
@@ -209,7 +209,7 @@ func (p *parser) tryCatch() Statement {
             p.expect(COLON)
             tryBlock = p.statements(CATCH)
         default:
-            p.error("expected { or :, not %s", p.tok)
+            p.error("expected ':' after 'try' keyword to start block, got %s", p.tok)
             return nil
 	}
 
@@ -261,7 +261,7 @@ func (p *parser) params() ([]string, bool) {
 	gotEllipsis := false
 	for p.tok != RPAREN && p.tok != EOF && !gotEllipsis {
 		if !gotComma {
-			p.error("expected , between parameters")
+			p.error("missing comma ',' between function parameters")
 		}
 		param := p.val
 		p.expect(NAME)
@@ -278,7 +278,7 @@ func (p *parser) params() ([]string, bool) {
 		}
 	}
 	if p.tok != RPAREN && gotEllipsis {
-		p.error("can only have ... after last parameter")
+		p.error("variadic parameter '...' must be the last parameter in function definition")
 	}
 	p.expect(RPAREN)
 	return params, gotEllipsis
@@ -332,7 +332,7 @@ func (p *parser) ternary() Expression {
 		trueExpr := p.expression()
 
 		if p.tok != COLON {
-			p.error("expected : in ternary expression")
+			p.error("missing ':' in ternary expression - expected format: condition ? true_value : false_value")
 		}
 		p.next() // consume COLON
 
@@ -393,7 +393,7 @@ func (p *parser) call() Expression {
                 gotEllipsis := false
                 for p.tok != RPAREN && p.tok != EOF && !gotEllipsis {
                     if !gotComma {
-                        p.error("expected , between arguments")
+                        p.error("missing comma ',' between function arguments")
                     }
                     arg := p.expression()
                     args = append(args, arg)
@@ -409,7 +409,7 @@ func (p *parser) call() Expression {
                     }
                 }
                 if p.tok != RPAREN && gotEllipsis {
-                    p.error("can only have ... after last argument")
+                    p.error("variadic argument '...' must be the last argument in function call")
                 }
                 p.expect(RPAREN)
                 expr = &Call{pos, expr, args, gotEllipsis}
@@ -494,7 +494,7 @@ func (p *parser) primary() Expression {
             p.expect(RPAREN)
             return expr
         default:
-            p.error("expected expression, not %s", p.tok)
+            p.error("unexpected token %s - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)", p.tok)
             return nil
 	}
 }
@@ -509,7 +509,7 @@ func (p *parser) list() Expression {
 	gotComma := true
 	for p.tok != RBRACKET && p.tok != EOF {
 		if !gotComma {
-			p.error("expected , between list elements")
+			p.error("missing comma ',' between array elements")
 		}
 		value := p.expression()
 		values = append(values, value)
@@ -535,7 +535,7 @@ func (p *parser) map_() Expression {
 	gotComma := true
 	for p.tok != RBRACE && p.tok != EOF {
 		if !gotComma {
-			p.error("expected , between object items")
+			p.error("missing comma ',' between object properties")
 		}
 		key := p.mapKey()
 		p.expect(COLON)
@@ -623,7 +623,7 @@ func (p *parser) import_() Statement {
 	pos := p.pos
 	p.expect(IMPORT)
 	if p.tok != STR {
-		p.error("expected string filename after import, got %s", p.tok)
+		p.error("import statement requires a string filename, got %s - example: import \"filename.din\"", p.tok)
 	}
 	filename := p.val
 	p.next()

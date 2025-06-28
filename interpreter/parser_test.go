@@ -288,25 +288,25 @@ func TestParseErrors(t *testing.T) {
 		expectError bool
 		errorMsg    string
 	}{
-		{"x = ", true, "parse error at 1:5: expected expression, not EOF"},                              // Incomplete assignment
+		{"x = ", true, "parse error at 1:5: unexpected token EOF - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)"},                              // Incomplete assignment
 		{"if (x > 5) then: y = 10 end", false, ""},                                                     // Complete if statement - should not error
-		{"if (x > 5) y = 10", true, "parse error at 1:12: expected then and not name"},                 // Missing 'then'
-		{"while (x > 0) x = x-1", true, "parse error at 1:15: expected { or :, not name"},             // Missing ':'
-		{"for (i in) print(i)", true, "parse error at 1:10: expected expression, not )"},              // Invalid for loop
-		{"fun add(a, b) return a+b", true, "parse error at 1:15: expected { or :, not return"},        // Missing ':'
+		{"if (x > 5) y = 10", true, "parse error at 1:12: expected then, but got name"},                 // Missing 'then'
+		{"while (x > 0) x = x-1", true, "parse error at 1:15: expected ':' to start block (after 'then', 'while(...)', 'for(...)', 'fun(...)', or 'try'), got name"},             // Missing ':'
+		{"for (i in) print(i)", true, "parse error at 1:10: unexpected token ) - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)"},              // Invalid for loop
+		{"fun add(a, b) return a+b", true, "parse error at 1:15: expected ':' to start block (after 'then', 'while(...)', 'for(...)', 'fun(...)', or 'try'), got return"},        // Missing ':'
 		{"fun add(a, b): return a+b end", false, ""},                                                    // Complete function - should not error
-		{"x + ", true, "parse error at 1:5: expected expression, not EOF"},                             // Incomplete expression
-		{"(x + y", true, "parse error at 1:7: expected ) and not EOF"},                                // Unclosed parenthesis
-		{"[1, 2, 3", true, "parse error at 1:9: expected ] and not EOF"},                              // Unclosed bracket
-		{"\"a\": 1,", true, "parse error at 1:4: expected expression, not :"},                         // Invalid expression
-		{"try:", true, "parse error at 1:5: expected catch and not EOF"},                              // Incomplete try block
-		{"try: x = 1 catch:", true, "parse error at 1:17: expected ( and not :"},                      // Missing catch variable
+		{"x + ", true, "parse error at 1:5: unexpected token EOF - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)"},                             // Incomplete expression
+		{"(x + y", true, "parse error at 1:7: expected ), but got EOF"},                                // Unclosed parenthesis
+		{"[1, 2, 3", true, "parse error at 1:9: expected ], but got EOF"},                              // Unclosed bracket
+		{"\"a\": 1,", true, "parse error at 1:4: unexpected token : - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)"},                         // Invalid expression
+		{"try:", true, "parse error at 1:5: expected catch, but got EOF"},                              // Incomplete try block
+		{"try: x = 1 catch:", true, "parse error at 1:17: expected (, but got :"},                      // Missing catch variable
 		{"throw x", false, ""},                                                                         // Complete throw - should not error
-		{"try: x = 1 catch (err) print(err)", true, "parse error at 1:24: expected { or :, not name"}, // Missing ':' in catch block
+		{"try: x = 1 catch (err) print(err)", true, "parse error at 1:24: expected ':' to start block (after 'then', 'while(...)', 'for(...)', 'fun(...)', or 'try'), got name"}, // Missing ':' in catch block
 		{"try: x = 1 catch (err): print(err) end", false, ""},                                          // Complete try-catch - should not error
 		{"if (x > 5) then: y = 10 end", false, ""},                                                     // Complete if - should not error
-		{"fun add(a, b): return", true, "parse error at 1:22: expected expression, not EOF"},          // Missing return value
-		{"try: x = 1", true, "parse error at 1:11: expected catch and not EOF"},                       // Missing catch block
+		{"fun add(a, b): return", true, "parse error at 1:22: unexpected token EOF - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)"},          // Missing return value
+		{"try: x = 1", true, "parse error at 1:11: expected catch, but got EOF"},                       // Missing catch block
 		{"try: x = 1 catch (err): print(err) end", false, ""},                                          // Complete try-catch - should not error
 	}
 
