@@ -16,70 +16,70 @@ const (
 	ILLEGAL Token = iota
 	EOF
 
-	// Single-character tokens
-	ASSIGN
-	COLON
-	COMMA
-	DIVIDE
-	DOT
-	GT
-	LBRACE
-	LBRACKET
-	LPAREN
-	LT
-	MINUS
-	MODULO
-	PLUS
-	RBRACE
-	RBRACKET
-	RPAREN
-	TIMES
-	QUESTION
+	// Single-character tokens (using ASCII values)
+	LPAREN   = 40  // '('
+	RPAREN   = 41  // ')'
+	TIMES    = 42  // '*'
+	PLUS     = 43  // '+'
+	COMMA    = 44  // ','
+	MINUS    = 45  // '-'
+	DOT      = 46  // '.'
+	DIVIDE   = 47  // '/'
+	COLON    = 58  // ':'
+	LT       = 60  // '<'
+	ASSIGN   = 61  // '='
+	GT       = 62  // '>'
+	QUESTION = 63  // '?'
+	LBRACKET = 91  // '['
+	RBRACKET = 93  // ']'
+	LBRACE   = 123 // '{'
+	RBRACE   = 125 // '}'
+	MODULO   = 37  // '%'
 
-	// Alternative block tokens
-	END
+	// Alternative block tokens (sequential from 200)
+	END = 200
 
-	// Two-character tokens
-	EQUAL
-	GTE
-	LTE
-	NOTEQUAL
-	PLUSEQUAL
-	MINUSEQUAL
-	TIMESEQUAL
-	DIVIDEEQUAL
-	MODULOEQUAL
+	// Two-character tokens (sequential from 300)
+	EQUAL       = 300
+	GTE         = 301
+	LTE         = 302
+	NOTEQUAL    = 303
+	PLUSEQUAL   = 304
+	MINUSEQUAL  = 305
+	TIMESEQUAL  = 306
+	DIVIDEEQUAL = 307
+	MODULOEQUAL = 308
 
-	// Three-character tokens
-	ELLIPSIS
+	// Three-character tokens (sequential from 400)
+	ELLIPSIS = 400
 
-	// Keywords
-	AND
-	BREAK
-	CATCH
-	CONTINUE
-	ELSE
-	FALSE
-	FOR
-	FUN
-	IF
-	IMPORT
-	IN
-	NULL
-	NOT
-	OR
-	RETURN
-	THEN
-	TRUE
-	TRY
-	WHILE
-	XOR
+	// Keywords (sequential from 500)
+	AND      = 500
+	BREAK    = 501
+	CATCH    = 502
+	CONTINUE = 503
+	ELSE     = 504
+	FALSE    = 505
+	FOR      = 506
+	FUN      = 507
+	IF       = 508
+	IMPORT   = 509
+	IN       = 510
+	NULL     = 511
+	NOT      = 512
+	OR       = 513
+	RETURN   = 514
+	THEN     = 515
+	TRUE     = 516
+	TRY      = 517
+	WHILE    = 518
+	XOR      = 519
 
-	// Literals and identifiers
-	INT
-	FLOAT
-	NAME
-	STR
+	// Literals and identifiers (sequential from 600)
+	INT   = 600
+	FLOAT = 601
+	NAME  = 602
+	STR   = 603
 )
 
 var keywordTokens = map[string]Token{
