@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -14,11 +15,12 @@ type CLI struct {
 	args    []string
 	profile bool
 	analyze bool
+	toJson  bool
 }
 
 // NewCLI creates a new CLI instance
 func NewCLI(args []string) *CLI {
-	return &CLI{args: args, profile: false, analyze: false}
+	return &CLI{args: args, profile: false, analyze: false, toJson: false}
 }
 
 // Run executes the CLI with the given arguments
@@ -37,6 +39,10 @@ func (c *CLI) Run() error {
 			c.args = append(c.args[:i], c.args[i+1:]...)
 		} else if arg == "--analyze" || arg == "-a" {
 			c.analyze = true
+			// Remove the flag from args
+			c.args = append(c.args[:i], c.args[i+1:]...)
+		} else if arg == "--to_json" {
+			c.toJson = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
 		}
@@ -69,6 +75,7 @@ func (c *CLI) printUsage() {
 	fmt.Println("  uddinlang <filename.din>   - Run a Uddin-Lang script file")
 	fmt.Println("  uddinlang --profile <filename.din> - Run with performance profiling")
 	fmt.Println("  uddinlang --analyze <filename.din> - Analyze syntax without execution")
+	fmt.Println("  uddinlang --to_json <filename.din> - Convert Uddin-Lang code to JSON AST")
 	fmt.Println("  uddinlang --examples       - List available example files")
 	fmt.Println("  uddinlang --version        - Show version information")
 	fmt.Println("  uddinlang --help           - Show this help message")
@@ -76,6 +83,7 @@ func (c *CLI) printUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("  --profile, -p              - Enable performance profiling output")
 	fmt.Println("  --analyze, -a              - Analyze syntax only (no execution)")
+	fmt.Println("  --to_json                  - Convert source code to JSON AST representation")
 }
 
 func (c *CLI) printVersion() {
@@ -109,7 +117,12 @@ func (c *CLI) listExamples() error {
 }
 
 func (c *CLI) runScript(filename string) error {
-	// Validate file extension
+	// Handle transpiler flags
+	if c.toJson {
+		return c.convertToJson(filename)
+	}
+
+	// Validate file extension for normal execution
 	if filepath.Ext(filename) != ".din" {
 		return fmt.Errorf("file must have .din extension")
 	}
@@ -144,6 +157,43 @@ func (c *CLI) runScript(filename string) error {
 	} else {
 		return fmt.Errorf("execution failed:\n%s", output)
 	}
+}
+
+// convertToJson converts a .din file to JSON AST representation
+func (c *CLI) convertToJson(filename string) error {
+	// Validate file extension
+	if filepath.Ext(filename) != ".din" {
+		return fmt.Errorf("file must have .din extension for --to_json")
+	}
+
+	// Read the file
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("error reading file %s: %w", filename, err)
+	}
+
+	// Parse the source code to AST using the correct interface
+	program, err := interpreter.ParseProgram(content)
+	if err != nil {
+		return fmt.Errorf("parsing error: %w", err)
+	}
+
+	// Convert AST to JSON
+	jsonData, err := json.MarshalIndent(program, "", "  ")
+	if err != nil {
+		return fmt.Errorf("error converting to JSON: %w", err)
+	}
+
+	// Print JSON to stdout
+	fmt.Println(string(jsonData))
+	return nil
+}
+
+
+
+// astToSourceCode converts an AST Program back to Uddin-Lang source code
+func (c *CLI) astToSourceCode(program *interpreter.Program) string {
+	return program.String()
 }
 
 func main() {
