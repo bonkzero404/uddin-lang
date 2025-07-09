@@ -377,10 +377,12 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		name := string(runes)
 
 		// Check if it's a keyword or a regular identifier
-		token, isKeyword := keywordTokens[name]
+		keywordToken, isKeyword := keywordTokens[name]
 		if !isKeyword {
 			token = NAME
 			value = name
+		} else {
+			token = keywordToken
 		}
 		return pos, token, value
 	}
