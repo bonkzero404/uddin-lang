@@ -119,6 +119,7 @@ graph TD
 -   ✅ **Functional Programming** paradigms
 -   ✅ **Memory Safe** with garbage collection
 -   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
+-   ✨ **Extended Standard Library** with advanced string manipulation, functional array methods, and new data structures (Set, Stack, Queue)
 
 ### 🛠️ Developer Tools
 
@@ -190,6 +191,11 @@ The language comes with comprehensive examples showcasing all features:
 ./uddinlang examples/13_assignment_operators.din  # Compound assignments (+=, -=, etc.)
 ./uddinlang examples/01_hello_world.din          # Basic syntax
 ./uddinlang examples/03_math_library.din         # Mathematical functions
+
+# ✨ New Standard Library Examples
+./uddinlang examples/14_string_manipulation_demo.din  # Advanced string functions
+./uddinlang examples/15_array_methods_demo.din        # Functional array methods
+./uddinlang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
 ```
 
 ### 🛠️ CLI Features & Development Tools
@@ -1070,6 +1076,8 @@ end
 
 ### String Functions
 
+#### Core String Functions
+
 | Function                       | Description       | Example                                      |
 | ------------------------------ | ----------------- | -------------------------------------------- |
 | `len(str)`                     | String length     | `len("hello")` → `5`                         |
@@ -1082,7 +1090,20 @@ end
 | `str_pad(str, len, char)`      | Pad string        | `str_pad("hi", 5, "*")` → `"***hi"`          |
 | `is_regex_match(pattern, str)` | Regex match       | `is_regex_match("^[0-9]+$", "123")` → `true` |
 
+#### ✨ New String Manipulation Functions
+
+| Function                    | Description                    | Example                                    |
+| --------------------------- | ------------------------------ | ------------------------------------------ |
+| `replace(str, old, new)`    | Replace all occurrences        | `replace("hello world", "world", "go")` → `"hello go"` |
+| `trim(str)`                 | Remove leading/trailing spaces | `trim("  hello  ")` → `"hello"`           |
+| `starts_with(str, prefix)`  | Check if starts with prefix    | `starts_with("hello", "he")` → `true`     |
+| `ends_with(str, suffix)`    | Check if ends with suffix      | `ends_with("hello.txt", ".txt")` → `true` |
+| `repeat(str, count)`        | Repeat string n times          | `repeat("*", 3)` → `"***"`                |
+| `reverse_str(str)`          | Reverse string                 | `reverse_str("hello")` → `"olleh"`        |
+
 ### Array Functions
+
+#### Core Array Functions
 
 | Function                           | Description      | Example                                             |
 | ---------------------------------- | ---------------- | --------------------------------------------------- |
@@ -1093,6 +1114,107 @@ end
 | `range(n)` or `range(start, stop)` | Create range     | `range(3)` → `[0,1,2]`<br>`range(1, 4)` → `[1,2,3]` |
 | `find(array, value)`               | Find index       | `find([1,2,3], 2)` → `1`                            |
 | `contains(array, value)`           | Check membership | `contains([1,2,3], 2)` → `true`                     |
+
+#### ✨ New Array Methods (Functional Programming)
+
+| Function                        | Description                      | Example                                           |
+| ------------------------------- | -------------------------------- | ------------------------------------------------- |
+| `map(array, function)`          | Transform each element           | `map([1,2,3], fun(x): return x*2 end)` → `[2,4,6]` |
+| `filter(array, function)`       | Filter elements by condition     | `filter([1,2,3,4], fun(x): return x%2==0 end)` → `[2,4]` |
+| `reduce(array, function, init)` | Reduce to single value           | `reduce([1,2,3], fun(a,x): return a+x end, 0)` → `6` |
+| `reverse(array)`                | Reverse array in-place           | `reverse([1,2,3])` modifies to `[3,2,1]`         |
+| `push(array, element)`          | Add element to end               | `push([1,2], 3)` modifies to `[1,2,3]`           |
+| `pop(array)`                    | Remove and return last element   | `pop([1,2,3])` → `3`, array becomes `[1,2]`      |
+| `shift(array)`                  | Remove and return first element  | `shift([1,2,3])` → `1`, array becomes `[2,3]`    |
+| `unshift(array, element)`       | Add element to beginning         | `unshift([2,3], 1)` modifies to `[1,2,3]`        |
+| `index_of(array, element)`      | Find first index of element      | `index_of([1,2,3,2], 2)` → `1`                   |
+| `last_index_of(array, element)` | Find last index of element       | `last_index_of([1,2,3,2], 2)` → `3`              |
+
+### ✨ New Data Structures
+
+Uddin-Lang now includes three powerful data structures for advanced programming patterns:
+
+#### Set (Unique Collection)
+
+A Set stores unique elements with no duplicates allowed.
+
+| Function              | Description                    | Example                           |
+| --------------------- | ------------------------------ | --------------------------------- |
+| `set_new()`           | Create new empty set           | `my_set = set_new()`              |
+| `set_add(set, elem)`  | Add element (ignores duplicates) | `set_add(my_set, 1)`              |
+| `set_has(set, elem)`  | Check if element exists        | `set_has(my_set, 1)` → `true`     |
+| `set_remove(set, elem)` | Remove element               | `set_remove(my_set, 1)` → `true`  |
+| `set_size(set)`       | Get number of elements         | `set_size(my_set)` → `3`          |
+| `set_clear(set)`      | Remove all elements            | `set_clear(my_set)`               |
+| `set_to_array(set)`   | Convert set to array           | `set_to_array(my_set)` → `[1,2,3]` |
+
+#### Stack (LIFO - Last In, First Out)
+
+A Stack follows the Last In, First Out principle, perfect for undo operations, parsing, and recursion.
+
+| Function                | Description                      | Example                           |
+| ----------------------- | -------------------------------- | --------------------------------- |
+| `stack_new()`           | Create new empty stack           | `my_stack = stack_new()`          |
+| `stack_push(stack, elem)` | Add element to top             | `stack_push(my_stack, "item")`    |
+| `stack_pop(stack)`      | Remove and return top element    | `stack_pop(my_stack)` → `"item"`  |
+| `stack_peek(stack)`     | View top element without removing | `stack_peek(my_stack)` → `"item"` |
+| `stack_size(stack)`     | Get number of elements           | `stack_size(my_stack)` → `3`      |
+| `stack_is_empty(stack)` | Check if stack is empty          | `stack_is_empty(my_stack)` → `false` |
+
+#### Queue (FIFO - First In, First Out)
+
+A Queue follows the First In, First Out principle, ideal for task scheduling, breadth-first search, and buffering.
+
+| Function                 | Description                        | Example                            |
+| ------------------------ | ---------------------------------- | ---------------------------------- |
+| `queue_new()`            | Create new empty queue             | `my_queue = queue_new()`           |
+| `queue_enqueue(queue, elem)` | Add element to back            | `queue_enqueue(my_queue, "task")`  |
+| `queue_dequeue(queue)`   | Remove and return front element    | `queue_dequeue(my_queue)` → `"task"` |
+| `queue_front(queue)`     | View front element without removing | `queue_front(my_queue)` → `"task"` |
+| `queue_size(queue)`      | Get number of elements             | `queue_size(my_queue)` → `3`       |
+| `queue_is_empty(queue)`  | Check if queue is empty            | `queue_is_empty(my_queue)` → `false` |
+
+#### Practical Use Cases
+
+```go
+// Remove duplicates using Set
+fun unique_elements(arr):
+    unique_set = set_new()
+    for item in arr:
+        set_add(unique_set, item)
+    end
+    return set_to_array(unique_set)
+end
+
+// Validate balanced parentheses using Stack
+fun is_balanced(text):
+    paren_stack = stack_new()
+    for i in range(len(text)):
+        char = substr(text, i, 1)
+        if char == "(":
+            stack_push(paren_stack, char)
+        elif char == ")":
+            if stack_is_empty(paren_stack):
+                return false
+            end
+            stack_pop(paren_stack)
+        end
+    end
+    return stack_is_empty(paren_stack)
+end
+
+// Process tasks in order using Queue
+fun process_tasks():
+    task_queue = queue_new()
+    queue_enqueue(task_queue, "Task 1")
+    queue_enqueue(task_queue, "Task 2")
+
+    while not queue_is_empty(task_queue):
+        current_task = queue_dequeue(task_queue)
+        print("Processing: " + current_task)
+    end
+end
+```
 
 ### Math Functions
 
