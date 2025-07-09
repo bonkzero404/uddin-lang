@@ -7,45 +7,20 @@ import (
 
 // Cache for commonly used error messages to reduce string formatting overhead
 var commonErrorMessages = map[Token]string{
-	LPAREN:  "expected (",
-	RPAREN:  "expected )",
-	LBRACE:  "expected {",
-	RBRACE:  "expected }",
+	LPAREN:   "expected (",
+	RPAREN:   "expected )",
+	LBRACE:   "expected {",
+	RBRACE:   "expected }",
 	LBRACKET: "expected [",
 	RBRACKET: "expected ]",
-	COMMA:   "expected ,",
-	COLON:   "expected :",
-	ASSIGN:  "expected =",
-	EOF:     "unexpected end of file",
-	THEN:    "expected then",
-	END:     "expected end",
-	ELSE:    "expected else",
-	IN:      "expected in",
-}
-
-// Operator precedence lookup table for faster precedence checks
-var operatorPrecedence = map[Token]int{
-	OR:       1,
-	AND:      2,
-	EQUAL:    3,
-	NOTEQUAL: 3,
-	LT:       4,
-	LTE:      4,
-	GT:       4,
-	GTE:      4,
-	PLUS:     5,
-	MINUS:    5,
-	TIMES:    6,
-	DIVIDE:   6,
-	MODULO:   6,
-}
-
-// Get operator precedence with default value for unknown operators
-func getOperatorPrecedence(tok Token) int {
-	if prec, exists := operatorPrecedence[tok]; exists {
-		return prec
-	}
-	return 0 // Default precedence for unknown operators
+	COMMA:    "expected ,",
+	COLON:    "expected :",
+	ASSIGN:   "expected =",
+	EOF:      "unexpected end of file",
+	THEN:     "expected then",
+	END:      "expected end",
+	ELSE:     "expected else",
+	IN:       "expected in",
 }
 
 // Error is the error type returned by ParseExpression and ParseProgram when
@@ -143,7 +118,7 @@ func (p *parser) statement() Statement {
 	pos := p.pos
 	expr := p.expression()
 	if p.tok == ASSIGN || p.tok == PLUSEQUAL || p.tok == MINUSEQUAL ||
-	   p.tok == TIMESEQUAL || p.tok == DIVIDEEQUAL || p.tok == MODULOEQUAL {
+		p.tok == TIMESEQUAL || p.tok == DIVIDEEQUAL || p.tok == MODULOEQUAL {
 		operator := p.tok
 		pos = p.pos
 		switch expr.(type) {
@@ -161,28 +136,28 @@ func (p *parser) statement() Statement {
 // block = (LBRACE statement* RBRACE) | (COLON statement* END)
 func (p *parser) block() Block {
 	switch p.tok {
-        case LBRACE:
-            p.expect(LBRACE)
-            body := p.statements(RBRACE)
-            p.expect(RBRACE)
-            return body
-        case COLON:
-            p.expect(COLON)
-            // We'll collect statements until we hit END, ELSE, or CATCH
-            statements := Block{}
-            for p.tok != END && p.tok != ELSE && p.tok != CATCH && p.tok != EOF {
-                statements = append(statements, p.statement())
-            }
+	case LBRACE:
+		p.expect(LBRACE)
+		body := p.statements(RBRACE)
+		p.expect(RBRACE)
+		return body
+	case COLON:
+		p.expect(COLON)
+		// We'll collect statements until we hit END, ELSE, or CATCH
+		statements := Block{}
+		for p.tok != END && p.tok != ELSE && p.tok != CATCH && p.tok != EOF {
+			statements = append(statements, p.statement())
+		}
 
-            // Only expect END if we're not at ELSE or CATCH
-            if p.tok == END {
-                p.expect(END)
-            }
+		// Only expect END if we're not at ELSE or CATCH
+		if p.tok == END {
+			p.expect(END)
+		}
 
-            return statements
-        default:
-            p.error("expected ':' to start block (after 'then', 'while(...)', 'for(...)', 'fun(...)', or 'try'), got %s", p.tok)
-            return nil
+		return statements
+	default:
+		p.error("expected ':' to start block (after 'then', 'while(...)', 'for(...)', 'fun(...)', or 'try'), got %s", p.tok)
+		return nil
 	}
 }
 
@@ -204,13 +179,13 @@ func (p *parser) if_() Statement {
 	if p.tok == ELSE {
 		p.next()
 		switch p.tok {
-            case LBRACE, COLON:
-                elseBody = p.block()
-            case IF:
-                elseBody = Block{p.if_()}
-            default:
-                p.error("expected ':' or 'if' after 'else' keyword, got %s", p.tok)
-            }
+		case LBRACE, COLON:
+			elseBody = p.block()
+		case IF:
+			elseBody = Block{p.if_()}
+		default:
+			p.error("expected ':' or 'if' after 'else' keyword, got %s", p.tok)
+		}
 	}
 
 	return &If{pos, condition, body, elseBody}
@@ -249,16 +224,16 @@ func (p *parser) tryCatch() Statement {
 	// For the try block, we don't expect END
 	var tryBlock Block
 	switch p.tok {
-        case LBRACE:
-            p.expect(LBRACE)
-            tryBlock = p.statements(RBRACE)
-            p.expect(RBRACE)
-        case COLON:
-            p.expect(COLON)
-            tryBlock = p.statements(CATCH)
-        default:
-            p.error("expected ':' after 'try' keyword to start block, got %s", p.tok)
-            return nil
+	case LBRACE:
+		p.expect(LBRACE)
+		tryBlock = p.statements(RBRACE)
+		p.expect(RBRACE)
+	case COLON:
+		p.expect(COLON)
+		tryBlock = p.statements(CATCH)
+	default:
+		p.error("expected ':' after 'try' keyword to start block, got %s", p.tok)
+		return nil
 	}
 
 	p.expect(CATCH)
@@ -433,47 +408,47 @@ func (p *parser) call() Expression {
 	expr := p.primary()
 	for p.matches(LPAREN, LBRACKET, DOT) {
 		switch p.tok {
-            case LPAREN:
-                pos := p.pos
-                p.next()
-                args := []Expression{}
-                gotComma := true
-                gotEllipsis := false
-                for p.tok != RPAREN && p.tok != EOF && !gotEllipsis {
-                    if !gotComma {
-                        p.error("missing comma ',' between function arguments")
-                    }
-                    arg := p.expression()
-                    args = append(args, arg)
-                    if p.tok == ELLIPSIS {
-                        gotEllipsis = true
-                        p.next()
-                    }
-                    if p.tok == COMMA {
-                        gotComma = true
-                        p.next()
-                    } else {
-                        gotComma = false
-                    }
-                }
-                if p.tok != RPAREN && gotEllipsis {
-                    p.error("variadic argument '...' must be the last argument in function call")
-                }
-                p.expect(RPAREN)
-                expr = &Call{pos, expr, args, gotEllipsis}
-            case LBRACKET:
-                pos := p.pos
-                p.next()
-                subscript := p.expression()
-                p.expect(RBRACKET)
-                expr = &Subscript{pos, expr, subscript}
-            default:
-                pos := p.pos
-                p.next()
-                subscript := &Literal{p.pos, p.val}
-                p.expect(NAME)
-                expr = &Subscript{pos, expr, subscript}
-            }
+		case LPAREN:
+			pos := p.pos
+			p.next()
+			args := []Expression{}
+			gotComma := true
+			gotEllipsis := false
+			for p.tok != RPAREN && p.tok != EOF && !gotEllipsis {
+				if !gotComma {
+					p.error("missing comma ',' between function arguments")
+				}
+				arg := p.expression()
+				args = append(args, arg)
+				if p.tok == ELLIPSIS {
+					gotEllipsis = true
+					p.next()
+				}
+				if p.tok == COMMA {
+					gotComma = true
+					p.next()
+				} else {
+					gotComma = false
+				}
+			}
+			if p.tok != RPAREN && gotEllipsis {
+				p.error("variadic argument '...' must be the last argument in function call")
+			}
+			p.expect(RPAREN)
+			expr = &Call{pos, expr, args, gotEllipsis}
+		case LBRACKET:
+			pos := p.pos
+			p.next()
+			subscript := p.expression()
+			p.expect(RBRACKET)
+			expr = &Subscript{pos, expr, subscript}
+		default:
+			pos := p.pos
+			p.next()
+			subscript := &Literal{p.pos, p.val}
+			p.expect(NAME)
+			expr = &Subscript{pos, expr, subscript}
+		}
 	}
 	return expr
 }
@@ -484,66 +459,66 @@ func (p *parser) call() Expression {
 //	LPAREN expression RPAREN
 func (p *parser) primary() Expression {
 	switch p.tok {
-        case NAME:
-            name := p.val
-            pos := p.pos
-            p.next()
-            return &Variable{pos, name}
-        case INT:
-            val := p.val
-            pos := p.pos
-            p.next()
-            n, err := strconv.Atoi(val)
-            if err != nil {
-                // Tokenizer should never give us this
-                panic(fmt.Sprintf("tokenizer gave INT token that isn't an int: %s", val))
-            }
-            return &Literal{pos, n}
-        case FLOAT:
-            val := p.val
-            pos := p.pos
-            p.next()
-            n, err := strconv.ParseFloat(val, 64)
-            if err != nil {
-                // Tokenizer should never give us this
-                panic(fmt.Sprintf("tokenizer gave FLOAT token that isn't a float: %s", val))
-            }
-            return &Literal{pos, n}
-        case STR:
-            val := p.val
-            pos := p.pos
-            p.next()
-            return &Literal{pos, val}
-        case TRUE:
-            pos := p.pos
-            p.next()
-            return &Literal{pos, true}
-        case FALSE:
-            pos := p.pos
-            p.next()
-            return &Literal{pos, false}
-        case NULL:
-            pos := p.pos
-            p.next()
-            return &Literal{pos, nil}
-        case LBRACKET:
-            return p.list()
-        case LBRACE:
-            return p.map_()
-        case FUN:
-            pos := p.pos
-            p.next()
-            args, ellipsis := p.params()
-            body := p.block()
-            return &FunctionExpression{pos, args, ellipsis, body}
-        case LPAREN:
-            p.next()
-            expr := p.expression()
-            p.expect(RPAREN)
-            return expr
-        default:
-            p.error("unexpected token %s - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)", p.tok)
-            return nil
+	case NAME:
+		name := p.val
+		pos := p.pos
+		p.next()
+		return &Variable{pos, name}
+	case INT:
+		val := p.val
+		pos := p.pos
+		p.next()
+		n, err := strconv.Atoi(val)
+		if err != nil {
+			// Tokenizer should never give us this
+			panic(fmt.Sprintf("tokenizer gave INT token that isn't an int: %s", val))
+		}
+		return &Literal{pos, n}
+	case FLOAT:
+		val := p.val
+		pos := p.pos
+		p.next()
+		n, err := strconv.ParseFloat(val, 64)
+		if err != nil {
+			// Tokenizer should never give us this
+			panic(fmt.Sprintf("tokenizer gave FLOAT token that isn't a float: %s", val))
+		}
+		return &Literal{pos, n}
+	case STR:
+		val := p.val
+		pos := p.pos
+		p.next()
+		return &Literal{pos, val}
+	case TRUE:
+		pos := p.pos
+		p.next()
+		return &Literal{pos, true}
+	case FALSE:
+		pos := p.pos
+		p.next()
+		return &Literal{pos, false}
+	case NULL:
+		pos := p.pos
+		p.next()
+		return &Literal{pos, nil}
+	case LBRACKET:
+		return p.list()
+	case LBRACE:
+		return p.map_()
+	case FUN:
+		pos := p.pos
+		p.next()
+		args, ellipsis := p.params()
+		body := p.block()
+		return &FunctionExpression{pos, args, ellipsis, body}
+	case LPAREN:
+		p.next()
+		expr := p.expression()
+		p.expect(RPAREN)
+		return expr
+	default:
+		p.error("unexpected token %s - expected a value (number, string, identifier, '(', '[', '{', 'fun', etc.)", p.tok)
+		return nil
 	}
 }
 
