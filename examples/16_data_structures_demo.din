@@ -1,0 +1,162 @@
+// =============================================================================
+// 16_data_structures_demo.din - New data structures demo (Set, Stack, Queue)
+// =============================================================================
+
+fun main():
+    print("=== New Data Structures Demo ===")
+    
+    print("\n--- SET (Unique Collection) ---")
+    
+    // Create new set
+    unique_numbers = set_new()
+    
+    // Add elements (duplicates will be ignored)
+    set_add(unique_numbers, 1)
+    set_add(unique_numbers, 2)
+    set_add(unique_numbers, 3)
+    set_add(unique_numbers, 2)  // Duplicate, will be ignored
+    set_add(unique_numbers, 1)  // Duplicate, will be ignored
+    
+    print("Set size: " + str(set_size(unique_numbers)))
+    print("Set contains 2: " + str(set_has(unique_numbers, 2)))
+    print("Set contains 5: " + str(set_has(unique_numbers, 5)))
+    
+    // Convert set to array to view contents
+    set_array = set_to_array(unique_numbers)
+    print("Set contents: " + str(set_array))
+    
+    // Remove element
+    removed = set_remove(unique_numbers, 2)
+    print("Removed 2: " + str(removed))
+    print("Set after removal: " + str(set_to_array(unique_numbers)))
+    
+    print("\n--- STACK (LIFO - Last In, First Out) ---")
+    
+    // Create new stack
+    my_stack = stack_new()
+    
+    // Push elements
+    stack_push(my_stack, "first")
+    stack_push(my_stack, "second")
+    stack_push(my_stack, "third")
+    
+    print("Stack size: " + str(stack_size(my_stack)))
+    print("Stack top (peek): " + str(stack_peek(my_stack)))
+    
+    // Pop elements
+    while (stack_size(my_stack) > 0):
+        popped = stack_pop(my_stack)
+        print("Popped: " + str(popped) + ", remaining size: " + str(stack_size(my_stack)))
+    end
+    
+    print("\n--- QUEUE (FIFO - First In, First Out) ---")
+    
+    // Create new queue
+    my_queue = queue_new()
+    
+    // Enqueue elements
+    queue_enqueue(my_queue, "first")
+    queue_enqueue(my_queue, "second")
+    queue_enqueue(my_queue, "third")
+    
+    print("Queue size: " + str(queue_size(my_queue)))
+    print("Queue front (peek): " + str(queue_front(my_queue)))
+    
+    // Dequeue elements
+    while (queue_size(my_queue) > 0):
+        dequeued = queue_dequeue(my_queue)
+        print("Dequeued: " + str(dequeued) + ", remaining size: " + str(queue_size(my_queue)))
+    end
+    
+    print("\n=== Practical Usage Examples ===")
+    
+    // 1. Set to remove duplicates
+    fun remove_duplicates(arr):
+        unique_set = set_new()
+        for (item in arr):
+            set_add(unique_set, item)
+        end
+        return set_to_array(unique_set)
+    end
+    
+    numbers_with_dups = [1, 2, 3, 2, 4, 1, 5, 3]
+    unique_nums = remove_duplicates(numbers_with_dups)
+    print("\nOriginal: " + str(numbers_with_dups))
+    print("Unique: " + str(unique_nums))
+    
+    // 2. Stack for parentheses validation
+    fun is_balanced_parentheses(text):
+        paren_stack = stack_new()
+        
+        for (i in range(len(text))):
+            char = substr(text, i, i+1)
+            
+            if (char == "(" or char == "[" or char == "{") then:
+                stack_push(paren_stack, char)
+            else if (char == ")" or char == "]" or char == "}") then:
+                if (stack_size(paren_stack) == 0) then:
+                    return false
+                end
+                
+                top = stack_pop(paren_stack)
+                if ((char == ")" and top != "(") or 
+                   (char == "]" and top != "[") or 
+                   (char == "}" and top != "{")) then:
+                    return false
+                end
+            end
+        end
+        
+        return stack_size(paren_stack) == 0
+    end
+    
+    test_strings = ["()", "()[]{}", "([{}])", "(((", "))("]
+    
+    print("\nParentheses validation:")
+    for (test_str in test_strings):
+        balanced = is_balanced_parentheses(test_str)
+        print("'" + test_str + "' balanced: " + str(balanced))
+    end
+    
+    // 3. Queue for queue system simulation
+    fun simulate_queue_system():
+        customer_queue = queue_new()
+        
+        // Customers arrive
+        customers = ["Alice", "Bob", "Charlie", "Diana"]
+        print("\nQueue system simulation:")
+        
+        for (customer in customers):
+            queue_enqueue(customer_queue, customer)
+            print("" + customer + " joined queue. Queue size: " + str(queue_size(customer_queue)))
+        end
+        
+        // Serve customers
+        print("\nServing customers:")
+        while (queue_size(customer_queue) > 0):
+            current = queue_dequeue(customer_queue)
+            print("Serving " + str(current) + ". Remaining queue: " + str(queue_size(customer_queue)))
+        end
+    end
+    
+    simulate_queue_system()
+    
+    // 4. Kombinasi struktur data
+    fun word_frequency_counter(text):
+        words = split(lower(text), " ")
+        word_set = set_new()
+        
+        // Collect unique words
+        for (word in words):
+            set_add(word_set, word)
+        end
+        
+        unique_words = set_to_array(word_set)
+        print("\nText analysis: '" + text + "'")
+        print("Total words: " + str(len(words)))
+        print("Unique words: " + str(len(unique_words)))
+        print("Unique words: " + str(unique_words))
+    end
+    
+    word_frequency_counter("hello world hello programming world")
+end
