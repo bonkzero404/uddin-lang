@@ -1,0 +1,105 @@
+// =============================================================================
+// 15_array_methods_demo.din - New array methods demo
+// =============================================================================
+
+fun main():
+    print("=== New Array Methods Demo ===")
+    
+    // map() - Transform each element
+    numbers = [1, 2, 3, 4, 5]
+    doubled = map(numbers, fun(x): return x * 2 end)
+    print("map([1,2,3,4,5], x => x*2):")
+    for (num in doubled):
+        print("  " + str(num))
+    end
+    
+    // filter() - Filter elements based on condition
+    evens = filter(numbers, fun(x): return x % 2 == 0 end)
+    print("\nfilter([1,2,3,4,5], x => x%2==0):")
+    for (num in evens):
+        print("  " + str(num))
+    end
+    
+    // reduce() - Reduce array to single value
+    sum = reduce(numbers, fun(acc, x): return acc + x end, 0)
+    product = reduce(numbers, fun(acc, x): return acc * x end, 1)
+    print("\nreduce([1,2,3,4,5], sum, 0) = " + str(sum))
+    print("reduce([1,2,3,4,5], product, 1) = " + str(product))
+    
+    // reverse() - Reverse array
+    fruits = ["apple", "banana", "cherry"]
+    print("\nBefore reverse: " + str(fruits))
+    reverse(fruits)
+    print("After reverse: " + str(fruits))
+    
+    // push() and pop() - Add and remove from end
+    stack_demo = []
+    push(stack_demo, "first")
+    push(stack_demo, "second")
+    push(stack_demo, "third")
+    print("\nAfter pushing 3 elements: " + str(stack_demo))
+    
+    popped = pop(stack_demo)
+    print("Popped: " + str(popped))
+    print("Array after pop: " + str(stack_demo))
+    
+    // shift() and unshift() - Add and remove from beginning
+    queue_demo = ["middle"]
+    unshift(queue_demo, "first")
+    push(queue_demo, "last")
+    print("\nAfter unshift and push: " + str(queue_demo))
+    
+    shifted = shift(queue_demo)
+    print("Shifted: " + str(shifted))
+    print("Array after shift: " + str(queue_demo))
+    
+    // index_of() dan last_index_of()
+    data = [1, 2, 3, 2, 4, 2]
+    first_index = index_of(data, 2)
+    last_index = last_index_of(data, 2)
+    print("\nArray: " + str(data))
+    print("First index of 2: " + str(first_index))
+    print("Last index of 2: " + str(last_index))
+    
+    print("\n=== Practical Usage Examples ===")
+    
+    // Simple data analysis
+    scores = [85, 92, 78, 96, 88, 79, 94]
+    
+    // Filter high scores (>= 90)
+    high_scores = filter(scores, fun(score): return score >= 90 end)
+    print("High scores (>=90): " + str(high_scores))
+    
+    // Calculate average
+    total = reduce(scores, fun(acc, score): return acc + score end, 0)
+    average = total / len(scores)
+    print("Average: " + str(average))
+    
+    // Transform to grades
+    grades = map(scores, fun(score):
+        if (score >= 90) then:
+            return "A"
+        else if (score >= 80) then:
+            return "B"
+        else if (score >= 70) then:
+            return "C"
+        else:
+            return "D"
+        end
+    end)
+    print("Grades: " + str(grades))
+    
+    // Pipeline processing
+    words = ["hello", "world", "programming", "is", "fun"]
+    
+    // Filter long words, transform to uppercase, then join
+    long_words = filter(words, fun(word): return len(word) > 3 end)
+    upper_words = map(long_words, fun(word): return upper(word) end)
+    result = reduce(upper_words, fun(acc, word): return acc + " " + word end, "")
+    
+    print("\nPipeline processing:")
+    print("Original: " + str(words))
+    print("Long words (>3 chars): " + str(long_words))
+    print("Uppercase: " + str(upper_words))
+    print("Joined:" + result)
+end
