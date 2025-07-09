@@ -168,12 +168,12 @@ func TestPosition(t *testing.T) {
 
 func TestTokenizerBasic(t *testing.T) {
 	// Test Token String method
-	if PLUS.String() != "+" {
-		t.Errorf("Expected PLUS to be '+', got '%s'", PLUS.String())
+	if Token(PLUS).String() != "+" {
+		t.Errorf("Expected PLUS to be '+', got '%s'", Token(PLUS).String())
 	}
 
-	if MINUS.String() != "-" {
-		t.Errorf("Expected MINUS to be '-', got '%s'", MINUS.String())
+	if Token(MINUS).String() != "-" {
+		t.Errorf("Expected MINUS to be '-', got '%s'", Token(MINUS).String())
 	}
 
 	// Test NewTokenizer
@@ -947,7 +947,7 @@ func TestSpecificLowLevelCoverage(t *testing.T) {
 // TestUncoveredFunctions tests specific functions that show 0% coverage
 func TestUncoveredFunctions(t *testing.T) {
 	// Test Token String method
-	token := NAME // Use a valid token constant
+	token := Token(NAME) // Use a valid token constant
 	if token.String() == "" {
 		t.Error("Token String method should not return empty string")
 	}
