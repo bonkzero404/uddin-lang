@@ -368,13 +368,17 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 
 	// Process names (identifiers) and keywords
 	if isNameStart(ch) {
+		// Use strings.Builder for efficient string building
+		var builder strings.Builder
+		builder.Grow(32) // Pre-allocate for typical identifier length
+		builder.WriteRune(ch)
+		
 		// Collect all characters that can be part of a name
-		runes := []rune{ch}
 		for isNameStart(t.ch) || (t.ch >= '0' && t.ch <= '9') {
-			runes = append(runes, t.ch)
+			builder.WriteRune(t.ch)
 			t.next()
 		}
-		name := string(runes)
+		name := builder.String()
 
 		// Check if it's a keyword or a regular identifier
 		keywordToken, isKeyword := keywordTokens[name]
@@ -485,7 +489,10 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		}
 	// Process numeric literals (integers and floats)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		runes := []rune{ch}
+		// Use strings.Builder for efficient number building
+		var builder strings.Builder
+		builder.Grow(16) // Pre-allocate for typical number length
+		builder.WriteRune(ch)
 		isFloat := false
 
 		// Collect all digits and at most one decimal point
@@ -496,7 +503,7 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 				}
 				isFloat = true
 			}
-			runes = append(runes, t.ch)
+			builder.WriteRune(t.ch)
 			t.next()
 		}
 
@@ -506,11 +513,13 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		} else {
 			token = INT
 		}
-		value = string(runes)
+		value = builder.String()
 
 	// Process string literals enclosed in double quotes
 	case '"':
-		runes := []rune{}
+		// Use strings.Builder for efficient string building
+		var builder strings.Builder
+		builder.Grow(64) // Pre-allocate for typical string length
 
 		// Collect all characters until closing quote
 		for t.ch != '"' {
@@ -543,18 +552,20 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 				}
 			}
 
-			runes = append(runes, c)
+			builder.WriteRune(c)
 			t.next()
 		}
 
 		// Skip the closing quote
 		t.next()
 		token = STR
-		value = string(runes)
+		value = builder.String()
 
 	// Process string literals enclosed in single quotes
 	case '\'':
-		runes := []rune{}
+		// Use strings.Builder for efficient string building
+		var builder strings.Builder
+		builder.Grow(64) // Pre-allocate for typical string length
 
 		// Collect all characters until closing quote
 		for t.ch != '\'' {
@@ -587,14 +598,14 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 				}
 			}
 
-			runes = append(runes, c)
+			builder.WriteRune(c)
 			t.next()
 		}
 
 		// Skip the closing quote
 		t.next()
 		token = STR
-		value = string(runes)
+		value = builder.String()
 
 	default:
 		token = ILLEGAL

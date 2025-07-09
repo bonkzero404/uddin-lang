@@ -1,5 +1,41 @@
 package interpreter
 
+// Type-specific value extractors for better performance
+func asInt(v Value) (int, bool) {
+	if i, ok := v.(int); ok {
+		return i, true
+	}
+	return 0, false
+}
+
+func asFloat(v Value) (float64, bool) {
+	if f, ok := v.(float64); ok {
+		return f, true
+	}
+	return 0, false
+}
+
+func asString(v Value) (string, bool) {
+	if s, ok := v.(string); ok {
+		return s, true
+	}
+	return "", false
+}
+
+func asArray(v Value) (*[]Value, bool) {
+	if arr, ok := v.(*[]Value); ok {
+		return arr, true
+	}
+	return nil, false
+}
+
+func asMap(v Value) (map[string]Value, bool) {
+	if m, ok := v.(map[string]Value); ok {
+		return m, true
+	}
+	return nil, false
+}
+
 // Evaluator handles expression evaluation
 type Evaluator struct {
 	env   *Environment
@@ -209,14 +245,15 @@ func (e *Evaluator) evaluateMap(node *Map) Value {
 	return result
 }
 
-// evaluateSubscript evaluates array/map indexing
+// evaluateSubscript evaluates array/map indexing with optimized type checking
 func (e *Evaluator) evaluateSubscript(node *Subscript) Value {
 	container := e.EvaluateExpression(node.Container)
 	index := e.EvaluateExpression(node.Subscript)
 
+	// Use optimized type checking with existing functions
 	switch c := container.(type) {
 	case *[]Value:  // Array is a pointer to slice
-		idx, ok := index.(int)
+		idx, ok := asInt(index)
 		if !ok {
 			panic(typeError(node.Position(), "array index must be integer, got %T", index))
 		}
@@ -232,7 +269,7 @@ func (e *Evaluator) evaluateSubscript(node *Subscript) Value {
 		return (*c)[idx]
 
 	case map[string]Value:
-		key, ok := index.(string)
+		key, ok := asString(index)
 		if !ok {
 			panic(typeError(node.Position(), "map key must be string, got %T", index))
 		}
@@ -242,7 +279,7 @@ func (e *Evaluator) evaluateSubscript(node *Subscript) Value {
 		return nil
 
 	case string:
-		idx, ok := index.(int)
+		idx, ok := asInt(index)
 		if !ok {
 			panic(typeError(node.Position(), "string index must be integer, got %T", index))
 		}

@@ -5,6 +5,49 @@ import (
 	"strconv"
 )
 
+// Cache for commonly used error messages to reduce string formatting overhead
+var commonErrorMessages = map[Token]string{
+	LPAREN:  "expected (",
+	RPAREN:  "expected )",
+	LBRACE:  "expected {",
+	RBRACE:  "expected }",
+	LBRACKET: "expected [",
+	RBRACKET: "expected ]",
+	COMMA:   "expected ,",
+	COLON:   "expected :",
+	ASSIGN:  "expected =",
+	EOF:     "unexpected end of file",
+	THEN:    "expected then",
+	END:     "expected end",
+	ELSE:    "expected else",
+	IN:      "expected in",
+}
+
+// Operator precedence lookup table for faster precedence checks
+var operatorPrecedence = map[Token]int{
+	OR:       1,
+	AND:      2,
+	EQUAL:    3,
+	NOTEQUAL: 3,
+	LT:       4,
+	LTE:      4,
+	GT:       4,
+	GTE:      4,
+	PLUS:     5,
+	MINUS:    5,
+	TIMES:    6,
+	DIVIDE:   6,
+	MODULO:   6,
+}
+
+// Get operator precedence with default value for unknown operators
+func getOperatorPrecedence(tok Token) int {
+	if prec, exists := operatorPrecedence[tok]; exists {
+		return prec
+	}
+	return 0 // Default precedence for unknown operators
+}
+
 // Error is the error type returned by ParseExpression and ParseProgram when
 // they encounter a syntax error. You can use this to get the location (line
 // and column) of where the error occurred, as well as the error message.
@@ -38,7 +81,12 @@ func (p *parser) error(format string, args ...any) {
 
 func (p *parser) expect(tok Token) {
 	if p.tok != tok {
-		p.error("expected %s, but got %s", tok, p.tok)
+		// Use cached error message if available, otherwise format dynamically
+		if msg, exists := commonErrorMessages[tok]; exists {
+			p.error("%s, but got %s", msg, p.tok)
+		} else {
+			p.error("expected %s, but got %s", tok, p.tok)
+		}
 	}
 	p.next()
 }
