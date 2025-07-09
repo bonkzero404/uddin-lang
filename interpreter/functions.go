@@ -151,6 +151,44 @@ var builtins = map[string]builtinFunction{
 	"date_now":       {datenowFunc, "date_now"},
 	"date_format":    {dateformatFunc, "date_format"},
 
+	// String Manipulation Functions (Point 1)
+	"replace":        {replaceFunc, "replace"},
+	"trim":           {trimFunc, "trim"},
+	"starts_with":    {startsWithFunc, "starts_with"},
+	"ends_with":      {endsWithFunc, "ends_with"},
+	"repeat":         {repeatFunc, "repeat"},
+	"reverse_str":    {reverseStrFunc, "reverse_str"},
+
+	// Array Methods (Point 1)
+	"map":            {mapFunc, "map"},
+	"filter":         {filterFunc, "filter"},
+	"reduce":         {reduceFunc, "reduce"},
+	"reverse":        {reverseFunc, "reverse"},
+	"push":           {pushFunc, "push"},
+	"pop":            {popFunc, "pop"},
+	"shift":          {shiftFunc, "shift"},
+	"unshift":        {unshiftFunc, "unshift"},
+	"index_of":       {indexOfFunc, "index_of"},
+	"last_index_of":  {lastIndexOfFunc, "last_index_of"},
+
+	// Data Structures (Point 2)
+	"set_new":        {setNewFunc, "set_new"},
+	"set_add":        {setAddFunc, "set_add"},
+	"set_remove":     {setRemoveFunc, "set_remove"},
+	"set_has":        {setHasFunc, "set_has"},
+	"set_size":       {setSizeFunc, "set_size"},
+	"set_to_array":   {setToArrayFunc, "set_to_array"},
+	"stack_new":      {stackNewFunc, "stack_new"},
+	"stack_push":     {stackPushFunc, "stack_push"},
+	"stack_pop":      {stackPopFunc, "stack_pop"},
+	"stack_peek":     {stackPeekFunc, "stack_peek"},
+	"stack_size":     {stackSizeFunc, "stack_size"},
+	"queue_new":      {queueNewFunc, "queue_new"},
+	"queue_enqueue":  {queueEnqueueFunc, "queue_enqueue"},
+	"queue_dequeue":  {queueDequeueFunc, "queue_dequeue"},
+	"queue_front":    {queueFrontFunc, "queue_front"},
+	"queue_size":     {queueSizeFunc, "queue_size"},
+
 	// Basic Math Operations
 	"abs":    {absFunc, "abs"},
 	"max":    {maxFunc, "max"},
@@ -1866,4 +1904,584 @@ func isInfiniteFunc(interp *interpreter, pos Position, args []Value) Value {
 	ensureNumArgs(pos, "is_infinite", args, 1)
 	val := toFloat64(pos, args[0], "is_infinite")
 	return Value(math.IsInf(val, 0))
+}
+
+// ========================================
+// String Manipulation Functions (Point 1)
+// ========================================
+
+// replaceFunc implements the replace() built-in function
+// replace(str, old, new) -> string
+// Example: replace("hello world", "world", "universe") -> "hello universe"
+func replaceFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "replace", args, 3)
+	str, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "replace() requires first argument to be a string"))
+	}
+	old, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "replace() requires second argument to be a string"))
+	}
+	new, ok := args[2].(string)
+	if !ok {
+		panic(typeError(pos, "replace() requires third argument to be a string"))
+	}
+	return Value(strings.ReplaceAll(str, old, new))
+}
+
+// trimFunc implements the trim() built-in function
+// trim(str) -> string
+// Example: trim("  hello world  ") -> "hello world"
+func trimFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "trim", args, 1)
+	str, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "trim() requires a string argument"))
+	}
+	return Value(strings.TrimSpace(str))
+}
+
+// startsWithFunc implements the starts_with() built-in function
+// starts_with(str, prefix) -> bool
+// Example: starts_with("hello world", "hello") -> true
+func startsWithFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "starts_with", args, 2)
+	str, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "starts_with() requires first argument to be a string"))
+	}
+	prefix, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "starts_with() requires second argument to be a string"))
+	}
+	return Value(strings.HasPrefix(str, prefix))
+}
+
+// endsWithFunc implements the ends_with() built-in function
+// ends_with(str, suffix) -> bool
+// Example: ends_with("hello world", "world") -> true
+func endsWithFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "ends_with", args, 2)
+	str, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "ends_with() requires first argument to be a string"))
+	}
+	suffix, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "ends_with() requires second argument to be a string"))
+	}
+	return Value(strings.HasSuffix(str, suffix))
+}
+
+// repeatFunc implements the repeat() built-in function
+// repeat(str, count) -> string
+// Example: repeat("hello", 3) -> "hellohellohello"
+func repeatFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "repeat", args, 2)
+	str, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "repeat() requires first argument to be a string"))
+	}
+	count, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "repeat() requires second argument to be an integer"))
+	}
+	if count < 0 {
+		panic(valueError(pos, "repeat() count cannot be negative"))
+	}
+	return Value(strings.Repeat(str, count))
+}
+
+// reverseStrFunc implements the reverse_str() built-in function
+// reverse_str(str) -> string
+// Example: reverse_str("hello") -> "olleh"
+func reverseStrFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "reverse_str", args, 1)
+	str, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "reverse_str() requires a string argument"))
+	}
+	runes := []rune(str)
+	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+		runes[i], runes[j] = runes[j], runes[i]
+	}
+	return Value(string(runes))
+}
+
+// ========================================
+// Array Methods (Point 1)
+// ========================================
+
+// mapFunc implements the map() built-in function
+// map(array, function) -> array
+// Example: map([1, 2, 3], lambda x: x * 2) -> [2, 4, 6]
+func mapFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "map", args, 2)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "map() requires first argument to be an array"))
+	}
+	fn, ok := args[1].(functionType)
+	if !ok {
+		panic(typeError(pos, "map() requires second argument to be a function"))
+	}
+
+	result := make([]Value, len(*arr))
+	for i, v := range *arr {
+		result[i] = interp.callFunction(pos, fn, []Value{v})
+	}
+	return Value(&result)
+}
+
+// filterFunc implements the filter() built-in function
+// filter(array, function) -> array
+// Example: filter([1, 2, 3, 4], lambda x: x % 2 == 0) -> [2, 4]
+func filterFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "filter", args, 2)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "filter() requires first argument to be an array"))
+	}
+	fn, ok := args[1].(functionType)
+	if !ok {
+		panic(typeError(pos, "filter() requires second argument to be a function"))
+	}
+
+	result := make([]Value, 0)
+	for _, v := range *arr {
+		if IsTruthy(interp.callFunction(pos, fn, []Value{v})) {
+			result = append(result, v)
+		}
+	}
+	return Value(&result)
+}
+
+// reduceFunc implements the reduce() built-in function
+// reduce(array, function, initial) -> any
+// Example: reduce([1, 2, 3, 4], lambda acc, x: acc + x, 0) -> 10
+func reduceFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 3 {
+		panic(typeError(pos, "reduce() requires 3 arguments, got %d", len(args)))
+	}
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "reduce() requires first argument to be an array"))
+	}
+	fn, ok := args[1].(functionType)
+	if !ok {
+		panic(typeError(pos, "reduce() requires second argument to be a function"))
+	}
+
+	accumulator := args[2]
+	for _, v := range *arr {
+		accumulator = interp.callFunction(pos, fn, []Value{accumulator, v})
+	}
+	return accumulator
+}
+
+// reverseFunc implements the reverse() built-in function
+// reverse(array) -> null (modifies array in place)
+// Example: reverse([1, 2, 3]) -> [3, 2, 1]
+func reverseFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "reverse", args, 1)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "reverse() requires an array argument"))
+	}
+
+	for i, j := 0, len(*arr)-1; i < j; i, j = i+1, j-1 {
+		(*arr)[i], (*arr)[j] = (*arr)[j], (*arr)[i]
+	}
+	return Value(nil)
+}
+
+// pushFunc implements the push() built-in function
+// push(array, element) -> null (modifies array in place)
+// Example: push([1, 2], 3) -> [1, 2, 3]
+func pushFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		panic(typeError(pos, "push() requires at least 2 arguments, got %d", len(args)))
+	}
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "push() requires first argument to be an array"))
+	}
+
+	*arr = append(*arr, args[1:]...)
+	return Value(nil)
+}
+
+// popFunc implements the pop() built-in function
+// pop(array) -> any (removes and returns last element)
+// Example: pop([1, 2, 3]) -> 3, array becomes [1, 2]
+func popFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "pop", args, 1)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "pop() requires an array argument"))
+	}
+
+	if len(*arr) == 0 {
+		return Value(nil)
+	}
+
+	last := (*arr)[len(*arr)-1]
+	*arr = (*arr)[:len(*arr)-1]
+	return last
+}
+
+// shiftFunc implements the shift() built-in function
+// shift(array) -> any (removes and returns first element)
+// Example: shift([1, 2, 3]) -> 1, array becomes [2, 3]
+func shiftFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "shift", args, 1)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "shift() requires an array argument"))
+	}
+
+	if len(*arr) == 0 {
+		return Value(nil)
+	}
+
+	first := (*arr)[0]
+	*arr = (*arr)[1:]
+	return first
+}
+
+// unshiftFunc implements the unshift() built-in function
+// unshift(array, element) -> null (adds element to beginning)
+// Example: unshift([2, 3], 1) -> [1, 2, 3]
+func unshiftFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		panic(typeError(pos, "unshift() requires at least 2 arguments, got %d", len(args)))
+	}
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "unshift() requires first argument to be an array"))
+	}
+
+	newArr := make([]Value, 0, len(*arr)+len(args)-1)
+	newArr = append(newArr, args[1:]...)
+	newArr = append(newArr, *arr...)
+	*arr = newArr
+	return Value(nil)
+}
+
+// indexOfFunc implements the index_of() built-in function
+// index_of(array, element) -> int
+// Example: index_of([1, 2, 3, 2], 2) -> 1
+func indexOfFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "index_of", args, 2)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "index_of() requires first argument to be an array"))
+	}
+
+	for i, v := range *arr {
+		if evalEqual(pos, v, args[1]).(bool) {
+			return Value(i)
+		}
+	}
+	return Value(-1)
+}
+
+// lastIndexOfFunc implements the last_index_of() built-in function
+// last_index_of(array, element) -> int
+// Example: last_index_of([1, 2, 3, 2], 2) -> 3
+func lastIndexOfFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "last_index_of", args, 2)
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "last_index_of() requires first argument to be an array"))
+	}
+
+	for i := len(*arr) - 1; i >= 0; i-- {
+		if evalEqual(pos, (*arr)[i], args[1]).(bool) {
+			return Value(i)
+		}
+	}
+	return Value(-1)
+}
+
+// ========================================
+// Data Structures (Point 2)
+// ========================================
+
+// Set implementation using map[string]Value for uniqueness
+type Set struct {
+	data map[string]Value
+	keys []Value // Keep track of insertion order
+}
+
+// Stack implementation using slice
+type Stack struct {
+	data []Value
+}
+
+// Queue implementation using slice
+type Queue struct {
+	data []Value
+}
+
+// Helper function to convert Value to string key for Set
+func valueToKey(v Value) string {
+	switch val := v.(type) {
+	case string:
+		return "s:" + val
+	case int:
+		return fmt.Sprintf("i:%d", val)
+	case float64:
+		return fmt.Sprintf("f:%g", val)
+	case bool:
+		return fmt.Sprintf("b:%t", val)
+	case nil:
+		return "n:null"
+	default:
+		return fmt.Sprintf("o:%p", val)
+	}
+}
+
+// setNewFunc implements the set_new() built-in function
+// set_new() -> set
+// Example: s = set_new()
+func setNewFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "set_new", args, 0)
+	return Value(&Set{
+		data: make(map[string]Value),
+		keys: make([]Value, 0),
+	})
+}
+
+// setAddFunc implements the set_add() built-in function
+// set_add(set, element) -> null
+// Example: set_add(s, "hello")
+func setAddFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "set_add", args, 2)
+	set, ok := args[0].(*Set)
+	if !ok {
+		panic(typeError(pos, "set_add() requires first argument to be a set"))
+	}
+
+	key := valueToKey(args[1])
+	if _, exists := set.data[key]; !exists {
+		set.data[key] = args[1]
+		set.keys = append(set.keys, args[1])
+	}
+	return Value(nil)
+}
+
+// setRemoveFunc implements the set_remove() built-in function
+// set_remove(set, element) -> bool
+// Example: set_remove(s, "hello") -> true if removed, false if not found
+func setRemoveFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "set_remove", args, 2)
+	set, ok := args[0].(*Set)
+	if !ok {
+		panic(typeError(pos, "set_remove() requires first argument to be a set"))
+	}
+
+	key := valueToKey(args[1])
+	if _, exists := set.data[key]; exists {
+		delete(set.data, key)
+		// Remove from keys slice
+		for i, v := range set.keys {
+			if evalEqual(pos, v, args[1]).(bool) {
+				set.keys = append(set.keys[:i], set.keys[i+1:]...)
+				break
+			}
+		}
+		return Value(true)
+	}
+	return Value(false)
+}
+
+// setHasFunc implements the set_has() built-in function
+// set_has(set, element) -> bool
+// Example: set_has(s, "hello") -> true if exists
+func setHasFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "set_has", args, 2)
+	set, ok := args[0].(*Set)
+	if !ok {
+		panic(typeError(pos, "set_has() requires first argument to be a set"))
+	}
+
+	key := valueToKey(args[1])
+	_, exists := set.data[key]
+	return Value(exists)
+}
+
+// setSizeFunc implements the set_size() built-in function
+// set_size(set) -> int
+// Example: set_size(s) -> 3
+func setSizeFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "set_size", args, 1)
+	set, ok := args[0].(*Set)
+	if !ok {
+		panic(typeError(pos, "set_size() requires a set argument"))
+	}
+
+	return Value(len(set.data))
+}
+
+// setToArrayFunc implements the set_to_array() built-in function
+// set_to_array(set) -> array
+// Example: set_to_array(s) -> ["hello", "world"]
+func setToArrayFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "set_to_array", args, 1)
+	set, ok := args[0].(*Set)
+	if !ok {
+		panic(typeError(pos, "set_to_array() requires a set argument"))
+	}
+
+	result := make([]Value, len(set.keys))
+	copy(result, set.keys)
+	return Value(&result)
+}
+
+// stackNewFunc implements the stack_new() built-in function
+// stack_new() -> stack
+// Example: s = stack_new()
+func stackNewFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "stack_new", args, 0)
+	return Value(&Stack{
+		data: make([]Value, 0),
+	})
+}
+
+// stackPushFunc implements the stack_push() built-in function
+// stack_push(stack, element) -> null
+// Example: stack_push(s, "hello")
+func stackPushFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "stack_push", args, 2)
+	stack, ok := args[0].(*Stack)
+	if !ok {
+		panic(typeError(pos, "stack_push() requires first argument to be a stack"))
+	}
+
+	stack.data = append(stack.data, args[1])
+	return Value(nil)
+}
+
+// stackPopFunc implements the stack_pop() built-in function
+// stack_pop(stack) -> any
+// Example: stack_pop(s) -> "hello"
+func stackPopFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "stack_pop", args, 1)
+	stack, ok := args[0].(*Stack)
+	if !ok {
+		panic(typeError(pos, "stack_pop() requires a stack argument"))
+	}
+
+	if len(stack.data) == 0 {
+		return Value(nil)
+	}
+
+	last := stack.data[len(stack.data)-1]
+	stack.data = stack.data[:len(stack.data)-1]
+	return last
+}
+
+// stackPeekFunc implements the stack_peek() built-in function
+// stack_peek(stack) -> any
+// Example: stack_peek(s) -> "hello" (without removing)
+func stackPeekFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "stack_peek", args, 1)
+	stack, ok := args[0].(*Stack)
+	if !ok {
+		panic(typeError(pos, "stack_peek() requires a stack argument"))
+	}
+
+	if len(stack.data) == 0 {
+		return Value(nil)
+	}
+
+	return stack.data[len(stack.data)-1]
+}
+
+// stackSizeFunc implements the stack_size() built-in function
+// stack_size(stack) -> int
+// Example: stack_size(s) -> 3
+func stackSizeFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "stack_size", args, 1)
+	stack, ok := args[0].(*Stack)
+	if !ok {
+		panic(typeError(pos, "stack_size() requires a stack argument"))
+	}
+
+	return Value(len(stack.data))
+}
+
+// queueNewFunc implements the queue_new() built-in function
+// queue_new() -> queue
+// Example: q = queue_new()
+func queueNewFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "queue_new", args, 0)
+	return Value(&Queue{
+		data: make([]Value, 0),
+	})
+}
+
+// queueEnqueueFunc implements the queue_enqueue() built-in function
+// queue_enqueue(queue, element) -> null
+// Example: queue_enqueue(q, "hello")
+func queueEnqueueFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "queue_enqueue", args, 2)
+	queue, ok := args[0].(*Queue)
+	if !ok {
+		panic(typeError(pos, "queue_enqueue() requires first argument to be a queue"))
+	}
+
+	queue.data = append(queue.data, args[1])
+	return Value(nil)
+}
+
+// queueDequeueFunc implements the queue_dequeue() built-in function
+// queue_dequeue(queue) -> any
+// Example: queue_dequeue(q) -> "hello"
+func queueDequeueFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "queue_dequeue", args, 1)
+	queue, ok := args[0].(*Queue)
+	if !ok {
+		panic(typeError(pos, "queue_dequeue() requires a queue argument"))
+	}
+
+	if len(queue.data) == 0 {
+		return Value(nil)
+	}
+
+	first := queue.data[0]
+	queue.data = queue.data[1:]
+	return first
+}
+
+// queueFrontFunc implements the queue_front() built-in function
+// queue_front(queue) -> any
+// Example: queue_front(q) -> "hello" (without removing)
+func queueFrontFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "queue_front", args, 1)
+	queue, ok := args[0].(*Queue)
+	if !ok {
+		panic(typeError(pos, "queue_front() requires a queue argument"))
+	}
+
+	if len(queue.data) == 0 {
+		return Value(nil)
+	}
+
+	return queue.data[0]
+}
+
+// queueSizeFunc implements the queue_size() built-in function
+// queue_size(queue) -> int
+// Example: queue_size(q) -> 3
+func queueSizeFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "queue_size", args, 1)
+	queue, ok := args[0].(*Queue)
+	if !ok {
+		panic(typeError(pos, "queue_size() requires a queue argument"))
+	}
+
+	return Value(len(queue.data))
 }
