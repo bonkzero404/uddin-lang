@@ -33,15 +33,16 @@ func (c *CLI) Run() error {
 	// Check for flags first
 	for i := len(c.args) - 1; i >= 0; i-- {
 		arg := c.args[i]
-		if arg == "--profile" || arg == "-p" {
+		switch arg {
+		case "--profile", "-p":
 			c.profile = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
-		} else if arg == "--analyze" || arg == "-a" {
+		case "--analyze", "-a":
 			c.analyze = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
-		} else if arg == "--to_json" {
+		case "--to_json":
 			c.toJson = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
@@ -187,13 +188,6 @@ func (c *CLI) convertToJson(filename string) error {
 	// Print JSON to stdout
 	fmt.Println(string(jsonData))
 	return nil
-}
-
-
-
-// astToSourceCode converts an AST Program back to Uddin-Lang source code
-func (c *CLI) astToSourceCode(program *interpreter.Program) string {
-	return program.String()
 }
 
 func main() {
