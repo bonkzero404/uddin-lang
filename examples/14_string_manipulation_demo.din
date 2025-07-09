@@ -1,0 +1,55 @@
+// =============================================================================
+// 14_string_manipulation_demo.din - New string manipulation functions demo
+// =============================================================================
+
+fun main():
+    print("=== String Manipulation Functions Demo ===")
+    
+    // replace() - Mengganti substring
+    text = "Hello World"
+    replaced = replace(text, "World", "Universe")
+    print("replace('" + text + "', 'World', 'Universe') = '" + replaced + "'")
+    
+    // trim() - Menghapus whitespace
+    messy = "   Hello World   "
+    trimmed = trim(messy)
+    print("trim('" + messy + "') = '" + trimmed + "'")
+    
+    // starts_with() dan ends_with()
+    filename = "document.pdf"
+    print("starts_with('" + filename + "', 'doc') = " + str(starts_with(filename, "doc")))
+    print("ends_with('" + filename + "', '.pdf') = " + str(ends_with(filename, ".pdf")))
+    
+    // repeat() - Mengulang string
+    pattern = "*-"
+    repeated = repeat(pattern, 5)
+    print("repeat('" + pattern + "', 5) = '" + repeated + "'")
+    
+    // reverse_str() - Membalik string
+    word = "hello"
+    reversed = reverse_str(word)
+    print("reverse_str('" + word + "') = '" + reversed + "'")
+    
+    print("\n=== Practical Usage Examples ===")
+    
+    // Simple email validation
+    fun is_valid_email(email):
+        return contains(email, "@") and ends_with(email, ".com")
+    end
+    
+    emails = ["user@example.com", "invalid-email", "test@domain.org"]
+    for (email in emails):
+        valid = is_valid_email(email)
+        print("Email '" + email + "' valid: " + str(valid))
+    end
+    
+    // Name formatting
+    fun format_name(first, last):
+        trimmed_first = trim(first)
+        trimmed_last = trim(last)
+        return upper(trimmed_first) + ", " + lower(trimmed_last)
+    end
+    
+    formatted = format_name("  john  ", "  DOE  ")
+    print("\nFormatted name: " + formatted)
+end
