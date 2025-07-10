@@ -1,9 +1,13 @@
 package interpreter
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"math/rand"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -257,6 +261,13 @@ var builtins = map[string]builtinFunction{
 	"radians":     {radiansFunc, "radians"},
 	"is_nan":      {isNanFunc, "is_nan"},
 	"is_infinite": {isInfiniteFunc, "is_infinite"},
+
+	// HTTP Client Functions
+	"http_get":    {httpGetFunc, "http_get"},
+	"http_post":   {httpPostFunc, "http_post"},
+	"http_put":    {httpPutFunc, "http_put"},
+	"http_delete": {httpDeleteFunc, "http_delete"},
+	"http_request": {httpRequestFunc, "http_request"},
 }
 
 // appendFunc implements the append() built-in function
@@ -2484,4 +2495,282 @@ func queueSizeFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	return Value(len(queue.data))
+}
+
+// HTTP Client Functions
+
+// httpGetFunc implements the http_get() built-in function
+// http_get(url) -> object
+// Example: response = http_get("https://api.example.com/data")
+func httpGetFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "http_get", args, 1)
+	url, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "http_get() requires a string URL"))
+	}
+
+	return httpRequest(pos, "GET", url, nil, nil)
+}
+
+// httpPostFunc implements the http_post() built-in function
+// http_post(url, data) -> object
+// Example: response = http_post("https://api.example.com/data", {"name": "John"})
+func httpPostFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 3 {
+		panic(typeError(pos, "http_post() requires 2 or 3 args, got %d", len(args)))
+	}
+	url, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "http_post() requires first argument to be a string URL"))
+	}
+
+	var headers map[string]Value
+	if len(args) == 3 {
+		headersMap, ok := args[2].(map[string]Value)
+		if !ok {
+			panic(typeError(pos, "http_post() requires third argument to be an object (headers)"))
+		}
+		headers = headersMap
+	}
+
+	return httpRequest(pos, "POST", url, args[1], headers)
+}
+
+// httpPutFunc implements the http_put() built-in function
+// http_put(url, data) -> object
+// Example: response = http_put("https://api.example.com/data/1", {"name": "Jane"})
+func httpPutFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 3 {
+		panic(typeError(pos, "http_put() requires 2 or 3 args, got %d", len(args)))
+	}
+	url, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "http_put() requires first argument to be a string URL"))
+	}
+
+	var headers map[string]Value
+	if len(args) == 3 {
+		headersMap, ok := args[2].(map[string]Value)
+		if !ok {
+			panic(typeError(pos, "http_put() requires third argument to be an object (headers)"))
+		}
+		headers = headersMap
+	}
+
+	return httpRequest(pos, "PUT", url, args[1], headers)
+}
+
+// httpDeleteFunc implements the http_delete() built-in function
+// http_delete(url) -> object
+// Example: response = http_delete("https://api.example.com/data/1")
+func httpDeleteFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "http_delete", args, 1)
+	url, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "http_delete() requires a string URL"))
+	}
+
+	return httpRequest(pos, "DELETE", url, nil, nil)
+}
+
+// httpRequestFunc implements the http_request() built-in function
+// http_request(method, url, data, headers) -> object
+// Example: response = http_request("PATCH", "https://api.example.com/data/1", {"status": "active"}, {"Authorization": "Bearer token"})
+func httpRequestFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 4 {
+		panic(typeError(pos, "http_request() requires 2 to 4 args, got %d", len(args)))
+	}
+
+	method, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "http_request() requires first argument to be a string (method)"))
+	}
+
+	url, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "http_request() requires second argument to be a string (URL)"))
+	}
+
+	var data Value
+	var headers map[string]Value
+
+	if len(args) >= 3 {
+		data = args[2]
+	}
+
+	if len(args) == 4 {
+		headersMap, ok := args[3].(map[string]Value)
+		if !ok {
+			panic(typeError(pos, "http_request() requires fourth argument to be an object (headers)"))
+		}
+		headers = headersMap
+	}
+
+	return httpRequest(pos, method, url, data, headers)
+}
+
+// httpRequest is a helper function that performs the actual HTTP request
+func httpRequest(pos Position, method, url string, data Value, headers map[string]Value) Value {
+	var body io.Reader
+
+	// Prepare request body if data is provided
+	if data != nil {
+		switch d := data.(type) {
+		case string:
+			body = strings.NewReader(d)
+		case map[string]Value, []Value:
+			// Convert to JSON
+			jsonData, err := valueToJSON(data)
+			if err != nil {
+				panic(valueError(pos, "Failed to convert data to JSON: %v", err))
+			}
+			body = bytes.NewReader(jsonData)
+		default:
+			// Convert other types to string
+			body = strings.NewReader(fmt.Sprintf("%v", data))
+		}
+	}
+
+	// Create HTTP request
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		panic(valueError(pos, "Failed to create HTTP request: %v", err))
+	}
+
+	// Set default Content-Type for POST/PUT requests with JSON data
+	if (method == "POST" || method == "PUT" || method == "PATCH") && data != nil {
+		if _, isMap := data.(map[string]Value); isMap {
+			req.Header.Set("Content-Type", "application/json")
+		} else if _, isArray := data.([]Value); isArray {
+			req.Header.Set("Content-Type", "application/json")
+		}
+	}
+
+	// Set custom headers
+	if headers != nil {
+		for key, value := range headers {
+			if strValue, ok := value.(string); ok {
+				req.Header.Set(key, strValue)
+			}
+		}
+	}
+
+	// Perform the request
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(valueError(pos, "HTTP request failed: %v", err))
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		panic(valueError(pos, "Failed to read response body: %v", err))
+	}
+
+	// Parse response body as JSON if possible
+	var bodyValue Value
+	var jsonData interface{}
+	if err := json.Unmarshal(respBody, &jsonData); err == nil {
+		bodyValue = jsonToValue(jsonData)
+	} else {
+		// If not JSON, return as string
+		bodyValue = string(respBody)
+	}
+
+	// Convert headers to map
+	headerMap := make(map[string]Value)
+	for key, values := range resp.Header {
+		if len(values) > 0 {
+			headerMap[key] = values[0]
+		}
+	}
+
+	// Create response object
+	response := map[string]Value{
+		"status":     resp.StatusCode,
+		"status_text": resp.Status,
+		"headers":    headerMap,
+		"body":       bodyValue,
+		"url":        resp.Request.URL.String(),
+	}
+
+	return Value(response)
+}
+
+// valueToJSON converts a Value to JSON bytes
+func valueToJSON(v Value) ([]byte, error) {
+	switch val := v.(type) {
+	case map[string]Value:
+		// Convert map to Go map for JSON marshaling
+		goMap := make(map[string]interface{})
+		for k, v := range val {
+			goMap[k] = valueToInterface(v)
+		}
+		return json.Marshal(goMap)
+	case []Value:
+		// Convert array to Go slice for JSON marshaling
+		goSlice := make([]interface{}, len(val))
+		for i, v := range val {
+			goSlice[i] = valueToInterface(v)
+		}
+		return json.Marshal(goSlice)
+	default:
+		return json.Marshal(valueToInterface(v))
+	}
+}
+
+// valueToInterface converts a Value to interface{} for JSON marshaling
+func valueToInterface(v Value) interface{} {
+	switch val := v.(type) {
+	case map[string]Value:
+		goMap := make(map[string]interface{})
+		for k, v := range val {
+			goMap[k] = valueToInterface(v)
+		}
+		return goMap
+	case []Value:
+		goSlice := make([]interface{}, len(val))
+		for i, v := range val {
+			goSlice[i] = valueToInterface(v)
+		}
+		return goSlice
+	case nil:
+		return nil
+	default:
+		return val
+	}
+}
+
+// jsonToValue converts JSON interface{} to Value
+func jsonToValue(data interface{}) Value {
+	switch val := data.(type) {
+	case map[string]interface{}:
+		result := make(map[string]Value)
+		for k, v := range val {
+			result[k] = jsonToValue(v)
+		}
+		return Value(result)
+	case []interface{}:
+		result := make([]Value, len(val))
+		for i, v := range val {
+			result[i] = jsonToValue(v)
+		}
+		return Value(result)
+	case float64:
+		// Check if it's actually an integer
+		if val == float64(int(val)) {
+			return Value(int(val))
+		}
+		return Value(val)
+	case bool:
+		return Value(val)
+	case string:
+		return Value(val)
+	case nil:
+		return Value(nil)
+	default:
+		return Value(val)
+	}
 }
