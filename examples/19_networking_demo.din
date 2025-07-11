@@ -1,0 +1,81 @@
+// Demo fungsionalitas networking di Uddin-Lang
+// Mendemonstrasikan TCP, UDP, dan utilitas jaringan
+
+print("=== Demo Networking Uddin-Lang ===")
+
+// Demo 1: Network Utilities
+print("\n--- Demo 1: Network Utilities ---")
+
+// Resolve hostname ke IP address
+print("Resolving google.com...")
+ips = net_resolve("google.com")
+print("IP addresses for google.com:")
+for (i in range(len(ips))):
+    print("  " + str(i+1) + ". " + ips[i])
+end
+
+// Ping test
+print("\nPing test to google.com:80...")
+ping_result = net_ping("google.com", 80, 3000)
+if (ping_result["success"]) then:
+    print("Ping successful! Time: " + str(ping_result["time_ms"]) + "ms")
+else:
+    print("Ping failed: " + ping_result["error"])
+end
+
+// Demo 2: TCP Client
+print("\n--- Demo 2: TCP Client ---")
+
+// Koneksi ke HTTP server (google.com:80)
+print("Connecting to google.com:80...")
+tcp_conn = tcp_connect("google.com", 80)
+print("Connected! Address: " + tcp_conn["address"])
+
+// Kirim HTTP request sederhana
+http_request = "GET / HTTP/1.1\r\nHost: google.com\r\nConnection: close\r\n\r\n"
+bytes_written = tcp_write(tcp_conn, http_request)
+print("Sent " + str(bytes_written) + " bytes")
+
+// Baca response
+response = tcp_read(tcp_conn, 1024)
+print("Received response (first 200 chars):")
+if (len(response) > 200) then:
+    print(substr(response, 0, 200) + "...")
+else:
+    print(response)
+end
+
+// Tutup koneksi
+tcp_close(tcp_conn)
+print("TCP connection closed")
+
+// Demo 3: UDP Client (Echo Test)
+print("\n--- Demo 3: UDP Client ---")
+
+// Koneksi UDP ke echo server (echo.websocket.org:80)
+print("Connecting to echo.websocket.org:80...")
+udp_conn = udp_connect("echo.websocket.org", 80)
+print("UDP connection established")
+
+// Kirim pesan sederhana
+test_message = "Hello from Uddin-Lang UDP client!"
+bytes_sent = udp_write(udp_conn, test_message)
+print("Sent message: " + str(bytes_sent) + " bytes")
+print("Message: " + test_message)
+
+// Tutup koneksi UDP
+udp_close(udp_conn)
+print("UDP connection closed")
+
+// Demo 4: UDP Server (Listen Mode)
+print("\n--- Demo 4: UDP Server (Listen Mode) ---")
+print("Creating UDP listener on port 12345...")
+udp_listener = udp_listen(12345)
+print("UDP listener created: " + udp_listener["address"])
+print("Note: This would normally wait for incoming connections")
+
+// Tutup listener
+udp_close(udp_listener)
+print("UDP listener closed")
+
+print("\n=== Demo Networking Selesai ===")

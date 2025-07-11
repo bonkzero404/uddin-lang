@@ -7,6 +7,7 @@ import (
 	"io"
 	"math"
 	"math/rand"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -268,6 +269,21 @@ var builtins = map[string]builtinFunction{
 	"http_put":    {httpPutFunc, "http_put"},
 	"http_delete": {httpDeleteFunc, "http_delete"},
 	"http_request": {httpRequestFunc, "http_request"},
+
+	// Network Functions
+	"tcp_connect":   {tcpConnectFunc, "tcp_connect"},
+	"tcp_listen":    {tcpListenFunc, "tcp_listen"},
+	"tcp_accept":    {tcpAcceptFunc, "tcp_accept"},
+	"tcp_read":      {tcpReadFunc, "tcp_read"},
+	"tcp_write":     {tcpWriteFunc, "tcp_write"},
+	"tcp_close":     {tcpCloseFunc, "tcp_close"},
+	"udp_connect":   {udpConnectFunc, "udp_connect"},
+	"udp_listen":    {udpListenFunc, "udp_listen"},
+	"udp_read":      {udpReadFunc, "udp_read"},
+	"udp_write":     {udpWriteFunc, "udp_write"},
+	"udp_close":     {udpCloseFunc, "udp_close"},
+	"net_resolve":   {netResolveFunc, "net_resolve"},
+	"net_ping":      {netPingFunc, "net_ping"},
 }
 
 // appendFunc implements the append() built-in function
@@ -2769,8 +2785,437 @@ func jsonToValue(data interface{}) Value {
 	case string:
 		return Value(val)
 	case nil:
-		return Value(nil)
+		return Value(val)
 	default:
 		return Value(val)
 	}
+}
+
+// TCP Connection Functions
+
+// tcpConnectFunc implements the tcp_connect() built-in function
+// tcp_connect(host, port) -> connection_object
+// Example: conn = tcp_connect("localhost", 8080)
+func tcpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "tcp_connect", args, 2)
+	host, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "tcp_connect() requires first argument to be a string (host)"))
+	}
+	port, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "tcp_connect() requires second argument to be an integer (port)"))
+	}
+
+	address := fmt.Sprintf("%s:%d", host, port)
+	conn, err := net.Dial("tcp", address)
+	if err != nil {
+		panic(valueError(pos, "Failed to connect to %s: %v", address, err))
+	}
+
+	// Return connection object
+	connObj := map[string]Value{
+		"type":    "tcp_connection",
+		"address": address,
+		"_conn":   conn, // Internal connection object
+	}
+	return Value(connObj)
+}
+
+// tcpListenFunc implements the tcp_listen() built-in function
+// tcp_listen(port) -> listener_object
+// Example: listener = tcp_listen(8080)
+func tcpListenFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "tcp_listen", args, 1)
+	port, ok := args[0].(int)
+	if !ok {
+		panic(typeError(pos, "tcp_listen() requires an integer (port)"))
+	}
+
+	address := fmt.Sprintf(":%d", port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		panic(valueError(pos, "Failed to listen on port %d: %v", port, err))
+	}
+
+	// Return listener object
+	listenerObj := map[string]Value{
+		"type":      "tcp_listener",
+		"address":   address,
+		"_listener": listener, // Internal listener object
+	}
+	return Value(listenerObj)
+}
+
+// tcpAcceptFunc implements the tcp_accept() built-in function
+// tcp_accept(listener) -> connection_object
+// Example: conn = tcp_accept(listener)
+func tcpAcceptFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "tcp_accept", args, 1)
+	listenerObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "tcp_accept() requires a listener object"))
+	}
+
+	listener, ok := listenerObj["_listener"].(net.Listener)
+	if !ok {
+		panic(typeError(pos, "tcp_accept() requires a valid TCP listener"))
+	}
+
+	conn, err := listener.Accept()
+	if err != nil {
+		panic(valueError(pos, "Failed to accept connection: %v", err))
+	}
+
+	// Return connection object
+	connObj := map[string]Value{
+		"type":    "tcp_connection",
+		"address": conn.RemoteAddr().String(),
+		"_conn":   conn, // Internal connection object
+	}
+	return Value(connObj)
+}
+
+// tcpReadFunc implements the tcp_read() built-in function
+// tcp_read(connection, size) -> string
+// Example: data = tcp_read(conn, 1024)
+func tcpReadFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "tcp_read", args, 2)
+	connObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "tcp_read() requires a connection object"))
+	}
+
+	conn, ok := connObj["_conn"].(net.Conn)
+	if !ok {
+		panic(typeError(pos, "tcp_read() requires a valid TCP connection"))
+	}
+
+	size, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "tcp_read() requires second argument to be an integer (size)"))
+	}
+
+	buffer := make([]byte, size)
+	n, err := conn.Read(buffer)
+	if err != nil {
+		panic(valueError(pos, "Failed to read from connection: %v", err))
+	}
+
+	return Value(string(buffer[:n]))
+}
+
+// tcpWriteFunc implements the tcp_write() built-in function
+// tcp_write(connection, data) -> bytes_written
+// Example: written = tcp_write(conn, "Hello, World!")
+func tcpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "tcp_write", args, 2)
+	connObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "tcp_write() requires a connection object"))
+	}
+
+	conn, ok := connObj["_conn"].(net.Conn)
+	if !ok {
+		panic(typeError(pos, "tcp_write() requires a valid TCP connection"))
+	}
+
+	data, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "tcp_write() requires second argument to be a string (data)"))
+	}
+
+	n, err := conn.Write([]byte(data))
+	if err != nil {
+		panic(valueError(pos, "Failed to write to connection: %v", err))
+	}
+
+	return Value(n)
+}
+
+// tcpCloseFunc implements the tcp_close() built-in function
+// tcp_close(connection_or_listener) -> null
+// Example: tcp_close(conn)
+func tcpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "tcp_close", args, 1)
+	obj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "tcp_close() requires a connection or listener object"))
+	}
+
+	// Try to close as connection first
+	if conn, ok := obj["_conn"].(net.Conn); ok {
+		err := conn.Close()
+		if err != nil {
+			panic(valueError(pos, "Failed to close connection: %v", err))
+		}
+		return Value(nil)
+	}
+
+	// Try to close as listener
+	if listener, ok := obj["_listener"].(net.Listener); ok {
+		err := listener.Close()
+		if err != nil {
+			panic(valueError(pos, "Failed to close listener: %v", err))
+		}
+		return Value(nil)
+	}
+
+	panic(typeError(pos, "tcp_close() requires a valid TCP connection or listener"))
+}
+
+// UDP Connection Functions
+
+// udpConnectFunc implements the udp_connect() built-in function
+// udp_connect(host, port) -> connection_object
+// Example: conn = udp_connect("localhost", 8080)
+func udpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "udp_connect", args, 2)
+	host, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "udp_connect() requires first argument to be a string (host)"))
+	}
+	port, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "udp_connect() requires second argument to be an integer (port)"))
+	}
+
+	address := fmt.Sprintf("%s:%d", host, port)
+	conn, err := net.Dial("udp", address)
+	if err != nil {
+		panic(valueError(pos, "Failed to connect to %s: %v", address, err))
+	}
+
+	// Return connection object
+	connObj := map[string]Value{
+		"type":    "udp_connection",
+		"address": address,
+		"_conn":   conn, // Internal connection object
+	}
+	return Value(connObj)
+}
+
+// udpListenFunc implements the udp_listen() built-in function
+// udp_listen(port) -> connection_object
+// Example: conn = udp_listen(8080)
+func udpListenFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "udp_listen", args, 1)
+	port, ok := args[0].(int)
+	if !ok {
+		panic(typeError(pos, "udp_listen() requires an integer (port)"))
+	}
+
+	address := fmt.Sprintf(":%d", port)
+	addr, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		panic(valueError(pos, "Failed to resolve UDP address %s: %v", address, err))
+	}
+
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		panic(valueError(pos, "Failed to listen on UDP port %d: %v", port, err))
+	}
+
+	// Return connection object
+	connObj := map[string]Value{
+		"type":    "udp_connection",
+		"address": address,
+		"_conn":   conn, // Internal connection object
+	}
+	return Value(connObj)
+}
+
+// udpReadFunc implements the udp_read() built-in function
+// udp_read(connection, size) -> {"data": string, "address": string}
+// Example: result = udp_read(conn, 1024)
+func udpReadFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "udp_read", args, 2)
+	connObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "udp_read() requires a connection object"))
+	}
+
+	size, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "udp_read() requires second argument to be an integer (size)"))
+	}
+
+	buffer := make([]byte, size)
+	var n int
+	var addr net.Addr
+	var err error
+
+	// Handle both UDP connection types
+	if udpConn, ok := connObj["_conn"].(*net.UDPConn); ok {
+		n, addr, err = udpConn.ReadFromUDP(buffer)
+	} else if conn, ok := connObj["_conn"].(net.Conn); ok {
+		n, err = conn.Read(buffer)
+		addr = conn.RemoteAddr()
+	} else {
+		panic(typeError(pos, "udp_read() requires a valid UDP connection"))
+	}
+
+	if err != nil {
+		panic(valueError(pos, "Failed to read from UDP connection: %v", err))
+	}
+
+	result := map[string]Value{
+		"data":    string(buffer[:n]),
+		"address": addr.String(),
+	}
+	return Value(result)
+}
+
+// udpWriteFunc implements the udp_write() built-in function
+// udp_write(connection, data, address?) -> bytes_written
+// Example: written = udp_write(conn, "Hello, World!", "192.168.1.100:8080")
+func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 3 {
+		panic(typeError(pos, "udp_write() requires 2 or 3 args, got %d", len(args)))
+	}
+
+	connObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "udp_write() requires a connection object"))
+	}
+
+	data, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "udp_write() requires second argument to be a string (data)"))
+	}
+
+	var n int
+	var err error
+
+	if len(args) == 3 {
+		// Write to specific address
+		addrStr, ok := args[2].(string)
+		if !ok {
+			panic(typeError(pos, "udp_write() requires third argument to be a string (address)"))
+		}
+
+		udpConn, ok := connObj["_conn"].(*net.UDPConn)
+		if !ok {
+			panic(typeError(pos, "udp_write() with address requires a UDP listener connection"))
+		}
+
+		addr, err := net.ResolveUDPAddr("udp", addrStr)
+		if err != nil {
+			panic(valueError(pos, "Failed to resolve UDP address %s: %v", addrStr, err))
+		}
+
+		n, err = udpConn.WriteToUDP([]byte(data), addr)
+	} else {
+		// Write to connected address
+		conn, ok := connObj["_conn"].(net.Conn)
+		if !ok {
+			panic(typeError(pos, "udp_write() requires a valid UDP connection"))
+		}
+
+		n, err = conn.Write([]byte(data))
+	}
+
+	if err != nil {
+		panic(valueError(pos, "Failed to write to UDP connection: %v", err))
+	}
+
+	return Value(n)
+}
+
+// udpCloseFunc implements the udp_close() built-in function
+// udp_close(connection) -> null
+// Example: udp_close(conn)
+func udpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "udp_close", args, 1)
+	connObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "udp_close() requires a connection object"))
+	}
+
+	conn, ok := connObj["_conn"].(net.Conn)
+	if !ok {
+		panic(typeError(pos, "udp_close() requires a valid UDP connection"))
+	}
+
+	err := conn.Close()
+	if err != nil {
+		panic(valueError(pos, "Failed to close UDP connection: %v", err))
+	}
+
+	return Value(nil)
+}
+
+// Network Utility Functions
+
+// netResolveFunc implements the net_resolve() built-in function
+// net_resolve(hostname) -> array of IP addresses
+// Example: ips = net_resolve("google.com")
+func netResolveFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "net_resolve", args, 1)
+	hostname, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "net_resolve() requires a string (hostname)"))
+	}
+
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		panic(valueError(pos, "Failed to resolve hostname %s: %v", hostname, err))
+	}
+
+	// Convert IPs to string array
+	ipStrings := make([]Value, len(ips))
+	for i, ip := range ips {
+		ipStrings[i] = Value(ip.String())
+	}
+
+	return Value(&ipStrings)
+}
+
+// netPingFunc implements the net_ping() built-in function
+// net_ping(host, port, timeout_ms?) -> {"success": bool, "time_ms": int, "error": string?}
+// Example: result = net_ping("google.com", 80, 5000)
+func netPingFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 3 {
+		panic(typeError(pos, "net_ping() requires 2 or 3 args, got %d", len(args)))
+	}
+
+	host, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "net_ping() requires first argument to be a string (host)"))
+	}
+
+	port, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "net_ping() requires second argument to be an integer (port)"))
+	}
+
+	timeoutMs := 5000 // Default 5 seconds
+	if len(args) == 3 {
+		if timeout, ok := args[2].(int); ok {
+			timeoutMs = timeout
+		} else {
+			panic(typeError(pos, "net_ping() requires third argument to be an integer (timeout_ms)"))
+		}
+	}
+
+	address := fmt.Sprintf("%s:%d", host, port)
+	timeout := time.Duration(timeoutMs) * time.Millisecond
+
+	start := time.Now()
+	conn, err := net.DialTimeout("tcp", address, timeout)
+	elapsed := time.Since(start)
+
+	result := map[string]Value{
+		"time_ms": int(elapsed.Nanoseconds() / 1000000),
+	}
+
+	if err != nil {
+		result["success"] = false
+		result["error"] = err.Error()
+	} else {
+		result["success"] = true
+		conn.Close()
+	}
+
+	return Value(result)
 }

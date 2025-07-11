@@ -120,6 +120,7 @@ graph TD
 -   ✅ **Memory Safe** with garbage collection
 -   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
 -   ✨ **Extended Standard Library** with advanced string manipulation, functional array methods, and new data structures (Set, Stack, Queue)
+-   🌐 **Comprehensive Networking** with HTTP client, TCP/UDP sockets, and network utilities
 
 ### 🛠️ Developer Tools
 
@@ -196,6 +197,10 @@ The language comes with comprehensive examples showcasing all features:
 ./uddinlang examples/14_string_manipulation_demo.din  # Advanced string functions
 ./uddinlang examples/15_array_methods_demo.din        # Functional array methods
 ./uddinlang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
+
+# 🌐 Networking Examples
+./uddinlang examples/18_http_client_demo.din      # HTTP client operations
+./uddinlang examples/19_networking_demo.din       # TCP/UDP networking and utilities
 ```
 
 ### 🛠️ CLI Features & Development Tools
@@ -1324,6 +1329,112 @@ end
 | `input(prompt)`             | Read user input   | `name = input("Enter name: ")`    |
 | `read_file(path)`           | Read file content | `content = read_file("data.txt")` |
 | `write_file(path, content)` | Write to file     | `write_file("out.txt", "Hello")`  |
+
+### 🌐 Networking Functions
+
+Uddin-Lang provides comprehensive networking capabilities for building client-server applications, network utilities, and distributed systems.
+
+#### HTTP Client Functions
+
+| Function                           | Description                    | Example                                      |
+| ---------------------------------- | ------------------------------ | -------------------------------------------- |
+| `http_get(url)`                    | HTTP GET request               | `http_get("https://api.example.com/data")`  |
+| `http_post(url, data)`             | HTTP POST request              | `http_post("https://api.example.com", data)` |
+| `http_put(url, data)`              | HTTP PUT request               | `http_put("https://api.example.com/1", data)` |
+| `http_delete(url)`                 | HTTP DELETE request            | `http_delete("https://api.example.com/1")`  |
+| `http_request(method, url, data)`  | Generic HTTP request           | `http_request("PATCH", url, data)`         |
+
+#### Network Utilities
+
+| Function                    | Description                      | Example                                    |
+| --------------------------- | -------------------------------- | ------------------------------------------ |
+| `net_resolve(hostname)`     | Resolve hostname to IP addresses | `net_resolve("google.com")` → `["142.250.191.14"]` |
+| `net_ping(host, port, timeout)` | Test connectivity to host:port | `net_ping("google.com", 80, 3000)` → `{"success": true, "time": 45}` |
+
+#### TCP Functions
+
+TCP (Transmission Control Protocol) provides reliable, connection-oriented communication.
+
+| Function                     | Description                    | Example                                    |
+| ---------------------------- | ------------------------------ | ------------------------------------------ |
+| `tcp_connect(host, port)`    | Create TCP client connection   | `conn = tcp_connect("localhost", 8080)`   |
+| `tcp_listen(port)`           | Create TCP server listener     | `listener = tcp_listen(8080)`             |
+| `tcp_accept(listener)`       | Accept incoming TCP connection | `client = tcp_accept(listener)`           |
+| `tcp_read(connection)`       | Read data from TCP connection  | `data = tcp_read(conn)`                   |
+| `tcp_write(connection, data)` | Write data to TCP connection  | `tcp_write(conn, "Hello Server!")`       |
+| `tcp_close(connection)`      | Close TCP connection/listener  | `tcp_close(conn)`                         |
+
+#### UDP Functions
+
+UDP (User Datagram Protocol) provides fast, connectionless communication.
+
+| Function                     | Description                    | Example                                    |
+| ---------------------------- | ------------------------------ | ------------------------------------------ |
+| `udp_connect(host, port)`    | Create UDP client connection   | `conn = udp_connect("localhost", 8080)`   |
+| `udp_listen(port)`           | Create UDP server listener     | `listener = udp_listen(8080)`             |
+| `udp_read(connection)`       | Read data from UDP connection  | `data = udp_read(conn)`                   |
+| `udp_write(connection, data)` | Write data to UDP connection  | `udp_write(conn, "Hello Server!")`       |
+| `udp_close(connection)`      | Close UDP connection/listener  | `udp_close(conn)`                         |
+
+#### Networking Examples
+
+```go
+// HTTP Client Example
+response = http_get("https://jsonplaceholder.typicode.com/posts/1")
+print("Response:", response)
+
+// TCP Client Example
+fun tcp_client_demo():
+    // Connect to a TCP server
+    conn = tcp_connect("httpbin.org", 80)
+    if (conn != null) then:
+        // Send HTTP request
+        request = "GET / HTTP/1.1\r\nHost: httpbin.org\r\n\r\n"
+        tcp_write(conn, request)
+        
+        // Read response
+        response = tcp_read(conn)
+        print("TCP Response:", response)
+        
+        // Close connection
+        tcp_close(conn)
+    end
+end
+
+// UDP Client Example
+fun udp_client_demo():
+    conn = udp_connect("8.8.8.8", 53)  // DNS server
+    if (conn != null) then:
+        udp_write(conn, "test message")
+        response = udp_read(conn)
+        print("UDP Response:", response)
+        udp_close(conn)
+    end
+end
+
+// Network Utilities Example
+fun network_utils_demo():
+    // Resolve hostname
+    ips = net_resolve("google.com")
+    print("Google IPs:", ips)
+    
+    // Test connectivity
+    ping_result = net_ping("google.com", 80, 3000)
+    if (ping_result["success"]) then:
+        print("Ping successful! Time:", ping_result["time"], "ms")
+    else:
+        print("Ping failed:", ping_result["error"])
+    end
+end
+```
+
+#### Important Notes
+
+- **Error Handling**: All networking functions return `null` on connection errors
+- **Timeouts**: Use appropriate timeouts for `net_ping()` to avoid blocking
+- **Resource Management**: Always call `tcp_close()` or `udp_close()` to prevent resource leaks
+- **Security**: Be cautious when accepting connections from untrusted sources
+- **Compatibility**: Functions work across different operating systems (Windows, macOS, Linux)
 
 ### Utility Functions
 
