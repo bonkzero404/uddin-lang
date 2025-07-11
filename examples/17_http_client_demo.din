@@ -1,5 +1,5 @@
-// HTTP Client Demo - Demonstrasi penggunaan fitur HTTP client di Uddin-Lang
-// File: 18_http_client_demo.din
+// HTTP Client Demo - Demonstration of HTTP client features in Uddin-Lang
+// File: 17_http_client_demo.din
 
 fun main():
     print("=== HTTP Client Demo ===")
@@ -25,8 +25,8 @@ fun main():
     try_delete_request()
     print("")
 
-    print("=== HTTP Client Demo Selesai ===")
-    print("Fitur yang tersedia:")
+    print("=== HTTP Client Demo Complete ===")
+    print("Available features:")
     print("- http_get(url)")
     print("- http_post(url, data, headers?)")
     print("- http_put(url, data, headers?)")
@@ -36,7 +36,7 @@ end
 
 // Demo HTTP GET request
 fun try_get_request():
-    print("  Melakukan GET request ke JSONPlaceholder...")
+    print("  Making GET request to JSONPlaceholder...")
 
     // GET request ke API publik
     response = http_get("https://jsonplaceholder.typicode.com/posts/1")
@@ -44,7 +44,7 @@ fun try_get_request():
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])
 
-    // Menampilkan body response
+    // Display response body
     body = response["body"]
     if (typeof(body) == "object") then:
         print("  Title: " + body.title)
@@ -56,9 +56,9 @@ end
 
 // Demo HTTP POST request
 fun try_post_request():
-    print("  Melakukan POST request ke JSONPlaceholder...")
+    print("  Making POST request to JSONPlaceholder...")
 
-    // Data untuk dikirim
+    // Data to send
     post_data = {
         "title": "Uddin-Lang HTTP Client",
         "body": "Testing HTTP POST from Uddin-Lang",
@@ -71,7 +71,7 @@ fun try_post_request():
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])
 
-    // Menampilkan response body
+    // Display response body
     body = response["body"]
     if (typeof(body) == "object") then:
         print("  Created ID: " + str(body["id"]))
@@ -81,9 +81,9 @@ end
 
 // Demo HTTP PUT request
 fun try_put_request():
-    print("  Melakukan PUT request ke JSONPlaceholder...")
+    print("  Making PUT request to JSONPlaceholder...")
 
-    // Data untuk update
+    // Data for update
     put_data = {
         "id": 1,
         "title": "Updated Title from Uddin-Lang",
@@ -91,13 +91,13 @@ fun try_put_request():
         "userId": 1
     }
 
-    // PUT request untuk update resource
+    // PUT request to update resource
     response = http_put("https://jsonplaceholder.typicode.com/posts/1", put_data)
 
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])
 
-    // Menampilkan response body
+    // Display response body
     body = response["body"]
     if (typeof(body) == "object") then:
         print("  Updated ID: " + str(body["id"]))
@@ -107,7 +107,7 @@ end
 
 // Demo HTTP DELETE request
 fun try_delete_request():
-    print("  Melakukan DELETE request...")
+    print("  Making DELETE request...")
 
     response = http_delete("https://jsonplaceholder.typicode.com/posts/1")
 
@@ -115,8 +115,8 @@ fun try_delete_request():
     print("  Status Text: " + response["status_text"])
 
     if (response["status"] == 200) then:
-        print("  Resource berhasil dihapus!")
+        print("  Resource successfully deleted!")
     else:
-        print("  Terjadi masalah saat menghapus resource")
+        print("  Problem occurred while deleting resource")
     end
 end
