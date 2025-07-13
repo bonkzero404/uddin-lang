@@ -2669,11 +2669,9 @@ func httpRequest(pos Position, method, url string, data Value, headers map[strin
 	}
 
 	// Set custom headers
-	if headers != nil {
-		for key, value := range headers {
-			if strValue, ok := value.(string); ok {
-				req.Header.Set(key, strValue)
-			}
+	for key, value := range headers {
+		if strValue, ok := value.(string); ok {
+			req.Header.Set(key, strValue)
 		}
 	}
 
@@ -3076,7 +3074,7 @@ func tcpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "tcp_connect() requires second argument to be an integer (port)"))
 	}
 
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
 		panic(valueError(pos, "Failed to connect to %s: %v", address, err))
@@ -3249,7 +3247,7 @@ func udpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "udp_connect() requires second argument to be an integer (port)"))
 	}
 
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.Dial("udp", address)
 	if err != nil {
 		panic(valueError(pos, "Failed to connect to %s: %v", address, err))
@@ -3374,6 +3372,9 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 
 		n, err = udpConn.WriteToUDP([]byte(data), addr)
+		if err != nil {
+			panic(valueError(pos, "Failed to write to UDP address %s: %v", addrStr, err))
+		}
 	} else {
 		// Write to connected address
 		conn, ok := connObj["_conn"].(net.Conn)
@@ -3467,7 +3468,7 @@ func netPingFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	}
 
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	timeout := time.Duration(timeoutMs) * time.Millisecond
 
 	start := time.Now()
