@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"strings"
+	"sync"
 )
 
 // Value represents any runtime value in the language.
@@ -19,6 +20,8 @@ type Value any
 type interpreter struct {
 	// vars is a stack of variable scopes, with the most local scope at the end
 	vars []map[string]Value
+	// mutex protects concurrent access to vars from HTTP handlers
+	mutex sync.RWMutex
 	// args holds command-line arguments for the args() builtin
 	args []string
 	// stdin is the input stream for the read() builtin
@@ -630,18 +633,26 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 }
 
 func (interp *interpreter) pushScope(scope map[string]Value) {
+	interp.mutex.Lock()
+	defer interp.mutex.Unlock()
 	interp.vars = append(interp.vars, scope)
 }
 
 func (interp *interpreter) popScope() {
+	interp.mutex.Lock()
+	defer interp.mutex.Unlock()
 	interp.vars = interp.vars[:len(interp.vars)-1]
 }
 
 func (interp *interpreter) assign(name string, value Value) {
+	interp.mutex.Lock()
+	defer interp.mutex.Unlock()
 	interp.vars[len(interp.vars)-1][name] = value
 }
 
 func (interp *interpreter) lookup(name string) (Value, bool) {
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
 	for i := len(interp.vars) - 1; i >= 0; i-- {
 		thisVars := interp.vars[i]
 		if v, ok := thisVars[name]; ok {
@@ -945,7 +956,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 	case *ExpressionStatement:
 		interp.evaluate(s.Expression)
 	case *FunctionDefinition:
+		interp.mutex.RLock()
 		closure := interp.vars[len(interp.vars)-1]
+		interp.mutex.RUnlock()
 		interp.assign(s.Name, &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, closure})
 	case *Return:
 		result := interp.evaluate(s.Result)

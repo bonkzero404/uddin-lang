@@ -270,6 +270,12 @@ var builtins = map[string]builtinFunction{
 	"http_delete": {httpDeleteFunc, "http_delete"},
 	"http_request": {httpRequestFunc, "http_request"},
 
+	// HTTP Server Functions
+	"http_server_start": {httpServerStartFunc, "http_server_start"},
+	"http_server_stop":  {httpServerStopFunc, "http_server_stop"},
+	"http_server_route": {httpServerRouteFunc, "http_server_route"},
+	"http_response":     {httpResponseFunc, "http_response"},
+
 	// Network Functions
 	"tcp_connect":   {tcpConnectFunc, "tcp_connect"},
 	"tcp_listen":    {tcpListenFunc, "tcp_listen"},
@@ -2789,6 +2795,269 @@ func jsonToValue(data interface{}) Value {
 	default:
 		return Value(val)
 	}
+}
+
+// HTTP Server Functions
+
+// Global HTTP server registry to manage multiple servers
+var httpServers = make(map[string]*http.Server)
+var httpRoutes = make(map[string]map[string]functionType) // serverID -> route -> handler
+
+// httpServerStartFunc implements the http_server_start() built-in function
+// http_server_start(port, server_id?) -> server_object
+// Example: server = http_server_start(8080, "main")
+func httpServerStartFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 || len(args) > 2 {
+		panic(typeError(pos, "http_server_start() requires 1 or 2 args, got %d", len(args)))
+	}
+
+	port, ok := args[0].(int)
+	if !ok {
+		panic(typeError(pos, "http_server_start() requires first argument to be an integer (port)"))
+	}
+
+	serverID := "default"
+	if len(args) == 2 {
+		if id, ok := args[1].(string); ok {
+			serverID = id
+		} else {
+			panic(typeError(pos, "http_server_start() requires second argument to be a string (server_id)"))
+		}
+	}
+
+	// Check if server already exists
+	if _, exists := httpServers[serverID]; exists {
+		panic(valueError(pos, "HTTP server with ID '%s' already exists", serverID))
+	}
+
+	// Initialize routes for this server
+	if httpRoutes[serverID] == nil {
+		httpRoutes[serverID] = make(map[string]functionType)
+	}
+
+	// Create HTTP server
+	address := fmt.Sprintf(":%d", port)
+	mux := http.NewServeMux()
+
+	// Default handler that looks up routes
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Look for exact route match first
+		routeKey := fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+		if handler, exists := httpRoutes[serverID][routeKey]; exists {
+			// Create request object for the handler
+			reqObj := map[string]Value{
+				"method": r.Method,
+				"path":   r.URL.Path,
+				"query":  r.URL.RawQuery,
+				"headers": convertHeaders(r.Header),
+				"body":    readRequestBody(r),
+			}
+
+			// Create response object
+			resObj := map[string]Value{
+				"status":  200,
+				"headers": make(map[string]Value),
+				"body":    "",
+				"_writer": w,
+			}
+
+			// Call the handler
+			handler.call(interp, pos, []Value{reqObj, resObj})
+			return
+		}
+
+		// No route found
+		w.WriteHeader(404)
+		w.Write([]byte("404 Not Found"))
+	})
+
+	server := &http.Server{
+		Addr:    address,
+		Handler: mux,
+	}
+
+	// Store server
+	httpServers[serverID] = server
+
+	// Start server in goroutine
+	go func() {
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("HTTP server error: %v\n", err)
+		}
+	}()
+
+	// Return server object
+	serverObj := map[string]Value{
+		"type":      "http_server",
+		"server_id": serverID,
+		"port":      port,
+		"address":   address,
+		"_server":   server,
+	}
+	return Value(serverObj)
+}
+
+// httpServerStopFunc implements the http_server_stop() built-in function
+// http_server_stop(server_id?) -> null
+// Example: http_server_stop("main")
+func httpServerStopFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) > 1 {
+		panic(typeError(pos, "http_server_stop() requires 0 or 1 args, got %d", len(args)))
+	}
+
+	serverID := "default"
+	if len(args) == 1 {
+		if id, ok := args[0].(string); ok {
+			serverID = id
+		} else {
+			panic(typeError(pos, "http_server_stop() requires argument to be a string (server_id)"))
+		}
+	}
+
+	// Find and stop server
+	if server, exists := httpServers[serverID]; exists {
+		server.Close()
+		delete(httpServers, serverID)
+		delete(httpRoutes, serverID)
+	} else {
+		panic(valueError(pos, "HTTP server with ID '%s' not found", serverID))
+	}
+
+	return Value(nil)
+}
+
+// httpServerRouteFunc implements the http_server_route() built-in function
+// http_server_route(method, path, handler, server_id?) -> null
+// Example: http_server_route("GET", "/api/users", my_handler, "main")
+func httpServerRouteFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 3 || len(args) > 4 {
+		panic(typeError(pos, "http_server_route() requires 3 or 4 args, got %d", len(args)))
+	}
+
+	method, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "http_server_route() requires first argument to be a string (method)"))
+	}
+
+	path, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "http_server_route() requires second argument to be a string (path)"))
+	}
+
+	handler, ok := args[2].(functionType)
+	if !ok {
+		panic(typeError(pos, "http_server_route() requires third argument to be a function (handler)"))
+	}
+
+	serverID := "default"
+	if len(args) == 4 {
+		if id, ok := args[3].(string); ok {
+			serverID = id
+		} else {
+			panic(typeError(pos, "http_server_route() requires fourth argument to be a string (server_id)"))
+		}
+	}
+
+	// Check if server exists
+	if _, exists := httpServers[serverID]; !exists {
+		panic(valueError(pos, "HTTP server with ID '%s' not found. Start server first.", serverID))
+	}
+
+	// Register route
+	routeKey := fmt.Sprintf("%s %s", method, path)
+	httpRoutes[serverID][routeKey] = handler
+
+	return Value(nil)
+}
+
+// httpResponseFunc implements the http_response() built-in function
+// http_response(response_obj, status?, headers?, body?) -> null
+// Example: http_response(res, 200, {"Content-Type": "application/json"}, '{"message": "Hello"}')
+func httpResponseFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 || len(args) > 4 {
+		panic(typeError(pos, "http_response() requires 1 to 4 args, got %d", len(args)))
+	}
+
+	resObj, ok := args[0].(map[string]Value)
+	if !ok {
+		panic(typeError(pos, "http_response() requires first argument to be a response object"))
+	}
+
+	w, ok := resObj["_writer"].(http.ResponseWriter)
+	if !ok {
+		panic(typeError(pos, "http_response() requires a valid response object"))
+	}
+
+	// Set status code
+	status := 200
+	if len(args) >= 2 {
+		if s, ok := args[1].(int); ok {
+			status = s
+		} else {
+			panic(typeError(pos, "http_response() requires second argument to be an integer (status)"))
+		}
+	}
+
+	// Set headers
+	if len(args) >= 3 {
+		if headers, ok := args[2].(map[string]Value); ok {
+			for key, value := range headers {
+				if strValue, ok := value.(string); ok {
+					w.Header().Set(key, strValue)
+				}
+			}
+		} else {
+			panic(typeError(pos, "http_response() requires third argument to be an object (headers)"))
+		}
+	}
+
+	// Set body
+	body := ""
+	if len(args) >= 4 {
+		switch b := args[3].(type) {
+		case string:
+			body = b
+		case map[string]Value, []Value:
+			// Convert to JSON
+			jsonData, err := valueToJSON(args[3])
+			if err != nil {
+				panic(valueError(pos, "Failed to convert body to JSON: %v", err))
+			}
+			body = string(jsonData)
+			if w.Header().Get("Content-Type") == "" {
+				w.Header().Set("Content-Type", "application/json")
+			}
+		default:
+			body = fmt.Sprintf("%v", args[3])
+		}
+	}
+
+	// Write response
+	w.WriteHeader(status)
+	w.Write([]byte(body))
+
+	return Value(nil)
+}
+
+// Helper functions for HTTP server
+
+func convertHeaders(headers http.Header) Value {
+	headerMap := make(map[string]Value)
+	for key, values := range headers {
+		if len(values) > 0 {
+			headerMap[key] = values[0]
+		}
+	}
+	return Value(headerMap)
+}
+
+func readRequestBody(r *http.Request) Value {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return Value("")
+	}
+	r.Body.Close()
+	return Value(string(body))
 }
 
 // TCP Connection Functions

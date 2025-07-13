@@ -1,0 +1,41 @@
+// HTTP Server Test - Uddin-Lang
+// This example demonstrates and tests HTTP server functionality
+
+print("=== HTTP Server Test ===")
+
+// Define a simple handler
+fun test_handler(req, res):
+    print("Request received:", req["method"], req["path"])
+    response_data = {
+        "message": "Hello from Uddin-Lang!",
+        "method": req["method"],
+        "path": req["path"],
+        "timestamp": date_now()
+    }
+    http_response(res, 200, {"Content-Type": "application/json"}, response_data)
+end
+
+// Start server
+print("Starting HTTP server on port 8080...")
+server = http_server_start(8080, "test")
+print("Server started successfully!")
+
+// Setup route
+http_server_route("GET", "/test", test_handler, "test")
+print("Route /test configured")
+
+print("\nServer is running at http://localhost:8080/test")
+print("Server will run for 60 seconds...")
+
+// Keep server running for 60 seconds
+i = 0
+while (i < 60):
+    if (i % 10 == 0) then:
+        print("Server running... " + str(60 - i) + " seconds remaining")
+    end
+    i = i + 1
+end
+
+print("\nStopping server...")
+http_server_stop("test")
+print("Server stopped!")

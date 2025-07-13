@@ -1,0 +1,111 @@
+// HTTP Server Persistent - Uddin-Lang
+// Server yang berjalan untuk testing dengan curl
+// Solusi untuk masalah concurrent map access dengan handler yang disederhanakan
+
+print("=== HTTP Server Persistent untuk Testing ===")
+
+// Define simple handler functions that minimize variable access
+fun hello_handler(req, res):
+    // Avoid complex variable assignments in handlers
+    response_text = "Hello from Uddin-Lang HTTP Server!"
+    http_response(res, 200, {"Content-Type": "text/plain"}, response_text)
+end
+
+fun api_users_handler(req, res):
+    if (req["method"] == "GET") then:
+        // Use direct values instead of complex variable assignments
+        http_response(res, 200, {"Content-Type": "application/json"}, '[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]')
+    else if (req["method"] == "POST") then:
+        // Simplified POST response
+        http_response(res, 201, {"Content-Type": "application/json"}, '{"id": 3, "name": "Charlie", "status": "created"}')
+    else:
+        http_response(res, 405, {"Content-Type": "text/plain"}, "Method not allowed")
+    end
+end
+
+fun health_check_handler(req, res):
+    // Simple health check without complex object creation
+    health_json = '{"status": "healthy", "server": "Uddin-Lang", "version": "1.0.0"}'
+    http_response(res, 200, {"Content-Type": "application/json"}, health_json)
+end
+
+// Start HTTP server on port 8080
+print("Starting HTTP server on port 8080...")
+server = http_server_start(8080, "main")
+print("Server started successfully!")
+print("Server type:", server["type"])
+print("Server ID:", server["server_id"])
+print("Server port:", server["port"])
+print("Server address:", server["address"])
+
+// Define routes
+print("\nSetting up routes...")
+
+// Basic routes
+http_server_route("GET", "/", hello_handler, "main")
+http_server_route("GET", "/hello", hello_handler, "main")
+http_server_route("GET", "/health", health_check_handler, "main")
+
+// API routes
+http_server_route("GET", "/api/users", api_users_handler, "main")
+http_server_route("POST", "/api/users", api_users_handler, "main")
+
+print("Routes configured successfully!")
+
+print("\n=== Server is running ===")
+print("You can test the server with:")
+print("- GET  http://localhost:8080/")
+print("- GET  http://localhost:8080/hello")
+print("- GET  http://localhost:8080/health")
+print("- GET  http://localhost:8080/api/users")
+print("- POST http://localhost:8080/api/users")
+
+print("\nServer berjalan dalam mode persistent...")
+print("Gunakan Ctrl+C untuk menghentikan server")
+print("Server akan berjalan untuk waktu yang lama untuk testing")
+print("")
+
+// Use a simple but long-running loop approach
+print("Server is now running and ready to accept requests...")
+print("Monitoring server status...")
+print("Server will run for approximately 10-15 minutes - use curl to test endpoints")
+print("")
+
+// Use a single long loop that's not too heavy but runs long enough
+counter = 0
+max_iterations = 50000000  // 50 million iterations - should run for several minutes
+
+while (counter < max_iterations):
+    // Very minimal operations to avoid race conditions and performance issues
+    if (counter == 0) then:
+        print("Server status: Running and ready for testing")
+        print("Expected runtime: 10-15 minutes")
+        print("Use curl commands in another terminal to test the server")
+    end
+    
+    if (counter == 5000000) then:
+        print("Server status: Still running (5M iterations) - 10% complete")
+    end
+    
+    if (counter == 15000000) then:
+        print("Server status: Still running (15M iterations) - 30% complete")
+    end
+    
+    if (counter == 25000000) then:
+        print("Server status: Still running (25M iterations) - 50% complete")
+    end
+    
+    if (counter == 35000000) then:
+        print("Server status: Still running (35M iterations) - 70% complete")
+    end
+    
+    if (counter == 45000000) then:
+        print("Server status: Still running (45M iterations) - 90% complete")
+    end
+    
+    counter = counter + 1
+end
+
+print("\nServer monitoring completed after long run, stopping server...")
+http_server_stop("main")
+print("Server stopped!")
