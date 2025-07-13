@@ -157,50 +157,50 @@ var builtins = map[string]builtinFunction{
 	"date_format":    {dateformatFunc, "date_format"},
 
 	// String Manipulation Functions (Point 1)
-	"replace":        {replaceFunc, "replace"},
-	"trim":           {trimFunc, "trim"},
-	"starts_with":    {startsWithFunc, "starts_with"},
-	"ends_with":      {endsWithFunc, "ends_with"},
-	"repeat":         {repeatFunc, "repeat"},
-	"reverse_str":    {reverseStrFunc, "reverse_str"},
+	"replace":     {replaceFunc, "replace"},
+	"trim":        {trimFunc, "trim"},
+	"starts_with": {startsWithFunc, "starts_with"},
+	"ends_with":   {endsWithFunc, "ends_with"},
+	"repeat":      {repeatFunc, "repeat"},
+	"reverse_str": {reverseStrFunc, "reverse_str"},
 
 	// Array Methods (Point 1)
-	"map":            {mapFunc, "map"},
-	"filter":         {filterFunc, "filter"},
-	"reduce":         {reduceFunc, "reduce"},
-	"reverse":        {reverseFunc, "reverse"},
-	"push":           {pushFunc, "push"},
-	"pop":            {popFunc, "pop"},
-	"shift":          {shiftFunc, "shift"},
-	"unshift":        {unshiftFunc, "unshift"},
-	"index_of":       {indexOfFunc, "index_of"},
-	"last_index_of":  {lastIndexOfFunc, "last_index_of"},
+	"map":           {mapFunc, "map"},
+	"filter":        {filterFunc, "filter"},
+	"reduce":        {reduceFunc, "reduce"},
+	"reverse":       {reverseFunc, "reverse"},
+	"push":          {pushFunc, "push"},
+	"pop":           {popFunc, "pop"},
+	"shift":         {shiftFunc, "shift"},
+	"unshift":       {unshiftFunc, "unshift"},
+	"index_of":      {indexOfFunc, "index_of"},
+	"last_index_of": {lastIndexOfFunc, "last_index_of"},
 
 	// Data Structures (Point 2)
-	"set_new":        {setNewFunc, "set_new"},
-	"set_add":        {setAddFunc, "set_add"},
-	"set_remove":     {setRemoveFunc, "set_remove"},
-	"set_has":        {setHasFunc, "set_has"},
-	"set_size":       {setSizeFunc, "set_size"},
-	"set_to_array":   {setToArrayFunc, "set_to_array"},
-	"stack_new":      {stackNewFunc, "stack_new"},
-	"stack_push":     {stackPushFunc, "stack_push"},
-	"stack_pop":      {stackPopFunc, "stack_pop"},
-	"stack_peek":     {stackPeekFunc, "stack_peek"},
-	"stack_size":     {stackSizeFunc, "stack_size"},
-	"queue_new":      {queueNewFunc, "queue_new"},
-	"queue_enqueue":  {queueEnqueueFunc, "queue_enqueue"},
-	"queue_dequeue":  {queueDequeueFunc, "queue_dequeue"},
-	"queue_front":    {queueFrontFunc, "queue_front"},
-	"queue_size":     {queueSizeFunc, "queue_size"},
+	"set_new":       {setNewFunc, "set_new"},
+	"set_add":       {setAddFunc, "set_add"},
+	"set_remove":    {setRemoveFunc, "set_remove"},
+	"set_has":       {setHasFunc, "set_has"},
+	"set_size":      {setSizeFunc, "set_size"},
+	"set_to_array":  {setToArrayFunc, "set_to_array"},
+	"stack_new":     {stackNewFunc, "stack_new"},
+	"stack_push":    {stackPushFunc, "stack_push"},
+	"stack_pop":     {stackPopFunc, "stack_pop"},
+	"stack_peek":    {stackPeekFunc, "stack_peek"},
+	"stack_size":    {stackSizeFunc, "stack_size"},
+	"queue_new":     {queueNewFunc, "queue_new"},
+	"queue_enqueue": {queueEnqueueFunc, "queue_enqueue"},
+	"queue_dequeue": {queueDequeueFunc, "queue_dequeue"},
+	"queue_front":   {queueFrontFunc, "queue_front"},
+	"queue_size":    {queueSizeFunc, "queue_size"},
 
 	// Basic Math Operations
-	"abs":    {absFunc, "abs"},
-	"max":    {maxFunc, "max"},
-	"min":    {minFunc, "min"},
-	"pow":    {powFunc, "pow"},
-	"sqrt":   {sqrtFunc, "sqrt"},
-	"cbrt":   {cbrtFunc, "cbrt"},
+	"abs":  {absFunc, "abs"},
+	"max":  {maxFunc, "max"},
+	"min":  {minFunc, "min"},
+	"pow":  {powFunc, "pow"},
+	"sqrt": {sqrtFunc, "sqrt"},
+	"cbrt": {cbrtFunc, "cbrt"},
 
 	// Rounding Functions
 	"round": {roundFunc, "round"},
@@ -264,10 +264,10 @@ var builtins = map[string]builtinFunction{
 	"is_infinite": {isInfiniteFunc, "is_infinite"},
 
 	// HTTP Client Functions
-	"http_get":    {httpGetFunc, "http_get"},
-	"http_post":   {httpPostFunc, "http_post"},
-	"http_put":    {httpPutFunc, "http_put"},
-	"http_delete": {httpDeleteFunc, "http_delete"},
+	"http_get":     {httpGetFunc, "http_get"},
+	"http_post":    {httpPostFunc, "http_post"},
+	"http_put":     {httpPutFunc, "http_put"},
+	"http_delete":  {httpDeleteFunc, "http_delete"},
 	"http_request": {httpRequestFunc, "http_request"},
 
 	// HTTP Server Functions
@@ -277,19 +277,19 @@ var builtins = map[string]builtinFunction{
 	"http_response":     {httpResponseFunc, "http_response"},
 
 	// Network Functions
-	"tcp_connect":   {tcpConnectFunc, "tcp_connect"},
-	"tcp_listen":    {tcpListenFunc, "tcp_listen"},
-	"tcp_accept":    {tcpAcceptFunc, "tcp_accept"},
-	"tcp_read":      {tcpReadFunc, "tcp_read"},
-	"tcp_write":     {tcpWriteFunc, "tcp_write"},
-	"tcp_close":     {tcpCloseFunc, "tcp_close"},
-	"udp_connect":   {udpConnectFunc, "udp_connect"},
-	"udp_listen":    {udpListenFunc, "udp_listen"},
-	"udp_read":      {udpReadFunc, "udp_read"},
-	"udp_write":     {udpWriteFunc, "udp_write"},
-	"udp_close":     {udpCloseFunc, "udp_close"},
-	"net_resolve":   {netResolveFunc, "net_resolve"},
-	"net_ping":      {netPingFunc, "net_ping"},
+	"tcp_connect": {tcpConnectFunc, "tcp_connect"},
+	"tcp_listen":  {tcpListenFunc, "tcp_listen"},
+	"tcp_accept":  {tcpAcceptFunc, "tcp_accept"},
+	"tcp_read":    {tcpReadFunc, "tcp_read"},
+	"tcp_write":   {tcpWriteFunc, "tcp_write"},
+	"tcp_close":   {tcpCloseFunc, "tcp_close"},
+	"udp_connect": {udpConnectFunc, "udp_connect"},
+	"udp_listen":  {udpListenFunc, "udp_listen"},
+	"udp_read":    {udpReadFunc, "udp_read"},
+	"udp_write":   {udpWriteFunc, "udp_write"},
+	"udp_close":   {udpCloseFunc, "udp_close"},
+	"net_resolve": {netResolveFunc, "net_resolve"},
+	"net_ping":    {netPingFunc, "net_ping"},
 }
 
 // appendFunc implements the append() built-in function
@@ -571,8 +571,9 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 //
 // Returns an array of integers
 // Examples:
-//   range(3) -> [0, 1, 2]
-//   range(1, 4) -> [1, 2, 3]
+//
+//	range(3) -> [0, 1, 2]
+//	range(1, 4) -> [1, 2, 3]
 func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 1 {
 		// Single argument: range(n) -> [0, 1, ..., n-1]
@@ -2709,11 +2710,11 @@ func httpRequest(pos Position, method, url string, data Value, headers map[strin
 
 	// Create response object
 	response := map[string]Value{
-		"status":     resp.StatusCode,
+		"status":      resp.StatusCode,
 		"status_text": resp.Status,
-		"headers":    headerMap,
-		"body":       bodyValue,
-		"url":        resp.Request.URL.String(),
+		"headers":     headerMap,
+		"body":        bodyValue,
+		"url":         resp.Request.URL.String(),
 	}
 
 	return Value(response)
@@ -2844,9 +2845,9 @@ func httpServerStartFunc(interp *interpreter, pos Position, args []Value) Value 
 		if handler, exists := httpRoutes[serverID][routeKey]; exists {
 			// Create request object for the handler
 			reqObj := map[string]Value{
-				"method": r.Method,
-				"path":   r.URL.Path,
-				"query":  r.URL.RawQuery,
+				"method":  r.Method,
+				"path":    r.URL.Path,
+				"query":   r.URL.RawQuery,
 				"headers": convertHeaders(r.Header),
 				"body":    readRequestBody(r),
 			}
@@ -3366,7 +3367,8 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 			panic(typeError(pos, "udp_write() with address requires a UDP listener connection"))
 		}
 
-		addr, err := net.ResolveUDPAddr("udp", addrStr)
+		var addr *net.UDPAddr
+		addr, err = net.ResolveUDPAddr("udp", addrStr)
 		if err != nil {
 			panic(valueError(pos, "Failed to resolve UDP address %s: %v", addrStr, err))
 		}
