@@ -199,8 +199,9 @@ The language comes with comprehensive examples showcasing all features:
 ./uddinlang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
 
 # 🌐 Networking Examples
-./uddinlang examples/18_http_client_demo.din      # HTTP client operations
-./uddinlang examples/19_networking_demo.din       # TCP/UDP networking and utilities
+./uddinlang examples/17_http_client_demo.din      # HTTP client operations
+./uddinlang examples/18_networking_demo.din       # TCP/UDP networking and utilities
+./uddinlang examples/19_persistent_http_server.din # Persistent HTTP server with main function
 ```
 
 ### 🛠️ CLI Features & Development Tools
@@ -1344,6 +1345,15 @@ Uddin-Lang provides comprehensive networking capabilities for building client-se
 | `http_delete(url)`                 | HTTP DELETE request            | `http_delete("https://api.example.com/1")`  |
 | `http_request(method, url, data)`  | Generic HTTP request           | `http_request("PATCH", url, data)`         |
 
+#### HTTP Server Functions
+
+| Function                                    | Description                           | Example                                           |
+| ------------------------------------------- | ------------------------------------- | ------------------------------------------------- |
+| `http_server_start(port, server_id?)`       | Start HTTP server on specified port  | `server = http_server_start(8080, "main")`       |
+| `http_server_stop(server_id?)`              | Stop HTTP server                     | `http_server_stop("main")`                       |
+| `http_server_route(method, path, handler, server_id?)` | Register route handler        | `http_server_route("GET", "/api", my_handler, "main")` |
+| `http_response(res, status, headers?, body?)` | Send HTTP response                  | `http_response(res, 200, {"Content-Type": "text/plain"}, "Hello")` |
+
 #### Network Utilities
 
 | Function                    | Description                      | Example                                    |
@@ -1382,6 +1392,36 @@ UDP (User Datagram Protocol) provides fast, connectionless communication.
 // HTTP Client Example
 response = http_get("https://jsonplaceholder.typicode.com/posts/1")
 print("Response:", response)
+
+// HTTP Server Example
+fun hello_handler(req, res):
+    http_response(res, 200, {"Content-Type": "text/plain"}, "Hello from Uddin-Lang!")
+end
+
+fun api_handler(req, res):
+    if (req["method"] == "GET") then:
+        data = '[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]'
+        http_response(res, 200, {"Content-Type": "application/json"}, data)
+    else if (req["method"] == "POST") then:
+        response = '{"id": 3, "name": "Charlie", "status": "created"}'
+        http_response(res, 201, {"Content-Type": "application/json"}, response)
+    else:
+        http_response(res, 405, {"Content-Type": "text/plain"}, "Method not allowed")
+    end
+end
+
+fun start_server():
+    // Start HTTP server
+    server = http_server_start(8080, "main")
+    print("Server started:", server)
+    
+    // Register routes
+    http_server_route("GET", "/", hello_handler, "main")
+    http_server_route("GET", "/api/users", api_handler, "main")
+    http_server_route("POST", "/api/users", api_handler, "main")
+    
+    print("Server running on http://localhost:8080")
+end
 
 // TCP Client Example
 fun tcp_client_demo():

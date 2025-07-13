@@ -1,0 +1,56 @@
+// HTTP Server Persistent - Uddin-Lang
+// Server running for testing with curl
+// Solution for concurrent map access issues with simplified handlers
+
+// Define simple handler functions that minimize variable access
+fun hello_handler(req, res):
+    // Avoid complex variable assignments in handlers
+    response_text = "Hello from Uddin-Lang HTTP Server!"
+    http_response(res, 200, {"Content-Type": "text/plain"}, response_text)
+end
+
+fun api_users_handler(req, res):
+    if (req["method"] == "GET") then:
+        // Use direct values instead of complex variable assignments
+        http_response(res, 200, {"Content-Type": "application/json"}, '[{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]')
+    else if (req["method"] == "POST") then:
+        // Simplified POST response
+        http_response(res, 201, {"Content-Type": "application/json"}, '{"id": 3, "name": "Charlie", "status": "created"}')
+    else:
+        http_response(res, 405, {"Content-Type": "text/plain"}, "Method not allowed")
+    end
+end
+
+fun health_check_handler(req, res):
+    // Simple health check without complex object creation
+    health_json = '{"status": "healthy", "server": "Uddin-Lang", "version": "1.0.0"}'
+    http_response(res, 200, {"Content-Type": "application/json"}, health_json)
+end
+
+// Main function to run the server
+fun main():
+
+    server = http_server_start(8081, "main")
+
+    // Basic routes
+    http_server_route("GET", "/", hello_handler, "main")
+    http_server_route("GET", "/hello", hello_handler, "main")
+    http_server_route("GET", "/health", health_check_handler, "main")
+
+    // API routes
+    http_server_route("GET", "/api/users", api_users_handler, "main")
+    http_server_route("POST", "/api/users", api_users_handler, "main")
+
+    // Run server indefinitely - use Ctrl+C to stop
+    counter = 0
+
+    // Infinite loop to keep server running
+    while (true):
+        // Show heartbeat every 5 million iterations
+        if (counter % 5000000 == 0) then:
+            print("Server heartbeat: " + str(counter / 1000000) + "M iterations completed")
+        end
+
+        counter = counter + 1
+    end
+end
