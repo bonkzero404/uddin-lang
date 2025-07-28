@@ -372,7 +372,7 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		var builder strings.Builder
 		builder.Grow(32) // Pre-allocate for typical identifier length
 		builder.WriteRune(ch)
-		
+
 		// Collect all characters that can be part of a name
 		for isNameStart(t.ch) || (t.ch >= '0' && t.ch <= '9') {
 			builder.WriteRune(t.ch)
@@ -516,6 +516,7 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		value = builder.String()
 
 	// Process string literals enclosed in double quotes
+	// Double quotes support escape sequences: \n, \t, \r, \\, \"
 	case '"':
 		// Use strings.Builder for efficient string building
 		var builder strings.Builder
@@ -562,6 +563,7 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		value = builder.String()
 
 	// Process string literals enclosed in single quotes
+	// Single quotes support escape sequences: \n, \t, \r, \\, \'
 	case '\'':
 		// Use strings.Builder for efficient string building
 		var builder strings.Builder
@@ -603,6 +605,33 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		}
 
 		// Skip the closing quote
+		t.next()
+		token = STR
+		value = builder.String()
+
+	// Process multiline string literals enclosed in backticks
+	// Backticks create raw strings: no escape sequences, can span multiple lines
+	case '`':
+		// Use strings.Builder for efficient string building
+		var builder strings.Builder
+		builder.Grow(256) // Pre-allocate for larger multiline strings
+
+		// Collect all characters until closing backtick
+		for t.ch != '`' {
+			c := t.ch
+
+			// Check for unterminated string
+			if c < 0 {
+				return pos, ILLEGAL, "didn't find end backtick in multiline string"
+			}
+
+			// Multiline strings can contain raw newlines (unlike regular strings)
+			// No escape sequences are processed in backtick strings (raw strings)
+			builder.WriteRune(c)
+			t.next()
+		}
+
+		// Skip the closing backtick
 		t.next()
 		token = STR
 		value = builder.String()

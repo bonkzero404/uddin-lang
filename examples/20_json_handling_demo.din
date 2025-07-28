@@ -27,7 +27,23 @@ fun main():
     print("Array length: " + str(len(parsed_array)))
 
     // Parse nested JSON
-    nested_json = '{"user": {"id": 1, "profile": {"firstName": "Alice", "lastName": "Smith", "contacts": [{"type": "email", "value": "alice@example.com"}, {"type": "phone", "value": "+1234567890"}]}}, "settings": {"theme": "dark", "notifications": true}}'
+    nested_json = `{
+        "user": {
+            "id": 1,
+            "profile": {
+                "firstName": "Alice",
+                "lastName": "Smith",
+                "contacts": [
+                    {"type": "email", "value": "alice@example.com"},
+                    {"type": "phone", "value": "+1234567890"}
+                ]
+            }
+        },
+        "settings": {
+            "theme": "dark",
+            "notifications": true
+        }
+    }`
 
     print("\n--- NESTED JSON PARSING ---")
     print("Parsing complex nested JSON...")
@@ -208,7 +224,13 @@ end
 
 // Example usage of the helper function
 fun demo_json_processing():
-    sample_user = '{"name": "Emma Johnson", "age": 28, "email": "emma@example.com", "skills": ["JavaScript", "Python", "Go"], "location": "San Francisco"}'
+    sample_user = `{
+        "name": "Emma Johnson",
+        "age": 28,
+        "email": "emma@example.com",
+        "skills": ["JavaScript", "Python", "Go"],
+        "location": "San Francisco"
+    }`
 
     processed = process_user_data(sample_user)
     print("Processed user data: " + processed)
