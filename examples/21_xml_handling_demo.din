@@ -1,0 +1,133 @@
+// XML Handling Demo
+// This example demonstrates XML parsing and serialization in Uddin-Lang
+
+fun main():
+    print("=== XML Handling Demo ===")
+
+    // Example 1: Simple XML parsing
+    simple_xml = `<person>
+        <name>John Doe</name>
+        <age>30</age>
+        <city>New York</city>
+    </person>`
+
+    print("")
+    print("1. Parsing simple XML:")
+    print("Original XML:")
+    print(simple_xml)
+
+    person_data = xml_parse(simple_xml)
+    person = person_data["person"]  // Get the person object from root
+    print("")
+    print("Parsed structure:")
+    print("Name: " + person["name"])
+    print("Age: " + person["age"])
+    print("City: " + person["city"])
+
+    // Example 2: XML with attributes
+    xml_with_attrs = `<book id="123" category="fiction">
+        <title>The Great Adventure</title>
+        <author>Jane Smith</author>
+        <price>19.99</price>
+    </book>`
+
+    print("")
+    print("2. Parsing XML with attributes:")
+    print("Original XML:")
+    print(xml_with_attrs)
+
+    book_data = xml_parse(xml_with_attrs)
+    book = book_data["book"]  // Get the book object from root
+    print("")
+    print("Book details:")
+    print("ID: " + book["@attributes"]["id"])
+    print("Category: " + book["@attributes"]["category"])
+    print("Title: " + book["title"])
+    print("Author: " + book["author"])
+    print("Price: " + book["price"])
+
+    // Example 3: Nested XML structure
+    nested_xml = `<company>
+        <name>Tech Corp</name>
+        <employees>
+            <employee id="1">
+                <name>Alice Johnson</name>
+                <position>Developer</position>
+            </employee>
+            <employee id="2">
+                <name>Bob Wilson</name>
+                <position>Designer</position>
+            </employee>
+        </employees>
+    </company>`
+
+    print("")
+    print("3. Parsing nested XML:")
+    print("Original XML:")
+    print(nested_xml)
+
+    company_data = xml_parse(nested_xml)
+    company = company_data["company"]  // Get the company object from root
+    print("")
+    print("Company: " + company["name"])
+    print("Employees:")
+    employees = company["employees"]["employee"]
+    for (emp in employees):
+        print("  ID " + emp["@attributes"]["id"] + ": " + emp["name"] + " (" + emp["position"] + ")")
+    end
+
+    // Example 4: Converting data to XML
+    print("")
+    print("4. Converting data to XML:")
+    data = {
+        "user": {
+            "id": "456",
+            "name": "Sarah Connor",
+            "email": "sarah@example.com",
+            "preferences": {
+                "theme": "dark",
+                "notifications": "enabled"
+            }
+        }
+    }
+
+    xml_output = xml_stringify(data)
+    print("Generated XML:")
+    print(xml_output)
+
+    // Example 5: Round-trip conversion (XML -> Object -> XML)
+    print("")
+    print("5. Round-trip conversion test:")
+    original = `<config>
+        <database>
+            <host>localhost</host>
+            <port>5432</port>
+            <name>myapp</name>
+        </database>
+        <features>
+            <logging>info</logging>
+            <caching>redis</caching>
+        </features>
+    </config>`
+
+    print("Original XML:")
+    print(original)
+
+    // Parse to object
+    config_data = xml_parse(original)
+    config = config_data["config"]  // Get the config object from root
+    print("")
+    print("Parsed and accessing values:")
+    print("Database host: " + config["database"]["host"])
+    print("Database port: " + config["database"]["port"])
+    print("Logging type: " + config["features"]["logging"])
+    print("Caching type: " + config["features"]["caching"])
+
+    // Convert back to XML
+    reconstructed = xml_stringify(config)
+    print("")
+    print("Reconstructed XML:")
+    print(reconstructed)
+end
+
+main()

@@ -1488,6 +1488,73 @@ print("JSON output: " + json_output)
 | `boolean` | `bool`             | `true` → `true`                       |
 | `null`    | `null`             | `null` → `null`                       |
 
+### 📄 XML Processing
+
+Uddin-Lang provides built-in XML parsing and serialization capabilities for processing XML documents and web services.
+
+| Function                | Description                            | Example                                                         |
+| ----------------------- | -------------------------------------- | --------------------------------------------------------------- |
+| `xml_parse(xml_string)` | Parse XML string to Uddin-Lang value   | `data = xml_parse('<person><name>John</name></person>')`        |
+| `xml_stringify(value)`  | Convert Uddin-Lang value to XML string | `xml_str = xml_stringify({person: {name: "Alice", age: "25"}})` |
+
+#### XML Examples
+
+```go
+// Parse XML data
+xml_data = `<config>
+    <database>
+        <host>localhost</host>
+        <port>5432</port>
+    </database>
+    <features>
+        <logging>enabled</logging>
+        <caching>redis</caching>
+    </features>
+</config>`
+
+parsed = xml_parse(xml_data)
+config = parsed["config"]  // Get root element
+print("Database host: " + config["database"]["host"])
+print("Caching type: " + config["features"]["caching"])
+
+// XML with attributes
+xml_with_attrs = `<book id="123" category="fiction">
+    <title>The Great Adventure</title>
+    <author>Jane Smith</author>
+</book>`
+
+book_data = xml_parse(xml_with_attrs)
+book = book_data["book"]
+print("Book ID: " + book["@attributes"]["id"])
+print("Category: " + book["@attributes"]["category"])
+print("Title: " + book["title"])
+
+// Convert to XML
+data = {
+    "user": {
+        "name": "Bob",
+        "age": "30",
+        "preferences": {
+            "theme": "dark",
+            "notifications": "enabled"
+        }
+    }
+}
+
+xml_output = xml_stringify(data)
+print("Generated XML: " + xml_output)
+```
+
+**XML Structure Mapping:**
+
+| XML Feature       | Uddin-Lang Representation | Example                                          |
+| ----------------- | ------------------------- | ------------------------------------------------ |
+| Root Element      | Map key                   | `<root>...</root>` → `{"root": {...}}`           |
+| Child Elements    | Map properties            | `<name>John</name>` → `{"name": "John"}`         |
+| Attributes        | `@attributes` object      | `<item id="1">` → `{"@attributes": {"id": "1"}}` |
+| Text Content      | String value              | `<title>Book</title>` → `{"title": "Book"}`      |
+| Multiple Elements | Array                     | `<item>1</item><item>2</item>` → `[1, 2]`        |
+
 ### 🌐 Networking Functions
 
 Uddin-Lang provides comprehensive networking capabilities for building client-server applications, network utilities, and distributed systems.

@@ -3,6 +3,7 @@ package interpreter
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"math"
@@ -266,6 +267,10 @@ var builtins = map[string]builtinFunction{
 	// JSON Functions
 	"json_parse":     {jsonParseFunc, "json_parse"},
 	"json_stringify": {jsonStringifyFunc, "json_stringify"},
+
+	// XML Functions
+	"xml_parse":    {xmlParseFunc, "xml_parse"},
+	"xml_stringify": {xmlStringifyFunc, "xml_stringify"},
 
 	// HTTP Client Functions
 	"http_get":     {httpGetFunc, "http_get"},
@@ -2839,6 +2844,252 @@ func jsonStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	return Value(string(jsonBytes))
+}
+
+// xmlParseFunc implements the xml_parse() built-in function
+// Parses an XML string and returns the corresponding Uddin-Lang value
+// Parameters:
+//   - xmlStr: XML string to parse
+//
+// Returns the parsed value as a map with XML structure
+// Example: xml_parse('<root><name>John</name><age>30</age></root>') -> {root: {name: "John", age: "30"}}
+func xmlParseFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "xml_parse", args, 1)
+
+	xmlStr, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "xml_parse() requires a string argument, not %s", typeName(args[0])))
+	}
+
+	// Parse XML into a generic interface
+	decoder := xml.NewDecoder(strings.NewReader(xmlStr))
+	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
+		return input, nil // Simple charset handling
+	}
+
+	// Parse the XML into a map structure
+	result, err := parseXMLElement(decoder)
+	if err != nil {
+		panic(valueError(pos, "Invalid XML: %v", err))
+	}
+
+	return xmlToValue(result)
+}
+
+// xmlStringifyFunc implements the xml_stringify() built-in function
+// Converts a Uddin-Lang value to an XML string
+// Parameters:
+//   - value: Value to convert to XML
+//
+// Returns the XML string representation
+// Example: xml_stringify({root: {name: "John", age: "30"}}) -> '<root><name>John</name><age>30</age></root>'
+func xmlStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "xml_stringify", args, 1)
+
+	xmlBytes, err := valueToXML(args[0])
+	if err != nil {
+		panic(valueError(pos, "Failed to convert to XML: %v", err))
+	}
+
+	return Value(string(xmlBytes))
+}
+
+// parseXMLElement parses a single XML element and its children
+func parseXMLElement(decoder *xml.Decoder) (map[string]interface{}, error) {
+	result := make(map[string]interface{})
+
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			// Handle start element
+			childResult, err := parseXMLElementContent(decoder, t)
+			if err != nil {
+				return nil, err
+			}
+
+			// Handle multiple elements with the same name
+			if existing, exists := result[t.Name.Local]; exists {
+				// Convert to array if not already
+				if arr, isArray := existing.([]interface{}); isArray {
+					result[t.Name.Local] = append(arr, childResult)
+				} else {
+					result[t.Name.Local] = []interface{}{existing, childResult}
+				}
+			} else {
+				result[t.Name.Local] = childResult
+			}
+		}
+	}
+
+	return result, nil
+}
+
+// parseXMLElementContent parses the content of an XML element
+func parseXMLElementContent(decoder *xml.Decoder, startElement xml.StartElement) (interface{}, error) {
+	content := make(map[string]interface{})
+	textContent := ""
+	hasChildren := false
+
+	// Add attributes if any
+	if len(startElement.Attr) > 0 {
+		attrs := make(map[string]interface{})
+		for _, attr := range startElement.Attr {
+			attrs[attr.Name.Local] = attr.Value
+		}
+		content["@attributes"] = attrs
+	}
+
+	for {
+		token, err := decoder.Token()
+		if err != nil {
+			return nil, err
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			hasChildren = true
+			childResult, err := parseXMLElementContent(decoder, t)
+			if err != nil {
+				return nil, err
+			}
+
+			// Handle multiple elements with the same name
+			if existing, exists := content[t.Name.Local]; exists {
+				if arr, isArray := existing.([]interface{}); isArray {
+					content[t.Name.Local] = append(arr, childResult)
+				} else {
+					content[t.Name.Local] = []interface{}{existing, childResult}
+				}
+			} else {
+				content[t.Name.Local] = childResult
+			}
+
+		case xml.CharData:
+			text := strings.TrimSpace(string(t))
+			if text != "" {
+				textContent += text
+			}
+
+		case xml.EndElement:
+			if t.Name.Local == startElement.Name.Local {
+				// End of this element
+				if hasChildren {
+					if textContent != "" {
+						content["#text"] = textContent
+					}
+					return content, nil
+				} else {
+					// Simple text element
+					if textContent != "" {
+						return textContent, nil
+					}
+					return content, nil
+				}
+			}
+		}
+	}
+}
+
+// valueToXML converts a Value to XML bytes
+func valueToXML(v Value) ([]byte, error) {
+	var buf bytes.Buffer
+	err := valueToXMLRecursive(v, "", &buf, 0)
+	return buf.Bytes(), err
+}
+
+// valueToXMLRecursive recursively converts a Value to XML
+func valueToXMLRecursive(v Value, tagName string, buf *bytes.Buffer, depth int) error {
+	indent := strings.Repeat("  ", depth)
+
+	switch val := v.(type) {
+	case map[string]Value:
+		if tagName == "" {
+			// Root level - find the first key as root element
+			for k, v := range val {
+				return valueToXMLRecursive(v, k, buf, depth)
+			}
+		} else {
+			buf.WriteString(fmt.Sprintf("%s<%s>\n", indent, tagName))
+			for k, v := range val {
+				if k == "@attributes" {
+					// Skip attributes for now (would need to be handled in parent)
+					continue
+				}
+				if k == "#text" {
+					// Handle text content
+					if str, ok := v.(string); ok {
+						buf.WriteString(str)
+					}
+				} else {
+					err := valueToXMLRecursive(v, k, buf, depth+1)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			buf.WriteString(fmt.Sprintf("%s</%s>\n", indent, tagName))
+		}
+
+	case []Value:
+		// Handle arrays - each element gets the same tag name
+		for _, item := range val {
+			err := valueToXMLRecursive(item, tagName, buf, depth)
+			if err != nil {
+				return err
+			}
+		}
+
+	case *[]Value:
+		// Handle pointer to arrays
+		for _, item := range *val {
+			err := valueToXMLRecursive(item, tagName, buf, depth)
+			if err != nil {
+				return err
+			}
+		}
+
+	default:
+		// Simple value
+		content := fmt.Sprintf("%v", val)
+		if content == "<nil>" {
+			content = ""
+		}
+		buf.WriteString(fmt.Sprintf("%s<%s>%s</%s>\n", indent, tagName, content, tagName))
+	}
+
+	return nil
+}
+
+// xmlToValue converts XML interface{} to Value
+func xmlToValue(data interface{}) Value {
+	switch val := data.(type) {
+	case map[string]interface{}:
+		result := make(map[string]Value)
+		for k, v := range val {
+			result[k] = xmlToValue(v)
+		}
+		return Value(result)
+	case []interface{}:
+		result := make([]Value, len(val))
+		for i, v := range val {
+			result[i] = xmlToValue(v)
+		}
+		return Value(&result)
+	case string:
+		return Value(val)
+	case nil:
+		return Value(nil)
+	default:
+		return Value(fmt.Sprintf("%v", val))
+	}
 }
 
 // HTTP Server Functions
