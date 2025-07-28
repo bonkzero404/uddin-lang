@@ -1,0 +1,215 @@
+// =============================================================================
+// 20_json_handling_demo.din - JSON Parsing and Serialization Demo
+// =============================================================================
+
+fun main():
+    print("=== JSON Handling Demo ===")
+
+    print("\n--- JSON PARSING (json_parse) ---")
+
+    // Parse simple JSON object
+    json_string = '{"name": "John", "age": 30, "city": "New York"}'
+    print("Original JSON string: " + json_string)
+
+    parsed_object = json_parse(json_string)
+    print("Parsed object: " + str(parsed_object))
+    print("Name: " + parsed_object.name)
+    print("Age: " + str(parsed_object.age))
+    print("City: " + parsed_object.city)
+
+    // Parse JSON array
+    json_array = '[1, 2, 3, "hello", true, null]'
+    print("\nOriginal JSON array: " + json_array)
+
+    parsed_array = json_parse(json_array)
+    print("Parsed array: " + str(parsed_array))
+    print("First element: " + str(parsed_array[0]))
+    print("Array length: " + str(len(parsed_array)))
+
+    // Parse nested JSON
+    nested_json = '{"user": {"id": 1, "profile": {"firstName": "Alice", "lastName": "Smith", "contacts": [{"type": "email", "value": "alice@example.com"}, {"type": "phone", "value": "+1234567890"}]}}, "settings": {"theme": "dark", "notifications": true}}'
+
+    print("\n--- NESTED JSON PARSING ---")
+    print("Parsing complex nested JSON...")
+
+    nested_data = json_parse(nested_json)
+    print("User ID: " + str(nested_data.user.id))
+    print("Full name: " + nested_data.user.profile.firstName + " " + nested_data.user.profile.lastName)
+    print("Email: " + nested_data.user.profile.contacts[0].value)
+    print("Theme: " + nested_data.settings.theme)
+
+    print("\n--- JSON SERIALIZATION (json_stringify) ---")
+
+    // Create Uddin-Lang data structures
+    person = {
+        "name": "Bob",
+        "age": 25,
+        "hobbies": ["reading", "programming", "gaming"],
+        "address": {
+            "street": "123 Main St",
+            "city": "Boston",
+            "zipcode": "02101"
+        },
+        "isStudent": true,
+        "spouse": null
+    }
+
+    print("Original Uddin-Lang object: " + str(person))
+
+    // Convert to JSON string
+    json_output = json_stringify(person)
+    print("JSON string: " + json_output)
+
+    // Array to JSON
+    numbers = [1, 2, 3, 4, 5]
+    json_numbers = json_stringify(numbers)
+    print("Array as JSON: " + json_numbers)
+
+    // Mixed data types
+    mixed_data = {
+        "text": "Hello World",
+        "number": 42,
+        "float": 3.14,
+        "boolean": true,
+        "null_value": null,
+        "array": [1, "two", 3.0, false],
+        "nested": {
+            "key": "value"
+        }
+    }
+
+    mixed_json = json_stringify(mixed_data)
+    print("Mixed data as JSON: " + mixed_json)
+
+    print("\n--- JSON ROUND-TRIP TEST ---")
+
+    // Test parsing and stringifying back
+    original = {"message": "Hello", "count": 100, "active": true}
+    print("Original: " + str(original))
+
+    // Convert to JSON string
+    json_str = json_stringify(original)
+    print("As JSON: " + json_str)
+
+    // Parse back to object
+    parsed_back = json_parse(json_str)
+    print("Parsed back: " + str(parsed_back))
+    print("Round-trip successful: " + str(parsed_back.message == original.message))
+
+    print("\n--- PRACTICAL JSON EXAMPLES ---")
+
+    // Example 1: Configuration data
+    config = {
+        "database": {
+            "host": "localhost",
+            "port": 5432,
+            "name": "myapp",
+            "ssl": true
+        },
+        "cache": {
+            "ttl": 3600,
+            "maxSize": "100MB"
+        },
+        "features": ["auth", "logging", "monitoring"]
+    }
+
+    config_json = json_stringify(config)
+    print("Config as JSON: " + config_json)
+
+    // Example 2: API Response simulation
+    api_response = {
+        "status": "success",
+        "data": [
+            {"id": 1, "name": "Product A", "price": 29.99},
+            {"id": 2, "name": "Product B", "price": 39.99},
+            {"id": 3, "name": "Product C", "price": 19.99}
+        ],
+        "pagination": {
+            "page": 1,
+            "limit": 10,
+            "total": 3
+        }
+    }
+
+    response_json = json_stringify(api_response)
+    print("API Response JSON: " + response_json)
+
+    // Parse and process the response
+    parsed_response = json_parse(response_json)
+    print("Response status: " + parsed_response.status)
+    print("Number of products: " + str(len(parsed_response.data)))
+
+    total_price = 0.0
+    for (product in parsed_response.data):
+        print("- " + product.name + ": $" + str(product.price))
+        total_price = total_price + product.price
+    end
+    print("Total price: $" + str(total_price))
+
+    print("\n--- ERROR HANDLING ---")
+
+    // Test invalid JSON
+    try:
+        invalid_json = '{"name": "John", "age": }'  // Missing value
+        json_parse(invalid_json)
+    catch (error):
+        print("Caught parsing error: " + str(error))
+    end
+
+    try:
+        malformed_json = '{"unclosed": "string'
+        json_parse(malformed_json)
+    catch (error):
+        print("Caught malformed JSON error: " + str(error))
+    end
+
+    print("\n=== JSON Handling Demo Complete ===")
+    print("Available JSON functions:")
+    print("- json_parse(json_string) - Parse JSON string to Uddin-Lang value")
+    print("- json_stringify(value) - Convert Uddin-Lang value to JSON string")
+    print("")
+    print("Supported JSON types:")
+    print("- Objects: {} -> map[string]Value")
+    print("- Arrays: [] -> []Value")
+    print("- Strings: \"text\" -> string")
+    print("- Numbers: 42, 3.14 -> int, float64")
+    print("- Booleans: true, false -> bool")
+    print("- Null: null -> null")
+
+    // Demonstrate helper function
+    demo_json_processing()
+end// Helper function to demonstrate JSON processing
+fun process_user_data(json_str):
+    print("\n--- Processing User Data ---")
+
+    user = json_parse(json_str)
+
+    print("Processing user: " + user.name)
+    print("Age: " + str(user.age))
+
+    if (user.age >= 18) then:
+        print("Status: Adult")
+    else:
+        print("Status: Minor")
+    end
+
+    if (len(user.skills) > 0) then:
+        print("Skills:")
+        for (skill in user.skills):
+            print("  - " + skill)
+        end
+    end
+
+    // Add processing timestamp
+    user.processed_at = date_now()
+
+    return json_stringify(user)
+end
+
+// Example usage of the helper function
+fun demo_json_processing():
+    sample_user = '{"name": "Emma Johnson", "age": 28, "email": "emma@example.com", "skills": ["JavaScript", "Python", "Go"], "location": "San Francisco"}'
+
+    processed = process_user_data(sample_user)
+    print("Processed user data: " + processed)
+end

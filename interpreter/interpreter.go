@@ -734,7 +734,7 @@ func (interp *interpreter) assignSubscript(pos Position, container, subscript, v
 }
 
 // evaluateAssignmentValue evaluates assignment operators like +=, -=, etc.
-func (interp *interpreter) evaluateAssignmentValue(operator Token, target interface{}, value Expression) Value {
+func (interp *interpreter) evaluateAssignmentValue(operator Token, target any, value Expression) Value {
 	rightValue := interp.evaluate(value)
 
 	// For simple assignment, just return the right value

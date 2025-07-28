@@ -263,6 +263,10 @@ var builtins = map[string]builtinFunction{
 	"is_nan":      {isNanFunc, "is_nan"},
 	"is_infinite": {isInfiniteFunc, "is_infinite"},
 
+	// JSON Functions
+	"json_parse":     {jsonParseFunc, "json_parse"},
+	"json_stringify": {jsonStringifyFunc, "json_stringify"},
+
 	// HTTP Client Functions
 	"http_get":     {httpGetFunc, "http_get"},
 	"http_post":    {httpPostFunc, "http_post"},
@@ -2692,7 +2696,7 @@ func httpRequest(pos Position, method, url string, data Value, headers map[strin
 
 	// Parse response body as JSON if possible
 	var bodyValue Value
-	var jsonData interface{}
+	var jsonData any
 	if err := json.Unmarshal(respBody, &jsonData); err == nil {
 		bodyValue = jsonToValue(jsonData)
 	} else {
@@ -2725,14 +2729,14 @@ func valueToJSON(v Value) ([]byte, error) {
 	switch val := v.(type) {
 	case map[string]Value:
 		// Convert map to Go map for JSON marshaling
-		goMap := make(map[string]interface{})
+		goMap := make(map[string]any)
 		for k, v := range val {
 			goMap[k] = valueToInterface(v)
 		}
 		return json.Marshal(goMap)
 	case []Value:
 		// Convert array to Go slice for JSON marshaling
-		goSlice := make([]interface{}, len(val))
+		goSlice := make([]any, len(val))
 		for i, v := range val {
 			goSlice[i] = valueToInterface(v)
 		}
@@ -2742,17 +2746,17 @@ func valueToJSON(v Value) ([]byte, error) {
 	}
 }
 
-// valueToInterface converts a Value to interface{} for JSON marshaling
-func valueToInterface(v Value) interface{} {
+// valueToInterface converts a Value to any for JSON marshaling
+func valueToInterface(v Value) any {
 	switch val := v.(type) {
 	case map[string]Value:
-		goMap := make(map[string]interface{})
+		goMap := make(map[string]any)
 		for k, v := range val {
 			goMap[k] = valueToInterface(v)
 		}
 		return goMap
 	case []Value:
-		goSlice := make([]interface{}, len(val))
+		goSlice := make([]any, len(val))
 		for i, v := range val {
 			goSlice[i] = valueToInterface(v)
 		}
@@ -2764,21 +2768,21 @@ func valueToInterface(v Value) interface{} {
 	}
 }
 
-// jsonToValue converts JSON interface{} to Value
-func jsonToValue(data interface{}) Value {
+// jsonToValue converts JSON any to Value
+func jsonToValue(data any) Value {
 	switch val := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		result := make(map[string]Value)
 		for k, v := range val {
 			result[k] = jsonToValue(v)
 		}
 		return Value(result)
-	case []interface{}:
+	case []any:
 		result := make([]Value, len(val))
 		for i, v := range val {
 			result[i] = jsonToValue(v)
 		}
-		return Value(result)
+		return Value(&result)
 	case float64:
 		// Check if it's actually an integer
 		if val == float64(int(val)) {
@@ -2794,6 +2798,47 @@ func jsonToValue(data interface{}) Value {
 	default:
 		return Value(val)
 	}
+}
+
+// jsonParseFunc implements the json_parse() built-in function
+// Parses a JSON string and returns the corresponding Uddin-Lang value
+// Parameters:
+//   - jsonStr: JSON string to parse
+//
+// Returns the parsed value (object, array, string, int, float, bool, or null)
+// Example: json_parse('{"name": "John", "age": 30}') -> {name: "John", age: 30}
+func jsonParseFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "json_parse", args, 1)
+
+	jsonStr, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "json_parse() requires a string argument, not %s", typeName(args[0])))
+	}
+
+	var jsonData any
+	if err := json.Unmarshal([]byte(jsonStr), &jsonData); err != nil {
+		panic(valueError(pos, "Invalid JSON: %v", err))
+	}
+
+	return jsonToValue(jsonData)
+}
+
+// jsonStringifyFunc implements the json_stringify() built-in function
+// Converts a Uddin-Lang value to a JSON string
+// Parameters:
+//   - value: Value to convert to JSON
+//
+// Returns the JSON string representation
+// Example: json_stringify({name: "John", age: 30}) -> '{"age":30,"name":"John"}'
+func jsonStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "json_stringify", args, 1)
+
+	jsonBytes, err := valueToJSON(args[0])
+	if err != nil {
+		panic(valueError(pos, "Failed to convert to JSON: %v", err))
+	}
+
+	return Value(string(jsonBytes))
 }
 
 // HTTP Server Functions
