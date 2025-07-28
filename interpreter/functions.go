@@ -16,7 +16,18 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+)
+
+// Global variables for Rule Engine features
+var (
+	factDatabase = make(map[string]interface{})
+	factMutex    = sync.RWMutex{}
+
+	eventStore   = make([]map[string]interface{}, 0)
+	eventPatterns = make(map[string]interface{})
+	eventMutex   = sync.RWMutex{}
 )
 
 // functionType is the interface for all callable functions in the interpreter
@@ -299,6 +310,38 @@ var builtins = map[string]builtinFunction{
 	"udp_close":   {udpCloseFunc, "udp_close"},
 	"net_resolve": {netResolveFunc, "net_resolve"},
 	"net_ping":    {netPingFunc, "net_ping"},
+
+	// Rule Engine Functions - Pattern Matching & Regex
+	"regex_match":     {regexMatchFunc, "regex_match"},
+	"regex_find":      {regexFindFunc, "regex_find"},
+	"regex_find_all":  {regexFindAllFunc, "regex_find_all"},
+	"regex_replace":   {regexReplaceFunc, "regex_replace"},
+	"regex_split":     {regexSplitFunc, "regex_split"},
+
+	// Rule Engine Functions - Enhanced Date/Time Operations
+	"date_parse":      {dateParseFunc, "date_parse"},
+	"date_format_new": {dateFormatEnhancedFunc, "date_format_new"},
+	"date_add":        {dateAddFunc, "date_add"},
+	"date_subtract":   {dateSubtractFunc, "date_subtract"},
+	"date_diff":       {dateDiffFunc, "date_diff"},
+	"date_between":    {dateBetweenFunc, "date_between"},
+	"date_compare":    {dateCompareFunc, "date_compare"},
+
+	// Rule Engine Functions - Fact Database & Working Memory
+	"fact_assert":     {factAssertFunc, "fact_assert"},
+	"fact_retract":    {factRetractFunc, "fact_retract"},
+	"fact_query":      {factQueryFunc, "fact_query"},
+	"fact_exists":     {factExistsFunc, "fact_exists"},
+	"fact_count":      {factCountFunc, "fact_count"},
+	"fact_clear":      {factClearFunc, "fact_clear"},
+	"fact_get_all":    {factGetAllFunc, "fact_get_all"},
+
+	// Rule Engine Functions - Complex Event Processing (CEP)
+	"event_emit":         {eventEmitFunc, "event_emit"},
+	"event_define_pattern": {eventDefinePatternFunc, "event_define_pattern"},
+	"event_get_window":     {eventGetWindowFunc, "event_get_window"},
+	"event_clear":          {eventClearFunc, "event_clear"},
+	"event_count":          {eventCountFunc, "event_count"},
 }
 
 // appendFunc implements the append() built-in function
@@ -420,6 +463,8 @@ func intFunc(interp *interpreter, pos Position, args []Value) Value {
 	switch arg := args[0].(type) {
 	case int:
 		return args[0] // Already an integer
+	case int64:
+		return Value(int(arg)) // Convert int64 to int
 	case string:
 		i, err := strconv.Atoi(arg)
 		if err != nil {
@@ -427,7 +472,7 @@ func intFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 		return Value(i)
 	default:
-		panic(typeError(pos, "int() requires an int or a string"))
+		panic(typeError(pos, "int() requires an int, int64, or a string"))
 	}
 }
 
@@ -946,6 +991,8 @@ func toString(value Value, quoteStr bool) string {
 		}
 	case int:
 		s = fmt.Sprintf("%d", v) // Integer
+	case int64:
+		s = fmt.Sprintf("%d", v) // int64 support
 	case float64:
 		s = fmt.Sprintf("%g", v) // Float
 	case string:
@@ -977,6 +1024,19 @@ func toString(value Value, quoteStr bool) string {
 		}
 		sort.Strings(strs) // Ensure str(output) is consistent
 		s = fmt.Sprintf("{%s}", strings.Join(strs, ", "))
+	case *map[string]Value:
+		// Convert pointer to object key-value pairs recursively
+		if v == nil {
+			s = "null"
+		} else {
+			strs := make([]string, 0, len(*v))
+			for k, val := range *v {
+				item := fmt.Sprintf("%q: %s", k, toString(val, true))
+				strs = append(strs, item)
+			}
+			sort.Strings(strs) // Ensure str(output) is consistent
+			s = fmt.Sprintf("{%s}", strings.Join(strs, ", "))
+		}
 	case functionType:
 		s = v.name() // Function representation
 	default:
@@ -3806,4 +3866,1046 @@ func netPingFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	return Value(result)
+}
+
+// ===============================
+// RULE ENGINE FUNCTIONS
+// ===============================
+
+// regexMatchFunc tests if a string matches a regular expression pattern
+// Parameters:
+//   - text: The string to test (first argument)
+//   - pattern: The regular expression pattern (second argument)
+//
+// Returns true if the text matches the pattern, false otherwise
+// Example: regex_match("hello@example.com", "^[\\w._%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$") -> true
+func regexMatchFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "regex_match", args, 2)
+
+	text, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "regex_match() requires first argument to be a string, not %s", typeName(args[0])))
+	}
+
+	pattern, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "regex_match() requires second argument to be a string pattern, not %s", typeName(args[1])))
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic(valueError(pos, "Invalid regex pattern: %v", err))
+	}
+
+	return Value(re.MatchString(text))
+}
+
+// regexFindFunc finds the first match of a regular expression in a string
+// Parameters:
+//   - text: The string to search in (first argument)
+//   - pattern: The regular expression pattern (second argument)
+//
+// Returns the first match as a string, or null if no match found
+// Example: regex_find("hello world 123", "\\d+") -> "123"
+func regexFindFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "regex_find", args, 2)
+
+	text, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "regex_find() requires first argument to be a string, not %s", typeName(args[0])))
+	}
+
+	pattern, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "regex_find() requires second argument to be a string pattern, not %s", typeName(args[1])))
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic(valueError(pos, "Invalid regex pattern: %v", err))
+	}
+
+	match := re.FindString(text)
+	if match == "" {
+		return Value(nil)
+	}
+
+	return Value(match)
+}
+
+// regexFindAllFunc finds all matches of a regular expression in a string
+// Parameters:
+//   - text: The string to search in (first argument)
+//   - pattern: The regular expression pattern (second argument)
+//   - limit: Optional maximum number of matches (third argument, -1 for all)
+//
+// Returns an array of all matches
+// Example: regex_find_all("hello 123 world 456", "\\d+") -> ["123", "456"]
+func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 3 {
+		panic(typeError(pos, "regex_find_all() requires 2 or 3 arguments, got %d", len(args)))
+	}
+
+	text, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "regex_find_all() requires first argument to be a string, not %s", typeName(args[0])))
+	}
+
+	pattern, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "regex_find_all() requires second argument to be a string pattern, not %s", typeName(args[1])))
+	}
+
+	limit := -1 // Default: find all matches
+	if len(args) == 3 {
+		if l, ok := args[2].(int); ok {
+			limit = l
+		} else {
+			panic(typeError(pos, "regex_find_all() requires third argument to be an integer (limit), not %s", typeName(args[2])))
+		}
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic(valueError(pos, "Invalid regex pattern: %v", err))
+	}
+
+	matches := re.FindAllString(text, limit)
+	result := make([]Value, len(matches))
+	for i, match := range matches {
+		result[i] = Value(match)
+	}
+
+	return Value(&result)
+}
+
+// regexReplaceFunc replaces matches of a regular expression with a replacement string
+// Parameters:
+//   - text: The string to search and replace in (first argument)
+//   - pattern: The regular expression pattern (second argument)
+//   - replacement: The replacement string (third argument)
+//
+// Returns the modified string with replacements
+// Example: regex_replace("hello 123 world", "\\d+", "XXX") -> "hello XXX world"
+func regexReplaceFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "regex_replace", args, 3)
+
+	text, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "regex_replace() requires first argument to be a string, not %s", typeName(args[0])))
+	}
+
+	pattern, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "regex_replace() requires second argument to be a string pattern, not %s", typeName(args[1])))
+	}
+
+	replacement, ok := args[2].(string)
+	if !ok {
+		panic(typeError(pos, "regex_replace() requires third argument to be a string (replacement), not %s", typeName(args[2])))
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic(valueError(pos, "Invalid regex pattern: %v", err))
+	}
+
+	result := re.ReplaceAllString(text, replacement)
+	return Value(result)
+}
+
+// regexSplitFunc splits a string using a regular expression pattern as delimiter
+// Parameters:
+//   - text: The string to split (first argument)
+//   - pattern: The regular expression pattern delimiter (second argument)
+//   - limit: Optional maximum number of splits (third argument, -1 for all)
+//
+// Returns an array of string parts
+// Example: regex_split("hello,world;test", "[,;]") -> ["hello", "world", "test"]
+func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 || len(args) > 3 {
+		panic(typeError(pos, "regex_split() requires 2 or 3 arguments, got %d", len(args)))
+	}
+
+	text, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "regex_split() requires first argument to be a string, not %s", typeName(args[0])))
+	}
+
+	pattern, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "regex_split() requires second argument to be a string pattern, not %s", typeName(args[1])))
+	}
+
+	limit := -1 // Default: split all
+	if len(args) == 3 {
+		if l, ok := args[2].(int); ok {
+			limit = l
+		} else {
+			panic(typeError(pos, "regex_split() requires third argument to be an integer (limit), not %s", typeName(args[2])))
+		}
+	}
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		panic(valueError(pos, "Invalid regex pattern: %v", err))
+	}
+
+	parts := re.Split(text, limit)
+	result := make([]Value, len(parts))
+	for i, part := range parts {
+		result[i] = Value(part)
+	}
+
+	return Value(&result)
+}
+
+// ==============================================================================
+// ENHANCED DATE/TIME OPERATIONS FOR RULE ENGINE
+// ==============================================================================
+
+// dateParseFunc parses a date string according to the specified format
+// Usage: date_parse("2023-12-25", "2006-01-02")
+func dateParseFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "date_parse", args, 2)
+
+	dateStr, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "date_parse() requires first argument to be a string"))
+	}
+
+	format, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "date_parse() requires second argument to be a string"))
+	}
+
+	// Parse the date
+	parsedTime, err := time.Parse(format, dateStr)
+	if err != nil {
+		return Value(nil) // Return null if parsing fails
+	}
+
+	// Return as ISO 8601 format string
+	return Value(parsedTime.Format(time.RFC3339))
+}
+
+// dateFormatEnhancedFunc formats a date string from one format to another
+// Usage: date_format_new("2023-12-25T10:30:00Z", "2006-01-02T15:04:05Z07:00", "January 2, 2006 3:04 PM")
+func dateFormatEnhancedFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "date_format_new", args, 3)
+
+	dateStr, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "date_format_new() requires first argument to be a string"))
+	}
+
+	inputFormat, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "date_format_new() requires second argument to be a string"))
+	}
+
+	outputFormat, ok := args[2].(string)
+	if !ok {
+		panic(typeError(pos, "date_format_new() requires third argument to be a string"))
+	}
+
+	// Parse the input date
+	parsedTime, err := time.Parse(inputFormat, dateStr)
+	if err != nil {
+		return Value(nil) // Return null if parsing fails
+	}
+
+	// Format to output format
+	return Value(parsedTime.Format(outputFormat))
+}
+
+// dateAddFunc adds time duration to a date
+// Usage: date_add("2023-12-25T10:30:00Z", "24h") or date_add("2023-12-25T10:30:00Z", "hours", 24)
+func dateAddFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(fmt.Errorf("date_add requires at least 2 arguments"))
+	}
+
+	dateStr, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_add: first argument must be a date string"))
+	}
+
+	// Parse the date (try multiple formats)
+	var parsedTime time.Time
+	var err error
+	formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02", "2006-01-02 15:04:05"}
+
+	for _, format := range formats {
+		parsedTime, err = time.Parse(format, dateStr)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_add: failed to parse date: %v", err))
+	}
+
+	if len(args) == 2 {
+		// Duration string format
+		durationStr, ok := args[1].(string)
+		if !ok {
+			return Value(fmt.Errorf("date_add: second argument must be a duration string"))
+		}
+
+		duration, err := time.ParseDuration(durationStr)
+		if err != nil {
+			return Value(fmt.Errorf("date_add: invalid duration format: %v", err))
+		}
+
+		result := parsedTime.Add(duration)
+		return Value(result.Format(time.RFC3339))
+	} else if len(args) == 3 {
+		// Unit and amount format
+		unit, ok := args[1].(string)
+		if !ok {
+			return Value(fmt.Errorf("date_add: second argument must be a unit string"))
+		}
+
+		var amount int64
+		switch v := args[2].(type) {
+		case int64:
+			amount = v
+		case float64:
+			amount = int64(v)
+		default:
+			return Value(fmt.Errorf("date_add: third argument must be a number"))
+		}
+
+		var result time.Time
+		switch strings.ToLower(unit) {
+		case "years", "year":
+			result = parsedTime.AddDate(int(amount), 0, 0)
+		case "months", "month":
+			result = parsedTime.AddDate(0, int(amount), 0)
+		case "days", "day":
+			result = parsedTime.AddDate(0, 0, int(amount))
+		case "hours", "hour":
+			result = parsedTime.Add(time.Duration(amount) * time.Hour)
+		case "minutes", "minute":
+			result = parsedTime.Add(time.Duration(amount) * time.Minute)
+		case "seconds", "second":
+			result = parsedTime.Add(time.Duration(amount) * time.Second)
+		default:
+			return Value(fmt.Errorf("date_add: unsupported unit '%s'", unit))
+		}
+
+		return Value(result.Format(time.RFC3339))
+	}
+
+	return Value(fmt.Errorf("date_add: invalid number of arguments"))
+}
+
+// dateSubtractFunc subtracts time duration from a date
+// Usage: date_subtract("2023-12-25T10:30:00Z", "24h") or date_subtract("2023-12-25T10:30:00Z", "hours", 24)
+func dateSubtractFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(fmt.Errorf("date_subtract requires at least 2 arguments"))
+	}
+
+	dateStr, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_subtract: first argument must be a date string"))
+	}
+
+	// Parse the date (try multiple formats)
+	var parsedTime time.Time
+	var err error
+	formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02", "2006-01-02 15:04:05"}
+
+	for _, format := range formats {
+		parsedTime, err = time.Parse(format, dateStr)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_subtract: failed to parse date: %v", err))
+	}
+
+	if len(args) == 2 {
+		// Duration string format
+		durationStr, ok := args[1].(string)
+		if !ok {
+			return Value(fmt.Errorf("date_subtract: second argument must be a duration string"))
+		}
+
+		duration, err := time.ParseDuration(durationStr)
+		if err != nil {
+			return Value(fmt.Errorf("date_subtract: invalid duration format: %v", err))
+		}
+
+		result := parsedTime.Add(-duration)
+		return Value(result.Format(time.RFC3339))
+	} else if len(args) == 3 {
+		// Unit and amount format
+		unit, ok := args[1].(string)
+		if !ok {
+			return Value(fmt.Errorf("date_subtract: second argument must be a unit string"))
+		}
+
+		var amount int64
+		switch v := args[2].(type) {
+		case int64:
+			amount = v
+		case float64:
+			amount = int64(v)
+		default:
+			return Value(fmt.Errorf("date_subtract: third argument must be a number"))
+		}
+
+		var result time.Time
+		switch strings.ToLower(unit) {
+		case "years", "year":
+			result = parsedTime.AddDate(-int(amount), 0, 0)
+		case "months", "month":
+			result = parsedTime.AddDate(0, -int(amount), 0)
+		case "days", "day":
+			result = parsedTime.AddDate(0, 0, -int(amount))
+		case "hours", "hour":
+			result = parsedTime.Add(-time.Duration(amount) * time.Hour)
+		case "minutes", "minute":
+			result = parsedTime.Add(-time.Duration(amount) * time.Minute)
+		case "seconds", "second":
+			result = parsedTime.Add(-time.Duration(amount) * time.Second)
+		default:
+			return Value(fmt.Errorf("date_subtract: unsupported unit '%s'", unit))
+		}
+
+		return Value(result.Format(time.RFC3339))
+	}
+
+	return Value(fmt.Errorf("date_subtract: invalid number of arguments"))
+}
+
+// dateDiffFunc calculates the difference between two dates
+// Usage: date_diff("2023-12-25T10:30:00Z", "2023-12-24T10:30:00Z", "hours")
+func dateDiffFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(fmt.Errorf("date_diff requires at least 2 arguments"))
+	}
+
+	date1Str, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_diff: first argument must be a date string"))
+	}
+
+	date2Str, ok := args[1].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_diff: second argument must be a date string"))
+	}
+
+	// Parse both dates
+	formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02", "2006-01-02 15:04:05"}
+
+	var date1, date2 time.Time
+	var err error
+
+	for _, format := range formats {
+		date1, err = time.Parse(format, date1Str)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_diff: failed to parse first date: %v", err))
+	}
+
+	for _, format := range formats {
+		date2, err = time.Parse(format, date2Str)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_diff: failed to parse second date: %v", err))
+	}
+
+	diff := date1.Sub(date2)
+
+	if len(args) == 2 {
+		// Return difference in seconds as default
+		return Value(int64(diff.Seconds()))
+	}
+
+	// Return difference in specified unit
+	unit, ok := args[2].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_diff: third argument must be a unit string"))
+	}
+
+	switch strings.ToLower(unit) {
+	case "nanoseconds", "nanosecond":
+		return Value(int64(diff.Nanoseconds()))
+	case "microseconds", "microsecond":
+		return Value(int64(diff.Nanoseconds() / 1000))
+	case "milliseconds", "millisecond":
+		return Value(int64(diff.Nanoseconds() / 1000000))
+	case "seconds", "second":
+		return Value(int64(diff.Seconds()))
+	case "minutes", "minute":
+		return Value(int64(diff.Minutes()))
+	case "hours", "hour":
+		return Value(int64(diff.Hours()))
+	case "days", "day":
+		return Value(int64(diff.Hours() / 24))
+	default:
+		return Value(fmt.Errorf("date_diff: unsupported unit '%s'", unit))
+	}
+}
+
+// dateBetweenFunc checks if a date is between two other dates
+// Usage: date_between("2023-12-25", "2023-12-24", "2023-12-26")
+func dateBetweenFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 3 {
+		return Value(fmt.Errorf("date_between requires 3 arguments (date, startDate, endDate)"))
+	}
+
+	dateStr, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_between: first argument must be a date string"))
+	}
+
+	startDateStr, ok := args[1].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_between: second argument must be a date string"))
+	}
+
+	endDateStr, ok := args[2].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_between: third argument must be a date string"))
+	}
+
+	// Parse all dates
+	formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02", "2006-01-02 15:04:05"}
+
+	var date, startDate, endDate time.Time
+	var err error
+
+	for _, format := range formats {
+		date, err = time.Parse(format, dateStr)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_between: failed to parse date: %v", err))
+	}
+
+	for _, format := range formats {
+		startDate, err = time.Parse(format, startDateStr)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_between: failed to parse start date: %v", err))
+	}
+
+	for _, format := range formats {
+		endDate, err = time.Parse(format, endDateStr)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_between: failed to parse end date: %v", err))
+	}
+
+	// Check if date is between start and end (inclusive)
+	isBetween := (date.Equal(startDate) || date.After(startDate)) &&
+	            (date.Equal(endDate) || date.Before(endDate))
+
+	return Value(isBetween)
+}
+
+// dateCompareFunc compares two dates
+// Usage: date_compare("2023-12-25", "2023-12-24") returns 1 (first is later)
+// Returns: -1 (first < second), 0 (equal), 1 (first > second)
+func dateCompareFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(fmt.Errorf("date_compare requires 2 arguments (date1, date2)"))
+	}
+
+	date1Str, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_compare: first argument must be a date string"))
+	}
+
+	date2Str, ok := args[1].(string)
+	if !ok {
+		return Value(fmt.Errorf("date_compare: second argument must be a date string"))
+	}
+
+	// Parse both dates
+	formats := []string{time.RFC3339, "2006-01-02T15:04:05", "2006-01-02", "2006-01-02 15:04:05"}
+
+	var date1, date2 time.Time
+	var err error
+
+	for _, format := range formats {
+		date1, err = time.Parse(format, date1Str)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_compare: failed to parse first date: %v", err))
+	}
+
+	for _, format := range formats {
+		date2, err = time.Parse(format, date2Str)
+		if err == nil {
+			break
+		}
+	}
+	if err != nil {
+		return Value(fmt.Errorf("date_compare: failed to parse second date: %v", err))
+	}
+
+	if date1.Before(date2) {
+		return Value(int64(-1))
+	} else if date1.After(date2) {
+		return Value(int64(1))
+	} else {
+		return Value(int64(0))
+	}
+}
+
+// ==============================================================================
+// FACT DATABASE & WORKING MEMORY FOR RULE ENGINE
+// ==============================================================================
+
+// factAssertFunc adds a fact to the knowledge base
+// Usage: fact_assert("customer", "john", {"age": 30, "status": "premium"})
+func factAssertFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		panic(typeError(pos, "fact_assert() requires at least 2 arguments (category, key, [value])"))
+	}
+
+	category, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "fact_assert() requires first argument to be a category string"))
+	}
+
+	key, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "fact_assert() requires second argument to be a key string"))
+	}
+
+	factMutex.Lock()
+	defer factMutex.Unlock()
+
+	// Create category if it doesn't exist
+	fullKey := category + ":" + key
+
+	if len(args) == 2 {
+		// Simple boolean fact
+		factDatabase[fullKey] = true
+	} else {
+		// Fact with value
+		factDatabase[fullKey] = args[2]
+	}
+
+	return Value(true)
+}
+
+// factRetractFunc removes a fact from the knowledge base
+// Usage: fact_retract("customer", "john") or fact_retract("customer")
+func factRetractFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 {
+		return Value(fmt.Errorf("fact_retract requires at least 1 argument (category, [key])"))
+	}
+
+	category, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("fact_retract: first argument must be a category string"))
+	}
+
+	factMutex.Lock()
+	defer factMutex.Unlock()
+
+	if len(args) == 1 {
+		// Remove all facts in category
+		prefix := category + ":"
+		count := 0
+		for key := range factDatabase {
+			if strings.HasPrefix(key, prefix) {
+				delete(factDatabase, key)
+				count++
+			}
+		}
+		return Value(int64(count))
+	} else {
+		// Remove specific fact
+		key, ok := args[1].(string)
+		if !ok {
+			return Value(fmt.Errorf("fact_retract: second argument must be a key string"))
+		}
+
+		fullKey := category + ":" + key
+		if _, exists := factDatabase[fullKey]; exists {
+			delete(factDatabase, fullKey)
+			return Value(true)
+		}
+		return Value(false)
+	}
+}
+
+// factQueryFunc queries facts from the knowledge base
+// Usage: fact_query("customer", "john") or fact_query("customer")
+func factQueryFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 {
+		return Value(fmt.Errorf("fact_query requires at least 1 argument (category, [key])"))
+	}
+
+	category, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("fact_query: first argument must be a category string"))
+	}
+
+	factMutex.RLock()
+	defer factMutex.RUnlock()
+
+	if len(args) == 1 {
+		// Return all facts in category
+		prefix := category + ":"
+		results := make(map[string]interface{})
+		for key, value := range factDatabase {
+			if strings.HasPrefix(key, prefix) {
+				actualKey := key[len(prefix):]
+				results[actualKey] = value
+			}
+		}
+
+		// Convert to Value
+		resultMap := make(map[string]Value)
+		for k, v := range results {
+			resultMap[k] = Value(v)
+		}
+		return Value(&resultMap)
+	} else {
+		// Return specific fact
+		key, ok := args[1].(string)
+		if !ok {
+			return Value(fmt.Errorf("fact_query: second argument must be a key string"))
+		}
+
+		fullKey := category + ":" + key
+		if value, exists := factDatabase[fullKey]; exists {
+			return Value(value)
+		}
+		return Value(nil)
+	}
+}
+
+// factExistsFunc checks if a fact exists in the knowledge base
+// Usage: fact_exists("customer", "john")
+func factExistsFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(fmt.Errorf("fact_exists requires 2 arguments (category, key)"))
+	}
+
+	category, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("fact_exists: first argument must be a category string"))
+	}
+
+	key, ok := args[1].(string)
+	if !ok {
+		return Value(fmt.Errorf("fact_exists: second argument must be a key string"))
+	}
+
+	factMutex.RLock()
+	defer factMutex.RUnlock()
+
+	fullKey := category + ":" + key
+	_, exists := factDatabase[fullKey]
+	return Value(exists)
+}
+
+// factCountFunc returns the number of facts in a category or total
+// Usage: fact_count("customer") or fact_count()
+func factCountFunc(interp *interpreter, pos Position, args []Value) Value {
+	factMutex.RLock()
+	defer factMutex.RUnlock()
+
+	if len(args) == 0 {
+		// Return total count
+		return Value(len(factDatabase)) // int, not int64
+	}
+
+	category, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "fact_count() requires first argument to be a category string"))
+	}
+
+	// Count facts in category
+	prefix := category + ":"
+	count := 0
+	for key := range factDatabase {
+		if strings.HasPrefix(key, prefix) {
+			count++
+		}
+	}
+	return Value(count) // int, not int64
+}
+
+// factClearFunc clears all facts or facts in a specific category
+// Usage: fact_clear() or fact_clear("customer")
+func factClearFunc(interp *interpreter, pos Position, args []Value) Value {
+	factMutex.Lock()
+	defer factMutex.Unlock()
+
+	if len(args) == 0 {
+		// Clear all facts
+		count := len(factDatabase)
+		factDatabase = make(map[string]interface{})
+		return Value(int64(count))
+	}
+
+	category, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("fact_clear: first argument must be a category string"))
+	}
+
+	// Clear facts in category
+	prefix := category + ":"
+	count := 0
+	for key := range factDatabase {
+		if strings.HasPrefix(key, prefix) {
+			delete(factDatabase, key)
+			count++
+		}
+	}
+	return Value(int64(count))
+}
+
+// factGetAllFunc returns all facts in the knowledge base
+// Usage: fact_get_all()
+func factGetAllFunc(interp *interpreter, pos Position, args []Value) Value {
+	factMutex.RLock()
+	defer factMutex.RUnlock()
+
+	results := make(map[string]Value)
+	for key, value := range factDatabase {
+		results[key] = Value(value)
+	}
+
+	return Value(&results)
+}
+
+// ==============================================================================
+// COMPLEX EVENT PROCESSING (CEP) FOR RULE ENGINE
+// ==============================================================================
+
+// eventEmitFunc emits an event to the event stream
+// Usage: event_emit("user_login", {"user": "john", "timestamp": "2023-12-25T10:30:00Z"})
+func eventEmitFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 {
+		return Value(fmt.Errorf("event_emit requires at least 1 argument (eventType, [data])"))
+	}
+
+	eventType, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("event_emit: first argument must be an event type string"))
+	}
+
+	eventMutex.Lock()
+	defer eventMutex.Unlock()
+
+	// Create event structure
+	event := map[string]interface{}{
+		"type":      eventType,
+		"timestamp": time.Now().Format(time.RFC3339),
+		"id":        fmt.Sprintf("%d", time.Now().UnixNano()),
+	}
+
+	// Add event data if provided
+	if len(args) > 1 {
+		event["data"] = args[1]
+	}
+
+	// Add to event store
+	eventStore = append(eventStore, event)
+
+	// Keep only recent events (last 1000)
+	if len(eventStore) > 1000 {
+		eventStore = eventStore[len(eventStore)-1000:]
+	}
+
+	return Value(true)
+}
+
+// eventDefinePatternFunc defines an event pattern for detection
+// Usage: event_define_pattern("login_sequence", ["user_login", "page_view", "purchase"])
+func eventDefinePatternFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(fmt.Errorf("event_define_pattern requires 2 arguments (patternName, eventSequence)"))
+	}
+
+	patternName, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("event_define_pattern: first argument must be a pattern name string"))
+	}
+
+	// Extract event sequence
+	var sequence []string
+	switch v := args[1].(type) {
+	case *[]Value:
+		for _, item := range *v {
+			if s, ok := item.(string); ok {
+				sequence = append(sequence, s)
+			} else {
+				return Value(fmt.Errorf("event_define_pattern: sequence must contain only strings"))
+			}
+		}
+	default:
+		return Value(fmt.Errorf("event_define_pattern: second argument must be an array of event types"))
+	}
+
+	eventMutex.Lock()
+	defer eventMutex.Unlock()
+
+	// Store pattern
+	pattern := map[string]interface{}{
+		"sequence":  sequence,
+		"created":   time.Now().Format(time.RFC3339),
+	}
+
+	// Add optional time window if provided
+	if len(args) > 2 {
+		if windowStr, ok := args[2].(string); ok {
+			if duration, err := time.ParseDuration(windowStr); err == nil {
+				pattern["window"] = duration.String()
+			}
+		}
+	}
+
+	eventPatterns[patternName] = pattern
+	return Value(true)
+}
+
+// eventGetWindowFunc gets events within a time window
+// Usage: event_get_window("5m") or event_get_window("1h", "user_login")
+func eventGetWindowFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 {
+		return Value(fmt.Errorf("event_get_window requires at least 1 argument (timeWindow, [eventType])"))
+	}
+
+	windowStr, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("event_get_window: first argument must be a duration string"))
+	}
+
+	duration, err := time.ParseDuration(windowStr)
+	if err != nil {
+		return Value(fmt.Errorf("event_get_window: invalid duration format: %v", err))
+	}
+
+	eventMutex.RLock()
+	defer eventMutex.RUnlock()
+
+	cutoffTime := time.Now().Add(-duration)
+	var filteredEvents []map[string]interface{}
+
+	for _, event := range eventStore {
+		// Parse event timestamp
+		if timestampStr, ok := event["timestamp"].(string); ok {
+			if eventTime, err := time.Parse(time.RFC3339, timestampStr); err == nil {
+				if eventTime.After(cutoffTime) {
+					// Filter by event type if specified
+					if len(args) > 1 {
+						filterType, ok := args[1].(string)
+						if !ok {
+							continue
+						}
+						if eventType, ok := event["type"].(string); ok && eventType == filterType {
+							filteredEvents = append(filteredEvents, event)
+						}
+					} else {
+						filteredEvents = append(filteredEvents, event)
+					}
+				}
+			}
+		}
+	}
+
+	// Convert to Value format
+	result := make([]Value, len(filteredEvents))
+	for i, event := range filteredEvents {
+		eventMap := make(map[string]Value)
+		for k, v := range event {
+			eventMap[k] = Value(v)
+		}
+		result[i] = Value(&eventMap)
+	}
+
+	return Value(&result)
+}
+
+// eventClearFunc clears events from the event store
+// Usage: event_clear() or event_clear("user_login")
+func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
+	eventMutex.Lock()
+	defer eventMutex.Unlock()
+
+	if len(args) == 0 {
+		// Clear all events
+		count := len(eventStore)
+		eventStore = make([]map[string]interface{}, 0)
+		return Value(count) // int, not int64
+	}
+
+	// Clear events of specific type
+	eventType, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "event_clear() requires first argument to be an event type string"))
+	}
+
+	var filteredEvents []map[string]interface{}
+	count := 0
+
+	for _, event := range eventStore {
+		if et, ok := event["type"].(string); ok && et == eventType {
+			count++
+		} else {
+			filteredEvents = append(filteredEvents, event)
+		}
+	}
+
+	eventStore = filteredEvents
+	return Value(count) // int, not int64
+}
+
+// eventCountFunc counts events in the store
+// Usage: event_count() or event_count("user_login")
+func eventCountFunc(interp *interpreter, pos Position, args []Value) Value {
+	eventMutex.RLock()
+	defer eventMutex.RUnlock()
+
+	if len(args) == 0 {
+		// Return total count
+		return Value(len(eventStore)) // int, not int64
+	}
+
+	// Count events of specific type
+	eventType, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "event_count() requires first argument to be an event type string"))
+	}
+
+	count := 0
+	for _, event := range eventStore {
+		if et, ok := event["type"].(string); ok && et == eventType {
+			count++
+		}
+	}
+
+	return Value(count) // int, not int64
 }

@@ -1,0 +1,111 @@
+// ================================================
+// UDDIN-LANG RULE ENGINE: Enhanced Date/Time Operations Demo
+// ================================================
+
+print("=== ENHANCED DATE/TIME OPERATIONS DEMO ===")
+print()
+
+// Working with timestamps
+print("1. TIMESTAMP OPERATIONS:")
+current_timestamp = date_now()
+print("Current timestamp: " + current_timestamp)
+print()
+
+// Date comparison and differences
+print("2. DATE COMPARISON:")
+date1 = "2023-12-25T10:30:00Z"
+date2 = "2023-12-24T10:30:00Z"
+
+diff_hours = date_diff(date1, date2, "hours")
+print("Difference in hours:")
+print(diff_hours)
+
+comparison = date_compare(date1, date2)
+print("Comparison result (1=later, 0=same, -1=earlier):")
+print(comparison)
+
+is_between = date_between("2023-12-25T05:00:00Z", "2023-12-24T00:00:00Z", "2023-12-26T00:00:00Z")
+print("Is date between range:")
+print(is_between)
+print()
+
+// Rule engine use case: Business hours check
+print("3. BUSINESS RULE: Office Hours Check")
+check_time = "2023-12-25T14:30:00Z"
+office_start = "2023-12-25T09:00:00Z"
+office_end = "2023-12-25T17:00:00Z"
+
+is_office_hours = date_between(check_time, office_start, office_end)
+if (is_office_hours) then {
+    print("✓ Time " + check_time + " is within office hours")
+} else {
+    print("✗ Time " + check_time + " is outside office hours")
+}
+print()
+
+// Rule engine use case: SLA deadline check
+print("4. BUSINESS RULE: SLA Deadline Check")
+request_time = "2023-12-25T10:00:00Z"
+current_time = "2023-12-25T13:30:00Z"
+sla_hours = 4
+
+time_elapsed = date_diff(current_time, request_time, "hours")
+if (int(time_elapsed) > sla_hours) then {
+    print("⚠ SLA VIOLATION: Request took")
+    print(time_elapsed)
+    print("hours (SLA:")
+    print(sla_hours)
+    print("hours)")
+} else {
+    remaining_time = sla_hours - int(time_elapsed)
+    print("✓ SLA OK:")
+    print(remaining_time)
+    print("hours remaining")
+}
+print()
+
+// Rule engine use case: Age-based discount
+print("5. BUSINESS RULE: Age-based Discount")
+birth_date = "1990-12-25"
+current_date_simple = "2023-12-25"
+
+age_years = int(date_diff(current_date_simple, birth_date, "days")) / 365
+discount = 0
+
+if (age_years >= 65) then {
+    discount = 20  // Senior discount
+} else if (age_years >= 18) then {
+    discount = 10  // Adult discount
+} else {
+    discount = 5   // Youth discount
+}
+
+print("Customer age:")
+print(age_years)
+print("years")
+print("Applied discount:")
+print(discount)
+print("%")
+print()
+
+// Rule engine use case: Event scheduling
+print("6. BUSINESS RULE: Event Scheduling")
+event_date = "2023-12-30T18:00:00Z"
+current_check = "2023-12-25T10:00:00Z"
+
+days_until_event = int(date_diff(event_date, current_check, "days"))
+
+if (days_until_event <= 1) then {
+    print("🚨 URGENT: Event is tomorrow or today!")
+} else if (days_until_event <= 7) then {
+    print("⚠ WARNING: Event is in")
+    print(days_until_event)
+    print("days")
+} else {
+    print("ℹ INFO: Event is in")
+    print(days_until_event)
+    print("days")
+}
+print()
+
+print("=== Date/Time Operations Demo Complete ===")

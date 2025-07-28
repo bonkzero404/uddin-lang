@@ -1,0 +1,179 @@
+// ================================================
+// UDDIN-LANG RULE ENGINE: Complex Event Processing (CEP) Demo
+// ================================================
+
+print("=== COMPLEX EVENT PROCESSING (CEP) DEMO ===")
+print()
+
+// Clear any existing events
+event_clear()
+print("1. EVENT EMISSION:")
+
+// Simulate user journey events
+event_emit("user_login", {"user": "john", "ip": "192.168.1.100", "device": "mobile"})
+event_emit("page_view", {"user": "john", "page": "/products", "duration": 30})
+event_emit("product_view", {"user": "john", "product_id": "P123", "category": "electronics"})
+event_emit("add_to_cart", {"user": "john", "product_id": "P123", "quantity": 1})
+event_emit("page_view", {"user": "john", "page": "/checkout", "duration": 45})
+event_emit("purchase", {"user": "john", "amount": 299.99, "product_id": "P123"})
+
+print("Emitted 6 user journey events")
+print("Total events in store: " + str(event_count()))
+print()
+
+// Define event patterns
+print("2. EVENT PATTERN DEFINITION:")
+
+// Define purchase funnel pattern
+event_define_pattern("purchase_funnel", ["user_login", "product_view", "add_to_cart", "purchase"])
+
+// Define potential fraud pattern
+event_define_pattern("fraud_pattern", ["user_login", "user_login", "purchase"])
+
+// Define engagement pattern
+event_define_pattern("high_engagement", ["page_view", "page_view", "page_view"])
+
+print("Defined 3 event patterns for detection")
+print()
+
+// Emit more events from different users
+print("3. MULTI-USER EVENT SIMULATION:")
+
+// Simulate normal user activity
+event_emit("user_login", {"user": "mary", "ip": "192.168.1.101", "device": "desktop"})
+event_emit("page_view", {"user": "mary", "page": "/home", "duration": 20})
+event_emit("page_view", {"user": "mary", "page": "/about", "duration": 15})
+event_emit("page_view", {"user": "mary", "page": "/contact", "duration": 10})
+
+// Simulate suspicious activity
+event_emit("user_login", {"user": "suspicious", "ip": "10.0.0.1", "device": "unknown"})
+event_emit("user_login", {"user": "suspicious", "ip": "10.0.0.2", "device": "unknown"})  // Multiple logins
+event_emit("purchase", {"user": "suspicious", "amount": 9999.99, "product_id": "P999"})  // High value purchase
+
+// Emit system events
+event_emit("system_alert", {"type": "high_cpu", "value": 85, "threshold": 80})
+event_emit("system_alert", {"type": "disk_space", "value": 95, "threshold": 90})
+
+print("Emitted additional events for analysis")
+print("Total events: " + str(event_count()))
+print()
+
+// Event window analysis
+print("4. EVENT WINDOW ANALYSIS:")
+
+// Get all events in last 5 minutes (all recent events)
+recent_events = event_get_window("5m")
+print("Events in last 5 minutes: " + str(len(recent_events)))
+
+// Get only login events
+login_events = event_get_window("5m", "user_login")
+print("Login events in last 5 minutes: " + str(len(login_events)))
+
+// Get system alerts
+alert_events = event_get_window("5m", "system_alert")
+print("System alerts in last 5 minutes: " + str(len(alert_events)))
+print()
+
+// Rule engine use case: Fraud detection
+print("5. BUSINESS RULE: Real-time Fraud Detection")
+
+// Check for multiple logins from same user
+users_with_multiple_logins = []
+login_events_data = event_get_window("1m", "user_login")
+
+// Simple fraud detection: multiple logins in short time
+user_login_count = {}
+if (len(login_events_data) > 0) then {
+    print("Analyzing login events for fraud patterns...")
+    // In real implementation, you'd access event.data.user
+    // For demo, we'll simulate the logic based on event data
+}
+
+// Simulate fraud detection results
+print("⚠ FRAUD ALERT: User 'suspicious' has multiple logins from different IPs")
+print("  - Login from IP: 10.0.0.1")
+print("  - Login from IP: 10.0.0.2")
+print("  - High-value purchase: $9999.99")
+print("  Recommendation: Flag account for manual review")
+print()
+
+// Rule engine use case: System monitoring
+print("6. BUSINESS RULE: System Health Monitoring")
+
+alert_count = event_count("system_alert")
+if (alert_count > 0) then {
+    print("🚨 SYSTEM HEALTH ALERT:")
+    print("  - " + str(alert_count) + " system alerts detected")
+
+    if (alert_count >= 2) then {
+        print("  - CRITICAL: Multiple system issues detected")
+        print("  - Action: Notify system administrator immediately")
+
+        // Emit escalation event
+        event_emit("escalation", {"type": "system_critical", "alert_count": alert_count})
+    } else {
+        print("  - WARNING: Monitor system closely")
+    }
+} else {
+    print("✓ SYSTEM HEALTH: All systems normal")
+}
+print()
+
+// Rule engine use case: User engagement analysis
+print("7. BUSINESS RULE: User Engagement Analysis")
+
+page_view_count = event_count("page_view")
+login_count = event_count("user_login")
+purchase_count = event_count("purchase")
+
+engagement_score = 0
+if (page_view_count >= 3) then {
+    engagement_score = engagement_score + 30
+}
+if (purchase_count >= 1) then {
+    engagement_score = engagement_score + 50
+}
+if (login_count >= 2) then {
+    engagement_score = engagement_score + 20
+}
+
+print("User Engagement Analysis:")
+print("  - Page views: " + str(page_view_count))
+print("  - Logins: " + str(login_count))
+print("  - Purchases: " + str(purchase_count))
+print("  - Engagement score: " + str(engagement_score) + "/100")
+
+if (engagement_score >= 80) then {
+    print("  🌟 HIGH ENGAGEMENT: Send premium offer")
+    event_emit("marketing_action", {"type": "premium_offer", "score": engagement_score})
+} else if (engagement_score >= 50) then {
+    print("  👍 MODERATE ENGAGEMENT: Send regular offer")
+    event_emit("marketing_action", {"type": "regular_offer", "score": engagement_score})
+} else {
+    print("  📧 LOW ENGAGEMENT: Send re-engagement email")
+    event_emit("marketing_action", {"type": "reengagement_email", "score": engagement_score})
+}
+print()
+
+// Event statistics
+print("8. EVENT STATISTICS:")
+print("Total events processed: " + str(event_count()))
+print("Event types:")
+print("  - User logins: " + str(event_count("user_login")))
+print("  - Page views: " + str(event_count("page_view")))
+print("  - Product views: " + str(event_count("product_view")))
+print("  - Add to cart: " + str(event_count("add_to_cart")))
+print("  - Purchases: " + str(event_count("purchase")))
+print("  - System alerts: " + str(event_count("system_alert")))
+print("  - Marketing actions: " + str(event_count("marketing_action")))
+print("  - Escalations: " + str(event_count("escalation")))
+print()
+
+// Cleanup demonstration
+print("9. EVENT CLEANUP:")
+removed_page_views = event_clear("page_view")
+print("Removed " + str(removed_page_views) + " page view events")
+print("Remaining events: " + str(event_count()))
+print()
+
+print("=== Complex Event Processing (CEP) Demo Complete ===")

@@ -1,0 +1,101 @@
+// Rule Engine Demo - Pattern Matching & Regex
+// This example demonstrates regex functions for rule engines
+
+fun main():
+    print("=== Rule Engine - Pattern Matching Demo ===")
+    
+    // Example 1: Email validation using regex
+    print("")
+    print("1. Email Validation:")
+    emails = ["user@example.com", "invalid-email", "test@domain.org", "bad@"]
+    email_pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
+    
+    for (email in emails):
+        is_valid = regex_match(email, email_pattern)
+        status = is_valid ? "VALID" : "INVALID"
+        print("  " + email + " -> " + status)
+    end
+    
+    // Example 2: Extract data using regex_find
+    print("")
+    print("2. Data Extraction:")
+    log_entry = "2024-01-15 14:30:25 ERROR: User login failed for IP 192.168.1.100"
+    
+    // Extract date
+    date = regex_find(log_entry, "\\d{4}-\\d{2}-\\d{2}")
+    print("  Date: " + str(date))
+    
+    // Extract time
+    time = regex_find(log_entry, "\\d{2}:\\d{2}:\\d{2}")
+    print("  Time: " + str(time))
+    
+    // Extract IP address
+    ip = regex_find(log_entry, "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}")
+    print("  IP Address: " + str(ip))
+    
+    // Example 3: Find all matches
+    print("")
+    print("3. Extract All Numbers:")
+    text = "Order #12345 contains 3 items costing $45.99 total"
+    numbers = regex_find_all(text, "\\d+(\\.\\d+)?")
+    print("  Text: " + text)
+    print("  Numbers found: " + str(numbers))
+    
+    // Example 4: Text replacement for data cleaning
+    print("")
+    print("4. Data Cleaning with Regex Replace:")
+    messy_data = "Phone: +1-555-123-4567 or call (555) 987-6543"
+    clean_phone = regex_replace(messy_data, "[\\s\\-\\(\\)\\+]", "")
+    print("  Original: " + messy_data)
+    print("  Cleaned: " + clean_phone)
+    
+    // Example 5: Text splitting
+    print("")
+    print("5. CSV-like Data Parsing:")
+    csv_line = "John,25,Engineer;Jane,30,Manager;Bob,28,Developer"
+    records = regex_split(csv_line, ";")
+    print("  Raw data: " + csv_line)
+    print("  Split records:")
+    for (record in records):
+        fields = regex_split(record, ",")
+        if (len(fields) >= 3) then:
+            print("    Name: " + fields[0] + ", Age: " + fields[1] + ", Job: " + fields[2])
+        end
+    end
+    
+    // Example 6: Rule Engine Pattern - Business Rules
+    print("")
+    print("6. Business Rule Validation:")
+    
+    // Sample customer data
+    customers = [
+        {name: "Alice", email: "alice@company.com", phone: "555-1234", age: 25},
+        {name: "Bob", email: "invalid-email", phone: "123", age: 17},
+        {name: "Charlie", email: "charlie@test.org", phone: "555-9876", age: 30}
+    ]
+    
+    phone_pattern = "^\\d{3}-\\d{4}$|^\\d{10}$"
+    
+    for (customer in customers):
+        print("  Validating: " + customer["name"])
+        
+        // Rule 1: Valid email
+        email_valid = regex_match(customer["email"], email_pattern)
+        print("    Email valid: " + str(email_valid))
+        
+        // Rule 2: Valid phone
+        phone_valid = regex_match(customer["phone"], phone_pattern)
+        print("    Phone valid: " + str(phone_valid))
+        
+        // Rule 3: Age requirement
+        age_valid = customer["age"] >= 18
+        print("    Age valid (18+): " + str(age_valid))
+        
+        // Overall validation
+        all_valid = email_valid and phone_valid and age_valid
+        print("    Overall valid: " + str(all_valid))
+        print("")
+    end
+end
+
+main()
