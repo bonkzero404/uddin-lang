@@ -119,6 +119,8 @@ graph TD
 -   ✅ **Functional Programming** paradigms
 -   ✅ **Memory Safe** with garbage collection
 -   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
+-   ✅ **Multiline Strings** with backticks for raw text (perfect for JSON, SQL, HTML)
+-   ✅ **JSON Support** with built-in parsing and serialization functions
 -   ✨ **Extended Standard Library** with advanced string manipulation, functional array methods, and new data structures (Set, Stack, Queue)
 -   🌐 **Comprehensive Networking** with HTTP client, TCP/UDP sockets, and network utilities
 
@@ -197,6 +199,8 @@ The language comes with comprehensive examples showcasing all features:
 ./uddinlang examples/14_string_manipulation_demo.din  # Advanced string functions
 ./uddinlang examples/15_array_methods_demo.din        # Functional array methods
 ./uddinlang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
+./uddinlang examples/20_json_handling_demo.din        # JSON parsing and serialization
+./uddinlang examples/21_multiline_strings_demo.din    # Multiline string features
 
 # 🌐 Networking Examples
 ./uddinlang examples/17_http_client_demo.din      # HTTP client operations
@@ -498,16 +502,16 @@ print(typeof(empty_value)) // "null"
 
 #### Supported Data Types
 
-| Type         | Description                 | Example              | Operations              |
-| ------------ | --------------------------- | -------------------- | ----------------------- |
-| **null**     | Represents absence of value | `null`               | Equality comparison     |
-| **bool**     | Boolean values              | `true`, `false`      | Logical operations      |
-| **int**      | Integer numbers             | `42`, `-17`          | Arithmetic operations   |
-| **float**    | Floating-point numbers      | `3.14`, `-2.5`       | Arithmetic operations   |
-| **string**   | Text sequences              | `"Hello"`, `'World'` | Concatenation, indexing |
-| **array**    | Ordered collections         | `[1, 2, 3]`          | Indexing, iteration     |
-| **object**   | Key-value pairs             | `{name: "John"}`     | Property access         |
-| **function** | Callable code blocks        | `fun() -> "result"`  | Function calls          |
+| Type         | Description                 | Example                                   | Operations              |
+| ------------ | --------------------------- | ----------------------------------------- | ----------------------- |
+| **null**     | Represents absence of value | `null`                                    | Equality comparison     |
+| **bool**     | Boolean values              | `true`, `false`                           | Logical operations      |
+| **int**      | Integer numbers             | `42`, `-17`                               | Arithmetic operations   |
+| **float**    | Floating-point numbers      | `3.14`, `-2.5`                            | Arithmetic operations   |
+| **string**   | Text sequences              | `"Hello"`, `'World'`, `` `Multi\nline` `` | Concatenation, indexing |
+| **array**    | Ordered collections         | `[1, 2, 3]`                               | Indexing, iteration     |
+| **object**   | Key-value pairs             | `{name: "John"}`                          | Property access         |
+| **function** | Callable code blocks        | `fun() -> "result"`                       | Function calls          |
 
 ### 🔧 Operators
 
@@ -1098,14 +1102,115 @@ end
 
 #### ✨ New String Manipulation Functions
 
-| Function                    | Description                    | Example                                    |
-| --------------------------- | ------------------------------ | ------------------------------------------ |
-| `replace(str, old, new)`    | Replace all occurrences        | `replace("hello world", "world", "go")` → `"hello go"` |
-| `trim(str)`                 | Remove leading/trailing spaces | `trim("  hello  ")` → `"hello"`           |
-| `starts_with(str, prefix)`  | Check if starts with prefix    | `starts_with("hello", "he")` → `true`     |
-| `ends_with(str, suffix)`    | Check if ends with suffix      | `ends_with("hello.txt", ".txt")` → `true` |
-| `repeat(str, count)`        | Repeat string n times          | `repeat("*", 3)` → `"***"`                |
-| `reverse_str(str)`          | Reverse string                 | `reverse_str("hello")` → `"olleh"`        |
+| Function                   | Description                    | Example                                                |
+| -------------------------- | ------------------------------ | ------------------------------------------------------ |
+| `replace(str, old, new)`   | Replace all occurrences        | `replace("hello world", "world", "go")` → `"hello go"` |
+| `trim(str)`                | Remove leading/trailing spaces | `trim("  hello  ")` → `"hello"`                        |
+| `starts_with(str, prefix)` | Check if starts with prefix    | `starts_with("hello", "he")` → `true`                  |
+| `ends_with(str, suffix)`   | Check if ends with suffix      | `ends_with("hello.txt", ".txt")` → `true`              |
+| `repeat(str, count)`       | Repeat string n times          | `repeat("*", 3)` → `"***"`                             |
+| `reverse_str(str)`         | Reverse string                 | `reverse_str("hello")` → `"olleh"`                     |
+
+#### 🔤 Multiline Strings
+
+Uddin-Lang supports three types of string literals:
+
+1. **Double quotes** (`"`) - Support escape sequences, single line only
+2. **Single quotes** (`'`) - Support escape sequences, single line only
+3. **Backticks** (`` ` ``) - Raw strings, can span multiple lines
+
+##### Regular Strings vs Multiline Strings
+
+```go
+// Regular strings with escape sequences
+regular_string = "Hello\nWorld"  // Results in actual newline
+single_quote = 'Line 1\nLine 2'  // Also processes escape sequences
+
+// Multiline raw strings (backticks)
+multiline_text = `This is a multiline string
+that can span multiple lines
+without any escape sequences.
+
+It can contain "quotes" and 'single quotes'
+and even \n \t characters literally.`
+
+print(regular_string)
+// Output:
+// Hello
+// World
+
+print(multiline_text)
+// Output:
+// This is a multiline string
+// that can span multiple lines
+// without any escape sequences.
+//
+// It can contain "quotes" and 'single quotes'
+// and even \n \t characters literally.
+```
+
+##### Practical Use Cases
+
+**JSON Data:**
+
+```go
+json_config = `{
+    "database": {
+        "host": "localhost",
+        "port": 5432,
+        "name": "myapp"
+    },
+    "features": ["auth", "logging"]
+}`
+
+config = json_parse(json_config)
+```
+
+**SQL Queries:**
+
+```go
+query = `SELECT
+    u.id, u.name, u.email
+FROM users u
+WHERE u.active = true
+    AND u.created_at >= '2024-01-01'
+ORDER BY u.name`
+```
+
+**HTML Templates:**
+
+```go
+html_template = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Welcome</title>
+</head>
+<body>
+    <h1>Hello World</h1>
+</body>
+</html>`
+```
+
+**Configuration Files:**
+
+```go
+config_content = `# Application Settings
+server:
+  host: localhost
+  port: 8080
+
+logging:
+  level: info
+  file: /var/log/app.log`
+```
+
+##### String Type Summary
+
+| Type         | Syntax       | Escape Sequences | Multiline | Use Case                            |
+| ------------ | ------------ | ---------------- | --------- | ----------------------------------- |
+| Double Quote | `"text"`     | ✅ Yes           | ❌ No     | Regular strings with formatting     |
+| Single Quote | `'text'`     | ✅ Yes           | ❌ No     | Regular strings, alternative syntax |
+| Backticks    | `` `text` `` | ❌ No (Raw)      | ✅ Yes    | JSON, SQL, HTML, config files       |
 
 ### Array Functions
 
@@ -1123,18 +1228,18 @@ end
 
 #### ✨ New Array Methods (Functional Programming)
 
-| Function                        | Description                      | Example                                           |
-| ------------------------------- | -------------------------------- | ------------------------------------------------- |
-| `map(array, function)`          | Transform each element           | `map([1,2,3], fun(x): return x*2 end)` → `[2,4,6]` |
-| `filter(array, function)`       | Filter elements by condition     | `filter([1,2,3,4], fun(x): return x%2==0 end)` → `[2,4]` |
-| `reduce(array, function, init)` | Reduce to single value           | `reduce([1,2,3], fun(a,x): return a+x end, 0)` → `6` |
-| `reverse(array)`                | Reverse array in-place           | `reverse([1,2,3])` modifies to `[3,2,1]`         |
-| `push(array, element)`          | Add element to end               | `push([1,2], 3)` modifies to `[1,2,3]`           |
-| `pop(array)`                    | Remove and return last element   | `pop([1,2,3])` → `3`, array becomes `[1,2]`      |
-| `shift(array)`                  | Remove and return first element  | `shift([1,2,3])` → `1`, array becomes `[2,3]`    |
-| `unshift(array, element)`       | Add element to beginning         | `unshift([2,3], 1)` modifies to `[1,2,3]`        |
-| `index_of(array, element)`      | Find first index of element      | `index_of([1,2,3,2], 2)` → `1`                   |
-| `last_index_of(array, element)` | Find last index of element       | `last_index_of([1,2,3,2], 2)` → `3`              |
+| Function                        | Description                     | Example                                                  |
+| ------------------------------- | ------------------------------- | -------------------------------------------------------- |
+| `map(array, function)`          | Transform each element          | `map([1,2,3], fun(x): return x*2 end)` → `[2,4,6]`       |
+| `filter(array, function)`       | Filter elements by condition    | `filter([1,2,3,4], fun(x): return x%2==0 end)` → `[2,4]` |
+| `reduce(array, function, init)` | Reduce to single value          | `reduce([1,2,3], fun(a,x): return a+x end, 0)` → `6`     |
+| `reverse(array)`                | Reverse array in-place          | `reverse([1,2,3])` modifies to `[3,2,1]`                 |
+| `push(array, element)`          | Add element to end              | `push([1,2], 3)` modifies to `[1,2,3]`                   |
+| `pop(array)`                    | Remove and return last element  | `pop([1,2,3])` → `3`, array becomes `[1,2]`              |
+| `shift(array)`                  | Remove and return first element | `shift([1,2,3])` → `1`, array becomes `[2,3]`            |
+| `unshift(array, element)`       | Add element to beginning        | `unshift([2,3], 1)` modifies to `[1,2,3]`                |
+| `index_of(array, element)`      | Find first index of element     | `index_of([1,2,3,2], 2)` → `1`                           |
+| `last_index_of(array, element)` | Find last index of element      | `last_index_of([1,2,3,2], 2)` → `3`                      |
 
 ### ✨ New Data Structures
 
@@ -1144,41 +1249,41 @@ Uddin-Lang now includes three powerful data structures for advanced programming 
 
 A Set stores unique elements with no duplicates allowed.
 
-| Function              | Description                    | Example                           |
-| --------------------- | ------------------------------ | --------------------------------- |
-| `set_new()`           | Create new empty set           | `my_set = set_new()`              |
-| `set_add(set, elem)`  | Add element (ignores duplicates) | `set_add(my_set, 1)`              |
-| `set_has(set, elem)`  | Check if element exists        | `set_has(my_set, 1)` → `true`     |
-| `set_remove(set, elem)` | Remove element               | `set_remove(my_set, 1)` → `true`  |
-| `set_size(set)`       | Get number of elements         | `set_size(my_set)` → `3`          |
-| `set_clear(set)`      | Remove all elements            | `set_clear(my_set)`               |
-| `set_to_array(set)`   | Convert set to array           | `set_to_array(my_set)` → `[1,2,3]` |
+| Function                | Description                      | Example                            |
+| ----------------------- | -------------------------------- | ---------------------------------- |
+| `set_new()`             | Create new empty set             | `my_set = set_new()`               |
+| `set_add(set, elem)`    | Add element (ignores duplicates) | `set_add(my_set, 1)`               |
+| `set_has(set, elem)`    | Check if element exists          | `set_has(my_set, 1)` → `true`      |
+| `set_remove(set, elem)` | Remove element                   | `set_remove(my_set, 1)` → `true`   |
+| `set_size(set)`         | Get number of elements           | `set_size(my_set)` → `3`           |
+| `set_clear(set)`        | Remove all elements              | `set_clear(my_set)`                |
+| `set_to_array(set)`     | Convert set to array             | `set_to_array(my_set)` → `[1,2,3]` |
 
 #### Stack (LIFO - Last In, First Out)
 
 A Stack follows the Last In, First Out principle, perfect for undo operations, parsing, and recursion.
 
-| Function                | Description                      | Example                           |
-| ----------------------- | -------------------------------- | --------------------------------- |
-| `stack_new()`           | Create new empty stack           | `my_stack = stack_new()`          |
-| `stack_push(stack, elem)` | Add element to top             | `stack_push(my_stack, "item")`    |
-| `stack_pop(stack)`      | Remove and return top element    | `stack_pop(my_stack)` → `"item"`  |
-| `stack_peek(stack)`     | View top element without removing | `stack_peek(my_stack)` → `"item"` |
-| `stack_size(stack)`     | Get number of elements           | `stack_size(my_stack)` → `3`      |
-| `stack_is_empty(stack)` | Check if stack is empty          | `stack_is_empty(my_stack)` → `false` |
+| Function                  | Description                       | Example                              |
+| ------------------------- | --------------------------------- | ------------------------------------ |
+| `stack_new()`             | Create new empty stack            | `my_stack = stack_new()`             |
+| `stack_push(stack, elem)` | Add element to top                | `stack_push(my_stack, "item")`       |
+| `stack_pop(stack)`        | Remove and return top element     | `stack_pop(my_stack)` → `"item"`     |
+| `stack_peek(stack)`       | View top element without removing | `stack_peek(my_stack)` → `"item"`    |
+| `stack_size(stack)`       | Get number of elements            | `stack_size(my_stack)` → `3`         |
+| `stack_is_empty(stack)`   | Check if stack is empty           | `stack_is_empty(my_stack)` → `false` |
 
 #### Queue (FIFO - First In, First Out)
 
 A Queue follows the First In, First Out principle, ideal for task scheduling, breadth-first search, and buffering.
 
-| Function                 | Description                        | Example                            |
-| ------------------------ | ---------------------------------- | ---------------------------------- |
-| `queue_new()`            | Create new empty queue             | `my_queue = queue_new()`           |
-| `queue_enqueue(queue, elem)` | Add element to back            | `queue_enqueue(my_queue, "task")`  |
-| `queue_dequeue(queue)`   | Remove and return front element    | `queue_dequeue(my_queue)` → `"task"` |
-| `queue_front(queue)`     | View front element without removing | `queue_front(my_queue)` → `"task"` |
-| `queue_size(queue)`      | Get number of elements             | `queue_size(my_queue)` → `3`       |
-| `queue_is_empty(queue)`  | Check if queue is empty            | `queue_is_empty(my_queue)` → `false` |
+| Function                     | Description                         | Example                              |
+| ---------------------------- | ----------------------------------- | ------------------------------------ |
+| `queue_new()`                | Create new empty queue              | `my_queue = queue_new()`             |
+| `queue_enqueue(queue, elem)` | Add element to back                 | `queue_enqueue(my_queue, "task")`    |
+| `queue_dequeue(queue)`       | Remove and return front element     | `queue_dequeue(my_queue)` → `"task"` |
+| `queue_front(queue)`         | View front element without removing | `queue_front(my_queue)` → `"task"`   |
+| `queue_size(queue)`          | Get number of elements              | `queue_size(my_queue)` → `3`         |
+| `queue_is_empty(queue)`      | Check if queue is empty             | `queue_is_empty(my_queue)` → `false` |
 
 #### Practical Use Cases
 
@@ -1331,60 +1436,112 @@ end
 | `read_file(path)`           | Read file content | `content = read_file("data.txt")` |
 | `write_file(path, content)` | Write to file     | `write_file("out.txt", "Hello")`  |
 
+### 🔄 JSON Functions
+
+Uddin-Lang provides built-in JSON parsing and serialization capabilities for working with JSON data seamlessly.
+
+| Function                  | Description                             | Example                                               |
+| ------------------------- | --------------------------------------- | ----------------------------------------------------- |
+| `json_parse(json_string)` | Parse JSON string to Uddin-Lang value   | `data = json_parse('{"name": "John", "age": 30}')`    |
+| `json_stringify(value)`   | Convert Uddin-Lang value to JSON string | `json_str = json_stringify({name: "Alice", age: 25})` |
+
+#### JSON Examples
+
+```go
+// Parse JSON data
+json_data = `{
+    "users": [
+        {"id": 1, "name": "Alice", "active": true},
+        {"id": 2, "name": "Bob", "active": false}
+    ],
+    "total": 2
+}`
+
+parsed = json_parse(json_data)
+print("Total users: " + str(parsed.total))
+print("First user: " + parsed.users[0].name)
+
+// Convert to JSON
+user_data = {
+    "profile": {
+        "username": "alice123",
+        "email": "alice@example.com"
+    },
+    "settings": {
+        "theme": "dark",
+        "notifications": true
+    }
+}
+
+json_output = json_stringify(user_data)
+print("JSON output: " + json_output)
+```
+
+**JSON Type Mapping:**
+
+| JSON Type | Uddin-Lang Type    | Example                               |
+| --------- | ------------------ | ------------------------------------- |
+| `object`  | `map[string]Value` | `{"key": "value"}` → `{key: "value"}` |
+| `array`   | `[]Value`          | `[1, 2, 3]` → `[1, 2, 3]`             |
+| `string`  | `string`           | `"hello"` → `"hello"`                 |
+| `number`  | `int` or `float64` | `42` → `42`, `3.14` → `3.14`          |
+| `boolean` | `bool`             | `true` → `true`                       |
+| `null`    | `null`             | `null` → `null`                       |
+
 ### 🌐 Networking Functions
 
 Uddin-Lang provides comprehensive networking capabilities for building client-server applications, network utilities, and distributed systems.
 
 #### HTTP Client Functions
 
-| Function                           | Description                    | Example                                      |
-| ---------------------------------- | ------------------------------ | -------------------------------------------- |
-| `http_get(url)`                    | HTTP GET request               | `http_get("https://api.example.com/data")`  |
-| `http_post(url, data)`             | HTTP POST request              | `http_post("https://api.example.com", data)` |
-| `http_put(url, data)`              | HTTP PUT request               | `http_put("https://api.example.com/1", data)` |
-| `http_delete(url)`                 | HTTP DELETE request            | `http_delete("https://api.example.com/1")`  |
-| `http_request(method, url, data)`  | Generic HTTP request           | `http_request("PATCH", url, data)`         |
+| Function                          | Description          | Example                                       |
+| --------------------------------- | -------------------- | --------------------------------------------- |
+| `http_get(url)`                   | HTTP GET request     | `http_get("https://api.example.com/data")`    |
+| `http_post(url, data)`            | HTTP POST request    | `http_post("https://api.example.com", data)`  |
+| `http_put(url, data)`             | HTTP PUT request     | `http_put("https://api.example.com/1", data)` |
+| `http_delete(url)`                | HTTP DELETE request  | `http_delete("https://api.example.com/1")`    |
+| `http_request(method, url, data)` | Generic HTTP request | `http_request("PATCH", url, data)`            |
 
 #### HTTP Server Functions
 
-| Function                                    | Description                           | Example                                           |
-| ------------------------------------------- | ------------------------------------- | ------------------------------------------------- |
-| `http_server_start(port, server_id?)`       | Start HTTP server on specified port  | `server = http_server_start(8080, "main")`       |
-| `http_server_stop(server_id?)`              | Stop HTTP server                     | `http_server_stop("main")`                       |
-| `http_server_route(method, path, handler, server_id?)` | Register route handler        | `http_server_route("GET", "/api", my_handler, "main")` |
-| `http_response(res, status, headers?, body?)` | Send HTTP response                  | `http_response(res, 200, {"Content-Type": "text/plain"}, "Hello")` |
+| Function                                               | Description                         | Example                                                            |
+| ------------------------------------------------------ | ----------------------------------- | ------------------------------------------------------------------ |
+| `http_server_start(port, server_id?)`                  | Start HTTP server on specified port | `server = http_server_start(8080, "main")`                         |
+| `http_server_stop(server_id?)`                         | Stop HTTP server                    | `http_server_stop("main")`                                         |
+| `http_server_route(method, path, handler, server_id?)` | Register route handler              | `http_server_route("GET", "/api", my_handler, "main")`             |
+| `http_response(res, status, headers?, body?)`          | Send HTTP response                  | `http_response(res, 200, {"Content-Type": "text/plain"}, "Hello")` |
 
 #### Network Utilities
 
-| Function                    | Description                      | Example                                    |
-| --------------------------- | -------------------------------- | ------------------------------------------ |
-| `net_resolve(hostname)`     | Resolve hostname to IP addresses | `net_resolve("google.com")` → `["142.250.191.14"]` |
-| `net_ping(host, port, timeout)` | Test connectivity to host:port | `net_ping("google.com", 80, 3000)` → `{"success": true, "time": 45}` |
+| Function                        | Description                      | Example                                                              |
+| ------------------------------- | -------------------------------- | -------------------------------------------------------------------- |
+| `net_resolve(hostname)`         | Resolve hostname to IP addresses | `net_resolve("google.com")` → `["142.250.191.14"]`                   |
+| `net_ping(host, port, timeout)` | Test connectivity to host:port   | `net_ping("google.com", 80, 3000)` → `{"success": true, "time": 45}` |
 
 #### TCP Functions
 
 TCP (Transmission Control Protocol) provides reliable, connection-oriented communication.
 
-| Function                     | Description                    | Example                                    |
-| ---------------------------- | ------------------------------ | ------------------------------------------ |
-| `tcp_connect(host, port)`    | Create TCP client connection   | `conn = tcp_connect("localhost", 8080)`   |
-| `tcp_listen(port)`           | Create TCP server listener     | `listener = tcp_listen(8080)`             |
-| `tcp_accept(listener)`       | Accept incoming TCP connection | `client = tcp_accept(listener)`           |
-| `tcp_read(connection)`       | Read data from TCP connection  | `data = tcp_read(conn)`                   |
-| `tcp_write(connection, data)` | Write data to TCP connection  | `tcp_write(conn, "Hello Server!")`       |
-| `tcp_close(connection)`      | Close TCP connection/listener  | `tcp_close(conn)`                         |
+| Function                      | Description                    | Example                                 |
+| ----------------------------- | ------------------------------ | --------------------------------------- |
+| `tcp_connect(host, port)`     | Create TCP client connection   | `conn = tcp_connect("localhost", 8080)` |
+| `tcp_listen(port)`            | Create TCP server listener     | `listener = tcp_listen(8080)`           |
+| `tcp_accept(listener)`        | Accept incoming TCP connection | `client = tcp_accept(listener)`         |
+| `tcp_read(connection)`        | Read data from TCP connection  | `data = tcp_read(conn)`                 |
+| `tcp_write(connection, data)` | Write data to TCP connection   | `tcp_write(conn, "Hello Server!")`      |
+| `tcp_close(connection)`       | Close TCP connection/listener  | `tcp_close(conn)`                       |
 
 #### UDP Functions
 
 UDP (User Datagram Protocol) provides fast, connectionless communication.
 
-| Function                     | Description                    | Example                                    |
-| ---------------------------- | ------------------------------ | ------------------------------------------ |
-| `udp_connect(host, port)`    | Create UDP client connection   | `conn = udp_connect("localhost", 8080)`   |
-| `udp_listen(port)`           | Create UDP server listener     | `listener = udp_listen(8080)`             |
-| `udp_read(connection)`       | Read data from UDP connection  | `data = udp_read(conn)`                   |
-| `udp_write(connection, data)` | Write data to UDP connection  | `udp_write(conn, "Hello Server!")`       |
-| `udp_close(connection)`      | Close UDP connection/listener  | `udp_close(conn)`                         |
+| Function                      | Description                   | Example                                 |
+| ----------------------------- | ----------------------------- | --------------------------------------- |
+| `udp_connect(host, port)`     | Create UDP client connection  | `conn = udp_connect("localhost", 8080)` |
+| `udp_listen(port)`            | Create UDP server listener    | `listener = udp_listen(8080)`           |
+| `udp_read(connection)`        | Read data from UDP connection | `data = udp_read(conn)`                 |
+| `udp_write(connection, data)` | Write data to UDP connection  | `udp_write(conn, "Hello Server!")`      |
+| `udp_close(connection)`       | Close UDP connection/listener | `udp_close(conn)`                       |
 
 #### Networking Examples
 
@@ -1414,12 +1571,12 @@ fun start_server():
     // Start HTTP server
     server = http_server_start(8080, "main")
     print("Server started:", server)
-    
+
     // Register routes
     http_server_route("GET", "/", hello_handler, "main")
     http_server_route("GET", "/api/users", api_handler, "main")
     http_server_route("POST", "/api/users", api_handler, "main")
-    
+
     print("Server running on http://localhost:8080")
 end
 
@@ -1431,11 +1588,11 @@ fun tcp_client_demo():
         // Send HTTP request
         request = "GET / HTTP/1.1\r\nHost: httpbin.org\r\n\r\n"
         tcp_write(conn, request)
-        
+
         // Read response
         response = tcp_read(conn)
         print("TCP Response:", response)
-        
+
         // Close connection
         tcp_close(conn)
     end
@@ -1457,7 +1614,7 @@ fun network_utils_demo():
     // Resolve hostname
     ips = net_resolve("google.com")
     print("Google IPs:", ips)
-    
+
     // Test connectivity
     ping_result = net_ping("google.com", 80, 3000)
     if (ping_result["success"]) then:
@@ -1470,11 +1627,11 @@ end
 
 #### Important Notes
 
-- **Error Handling**: All networking functions return `null` on connection errors
-- **Timeouts**: Use appropriate timeouts for `net_ping()` to avoid blocking
-- **Resource Management**: Always call `tcp_close()` or `udp_close()` to prevent resource leaks
-- **Security**: Be cautious when accepting connections from untrusted sources
-- **Compatibility**: Functions work across different operating systems (Windows, macOS, Linux)
+-   **Error Handling**: All networking functions return `null` on connection errors
+-   **Timeouts**: Use appropriate timeouts for `net_ping()` to avoid blocking
+-   **Resource Management**: Always call `tcp_close()` or `udp_close()` to prevent resource leaks
+-   **Security**: Be cautious when accepting connections from untrusted sources
+-   **Compatibility**: Functions work across different operating systems (Windows, macOS, Linux)
 
 ### Utility Functions
 
