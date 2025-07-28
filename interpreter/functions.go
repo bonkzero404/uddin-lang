@@ -2895,8 +2895,8 @@ func xmlStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
 }
 
 // parseXMLElement parses a single XML element and its children
-func parseXMLElement(decoder *xml.Decoder) (map[string]interface{}, error) {
-	result := make(map[string]interface{})
+func parseXMLElement(decoder *xml.Decoder) (map[string]any, error) {
+	result := make(map[string]any)
 
 	for {
 		token, err := decoder.Token()
@@ -2918,10 +2918,10 @@ func parseXMLElement(decoder *xml.Decoder) (map[string]interface{}, error) {
 			// Handle multiple elements with the same name
 			if existing, exists := result[t.Name.Local]; exists {
 				// Convert to array if not already
-				if arr, isArray := existing.([]interface{}); isArray {
+				if arr, isArray := existing.([]any); isArray {
 					result[t.Name.Local] = append(arr, childResult)
 				} else {
-					result[t.Name.Local] = []interface{}{existing, childResult}
+					result[t.Name.Local] = []any{existing, childResult}
 				}
 			} else {
 				result[t.Name.Local] = childResult
@@ -2933,14 +2933,14 @@ func parseXMLElement(decoder *xml.Decoder) (map[string]interface{}, error) {
 }
 
 // parseXMLElementContent parses the content of an XML element
-func parseXMLElementContent(decoder *xml.Decoder, startElement xml.StartElement) (interface{}, error) {
-	content := make(map[string]interface{})
+func parseXMLElementContent(decoder *xml.Decoder, startElement xml.StartElement) (any, error) {
+	content := make(map[string]any)
 	textContent := ""
 	hasChildren := false
 
 	// Add attributes if any
 	if len(startElement.Attr) > 0 {
-		attrs := make(map[string]interface{})
+		attrs := make(map[string]any)
 		for _, attr := range startElement.Attr {
 			attrs[attr.Name.Local] = attr.Value
 		}
@@ -2963,10 +2963,10 @@ func parseXMLElementContent(decoder *xml.Decoder, startElement xml.StartElement)
 
 			// Handle multiple elements with the same name
 			if existing, exists := content[t.Name.Local]; exists {
-				if arr, isArray := existing.([]interface{}); isArray {
+				if arr, isArray := existing.([]any); isArray {
 					content[t.Name.Local] = append(arr, childResult)
 				} else {
-					content[t.Name.Local] = []interface{}{existing, childResult}
+					content[t.Name.Local] = []any{existing, childResult}
 				}
 			} else {
 				content[t.Name.Local] = childResult
@@ -3017,12 +3017,32 @@ func valueToXMLRecursive(v Value, tagName string, buf *bytes.Buffer, depth int) 
 				return valueToXMLRecursive(v, k, buf, depth)
 			}
 		} else {
-			buf.WriteString(fmt.Sprintf("%s<%s>\n", indent, tagName))
-			for k, v := range val {
-				if k == "@attributes" {
-					// Skip attributes for now (would need to be handled in parent)
-					continue
+			// Build opening tag with attributes if present
+			openTag := tagName
+			var attributes []string
+
+			// Check for attributes
+			if attrs, hasAttrs := val["@attributes"]; hasAttrs {
+				if attrsMap, ok := attrs.(map[string]Value); ok {
+					for attrName, attrValue := range attrsMap {
+						attributes = append(attributes, fmt.Sprintf(`%s="%v"`, attrName, attrValue))
+					}
 				}
+			}
+
+			// Write opening tag
+			if len(attributes) > 0 {
+				fmt.Fprintf(buf, "%s<%s %s>\n", indent, openTag, strings.Join(attributes, " "))
+			} else {
+				fmt.Fprintf(buf, "%s<%s>\n", indent, openTag)
+			}
+
+			// Process child elements
+			for k, v := range val {
+				// if k == "@attributes" {
+				// 	// Already handled above
+				// 	continue
+				// }
 				if k == "#text" {
 					// Handle text content
 					if str, ok := v.(string); ok {
@@ -3035,7 +3055,7 @@ func valueToXMLRecursive(v Value, tagName string, buf *bytes.Buffer, depth int) 
 					}
 				}
 			}
-			buf.WriteString(fmt.Sprintf("%s</%s>\n", indent, tagName))
+			fmt.Fprintf(buf, "%s</%s>\n", indent, tagName)
 		}
 
 	case []Value:
@@ -3062,22 +3082,22 @@ func valueToXMLRecursive(v Value, tagName string, buf *bytes.Buffer, depth int) 
 		if content == "<nil>" {
 			content = ""
 		}
-		buf.WriteString(fmt.Sprintf("%s<%s>%s</%s>\n", indent, tagName, content, tagName))
+		fmt.Fprintf(buf, "%s<%s>%s</%s>\n", indent, tagName, content, tagName)
 	}
 
 	return nil
 }
 
-// xmlToValue converts XML interface{} to Value
-func xmlToValue(data interface{}) Value {
+// xmlToValue converts XML any to Value
+func xmlToValue(data any) Value {
 	switch val := data.(type) {
-	case map[string]interface{}:
+	case map[string]any:
 		result := make(map[string]Value)
 		for k, v := range val {
 			result[k] = xmlToValue(v)
 		}
 		return Value(result)
-	case []interface{}:
+	case []any:
 		result := make([]Value, len(val))
 		for i, v := range val {
 			result[i] = xmlToValue(v)
