@@ -1039,6 +1039,8 @@ func toString(value Value, quoteStr bool) string {
 		}
 	case functionType:
 		s = v.name() // Function representation
+	case error:
+		s = v.Error() // Error representation
 	default:
 		// Interpreter should never give us this
 		panic(fmt.Sprintf("str() got unexpected type %T", v))
@@ -3880,21 +3882,23 @@ func netPingFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns true if the text matches the pattern, false otherwise
 // Example: regex_match("hello@example.com", "^[\\w._%+-]+@[\\w.-]+\\.[a-zA-Z]{2,}$") -> true
 func regexMatchFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "regex_match", args, 2)
+	if len(args) != 2 {
+		return Value(fmt.Errorf("regex_match() requires exactly 2 arguments, got %d", len(args)))
+	}
 
 	text, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "regex_match() requires first argument to be a string, not %s", typeName(args[0])))
+		return Value(fmt.Errorf("regex_match() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
 	pattern, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "regex_match() requires second argument to be a string pattern, not %s", typeName(args[1])))
+		return Value(fmt.Errorf("regex_match() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		panic(valueError(pos, "Invalid regex pattern: %v", err))
+		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	return Value(re.MatchString(text))
@@ -3908,21 +3912,23 @@ func regexMatchFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the first match as a string, or null if no match found
 // Example: regex_find("hello world 123", "\\d+") -> "123"
 func regexFindFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "regex_find", args, 2)
+	if len(args) != 2 {
+		return Value(fmt.Errorf("regex_find() requires exactly 2 arguments, got %d", len(args)))
+	}
 
 	text, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "regex_find() requires first argument to be a string, not %s", typeName(args[0])))
+		return Value(fmt.Errorf("regex_find() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
 	pattern, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "regex_find() requires second argument to be a string pattern, not %s", typeName(args[1])))
+		return Value(fmt.Errorf("regex_find() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		panic(valueError(pos, "Invalid regex pattern: %v", err))
+		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	match := re.FindString(text)
@@ -3943,17 +3949,17 @@ func regexFindFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: regex_find_all("hello 123 world 456", "\\d+") -> ["123", "456"]
 func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 3 {
-		panic(typeError(pos, "regex_find_all() requires 2 or 3 arguments, got %d", len(args)))
+		return Value(fmt.Errorf("regex_find_all() requires 2 or 3 arguments, got %d", len(args)))
 	}
 
 	text, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "regex_find_all() requires first argument to be a string, not %s", typeName(args[0])))
+		return Value(fmt.Errorf("regex_find_all() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
 	pattern, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "regex_find_all() requires second argument to be a string pattern, not %s", typeName(args[1])))
+		return Value(fmt.Errorf("regex_find_all() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
 	limit := -1 // Default: find all matches
@@ -3961,13 +3967,13 @@ func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
 		if l, ok := args[2].(int); ok {
 			limit = l
 		} else {
-			panic(typeError(pos, "regex_find_all() requires third argument to be an integer (limit), not %s", typeName(args[2])))
+			return Value(fmt.Errorf("regex_find_all() requires third argument to be an integer (limit), not %s", typeName(args[2])))
 		}
 	}
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		panic(valueError(pos, "Invalid regex pattern: %v", err))
+		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	matches := re.FindAllString(text, limit)
@@ -3988,26 +3994,28 @@ func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the modified string with replacements
 // Example: regex_replace("hello 123 world", "\\d+", "XXX") -> "hello XXX world"
 func regexReplaceFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "regex_replace", args, 3)
+	if len(args) != 3 {
+		return Value(fmt.Errorf("regex_replace() requires exactly 3 arguments, got %d", len(args)))
+	}
 
 	text, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "regex_replace() requires first argument to be a string, not %s", typeName(args[0])))
+		return Value(fmt.Errorf("regex_replace() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
 	pattern, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "regex_replace() requires second argument to be a string pattern, not %s", typeName(args[1])))
+		return Value(fmt.Errorf("regex_replace() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
 	replacement, ok := args[2].(string)
 	if !ok {
-		panic(typeError(pos, "regex_replace() requires third argument to be a string (replacement), not %s", typeName(args[2])))
+		return Value(fmt.Errorf("regex_replace() requires third argument to be a string (replacement), not %s", typeName(args[2])))
 	}
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		panic(valueError(pos, "Invalid regex pattern: %v", err))
+		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	result := re.ReplaceAllString(text, replacement)
@@ -4024,17 +4032,17 @@ func regexReplaceFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: regex_split("hello,world;test", "[,;]") -> ["hello", "world", "test"]
 func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 3 {
-		panic(typeError(pos, "regex_split() requires 2 or 3 arguments, got %d", len(args)))
+		return Value(fmt.Errorf("regex_split() requires 2 or 3 arguments, got %d", len(args)))
 	}
 
 	text, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "regex_split() requires first argument to be a string, not %s", typeName(args[0])))
+		return Value(fmt.Errorf("regex_split() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
 	pattern, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "regex_split() requires second argument to be a string pattern, not %s", typeName(args[1])))
+		return Value(fmt.Errorf("regex_split() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
 	limit := -1 // Default: split all
@@ -4042,13 +4050,13 @@ func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
 		if l, ok := args[2].(int); ok {
 			limit = l
 		} else {
-			panic(typeError(pos, "regex_split() requires third argument to be an integer (limit), not %s", typeName(args[2])))
+			return Value(fmt.Errorf("regex_split() requires third argument to be an integer (limit), not %s", typeName(args[2])))
 		}
 	}
 
 	re, err := regexp.Compile(pattern)
 	if err != nil {
-		panic(valueError(pos, "Invalid regex pattern: %v", err))
+		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	parts := re.Split(text, limit)
@@ -4067,22 +4075,24 @@ func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
 // dateParseFunc parses a date string according to the specified format
 // Usage: date_parse("2023-12-25", "2006-01-02")
 func dateParseFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "date_parse", args, 2)
+	if len(args) != 2 {
+		return Value(fmt.Errorf("date_parse() requires exactly 2 arguments, got %d", len(args)))
+	}
 
 	dateStr, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "date_parse() requires first argument to be a string"))
+		return Value(fmt.Errorf("date_parse() requires first argument to be a string"))
 	}
 
 	format, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "date_parse() requires second argument to be a string"))
+		return Value(fmt.Errorf("date_parse() requires second argument to be a string"))
 	}
 
 	// Parse the date
 	parsedTime, err := time.Parse(format, dateStr)
 	if err != nil {
-		return Value(nil) // Return null if parsing fails
+		return Value(fmt.Errorf("date_parse() failed to parse date: %v", err))
 	}
 
 	// Return as ISO 8601 format string
@@ -4092,27 +4102,29 @@ func dateParseFunc(interp *interpreter, pos Position, args []Value) Value {
 // dateFormatEnhancedFunc formats a date string from one format to another
 // Usage: date_format_new("2023-12-25T10:30:00Z", "2006-01-02T15:04:05Z07:00", "January 2, 2006 3:04 PM")
 func dateFormatEnhancedFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "date_format_new", args, 3)
+	if len(args) != 3 {
+		return Value(fmt.Errorf("date_format_new() requires exactly 3 arguments, got %d", len(args)))
+	}
 
 	dateStr, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "date_format_new() requires first argument to be a string"))
+		return Value(fmt.Errorf("date_format_new() requires first argument to be a string"))
 	}
 
 	inputFormat, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "date_format_new() requires second argument to be a string"))
+		return Value(fmt.Errorf("date_format_new() requires second argument to be a string"))
 	}
 
 	outputFormat, ok := args[2].(string)
 	if !ok {
-		panic(typeError(pos, "date_format_new() requires third argument to be a string"))
+		return Value(fmt.Errorf("date_format_new() requires third argument to be a string"))
 	}
 
 	// Parse the input date
 	parsedTime, err := time.Parse(inputFormat, dateStr)
 	if err != nil {
-		return Value(nil) // Return null if parsing fails
+		return Value(fmt.Errorf("date_format_new() failed to parse date: %v", err))
 	}
 
 	// Format to output format
