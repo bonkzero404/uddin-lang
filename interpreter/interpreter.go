@@ -37,6 +37,7 @@ type interpreter struct {
 	memoCache map[string]Value
 	stringBuilderPool sync.Pool
 	arrayPool sync.Pool
+	mapPool sync.Pool
 }
 
 // returnResult is used to handle return statements in functions.
@@ -66,7 +67,6 @@ var binaryEvalFuncs = map[Token]binaryEvalFunc{
 	MINUS:    evalMinus,                                                                    // Subtraction operator: -
 	MODULO:   evalModulo,                                                                   // Modulo operator: %
 	NOTEQUAL: func(pos Position, l, r Value) Value { return !evalEqual(pos, l, r).(bool) }, // Inequality operator: !=
-	PLUS:     evalPlus,                                                                     // Addition operator: +
 	TIMES:    evalTimes,                                                                    // Multiplication operator: *
 }
 
@@ -301,7 +301,7 @@ func evalLess(pos Position, l, r Value) Value {
 }
 
 // Optimized evalPlus with reduced type assertions and memory optimization
-func evalPlus(pos Position, l, r Value) Value {
+func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 	// Fast path for most common cases
 	if li, ok := l.(int); ok {
 		if ri, ok := r.(int); ok {
@@ -332,9 +332,8 @@ func evalPlus(pos Position, l, r Value) Value {
 		}
 	} else if lmap, ok := l.(map[string]Value); ok {
 		if rmap, ok := r.(map[string]Value); ok {
-			// Optimized map merging
-			llen, rlen := len(lmap), len(rmap)
-			result := make(map[string]Value, llen+rlen)
+			// Optimized map merging with pool
+			result := interp.getMap()
 			for k, v := range lmap {
 				result[k] = v
 			}
@@ -591,7 +590,9 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.stats.Ops++
 	switch e := expr.(type) {
 	case *Binary:
-		if f, ok := binaryEvalFuncs[e.Operator]; ok {
+		if e.Operator == PLUS {
+			return interp.evalPlus(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
+		} else if f, ok := binaryEvalFuncs[e.Operator]; ok {
 			return f(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
 		} else if e.Operator == AND {
 			return interp.evalAnd(e.Position(), e.Left, e.Right)
@@ -640,13 +641,19 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		panic(nameError(e.Position(), "name %q not found", e.Name))
 	case *List:
-		values := make([]Value, len(e.Values))
+		// Use array pool for better memory management
+		values := interp.getArray()
+		if cap(values) < len(e.Values) {
+			values = make([]Value, len(e.Values))
+		} else {
+			values = values[:len(e.Values)]
+		}
 		for i, v := range e.Values {
 			values[i] = interp.evaluate(v)
 		}
 		return Value(&values)
 	case *Map:
-		value := make(map[string]Value)
+		value := interp.getMap()
 		for _, item := range e.Items {
 			key := interp.evaluate(item.Key)
 			if k, ok := key.(string); ok {
@@ -795,7 +802,7 @@ func (interp *interpreter) evaluateAssignmentValue(operator Token, target any, v
 	// Perform the compound operation
 	switch operator {
 	case PLUSEQUAL:
-		return evalPlus(value.Position(), currentValue, rightValue)
+		return interp.evalPlus(value.Position(), currentValue, rightValue)
 	case MINUSEQUAL:
 		return evalMinus(value.Position(), currentValue, rightValue)
 	case TIMESEQUAL:
@@ -824,7 +831,7 @@ func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, cont
 	// Perform the compound operation
 	switch operator {
 	case PLUSEQUAL:
-		return evalPlus(value.Position(), currentValue, rightValue)
+		return interp.evalPlus(value.Position(), currentValue, rightValue)
 	case MINUSEQUAL:
 		return evalMinus(value.Position(), currentValue, rightValue)
 	case TIMESEQUAL:
@@ -1219,4 +1226,20 @@ func getMemoKey(funcName string, args []Value) string {
 		sb.WriteString(fmt.Sprintf("%v", arg))
 	}
 	return sb.String()
+}
+
+// Map pool helpers
+func (interp *interpreter) getMap() map[string]Value {
+	if m := interp.mapPool.Get(); m != nil {
+		return m.(map[string]Value)
+	}
+	return make(map[string]Value)
+}
+
+func (interp *interpreter) putMap(m map[string]Value) {
+	// Clear the map before returning to pool
+	for k := range m {
+		delete(m, k)
+	}
+	interp.mapPool.Put(m)
 }

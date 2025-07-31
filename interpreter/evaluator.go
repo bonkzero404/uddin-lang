@@ -46,13 +46,15 @@ func asMap(v Value) (map[string]Value, bool) {
 type Evaluator struct {
 	env   *Environment
 	stats *Stats
+	interp *interpreter
 }
 
 // NewEvaluator creates a new expression evaluator
-func NewEvaluator(env *Environment, stats *Stats) *Evaluator {
+func NewEvaluator(env *Environment, stats *Stats, interp *interpreter) *Evaluator {
 	return &Evaluator{
 		env:   env,
 		stats: stats,
+		interp: interp,
 	}
 }
 
@@ -366,7 +368,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 
 // evalPlus handles addition operation
 func (e *Evaluator) evalPlus(pos Position, l, r Value) Value {
-	return evalPlus(pos, l, r)
+	return e.interp.evalPlus(pos, l, r)
 }
 
 // evalMinus handles subtraction operation
