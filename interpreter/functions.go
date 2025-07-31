@@ -25,9 +25,9 @@ var (
 	factDatabase = make(map[string]interface{})
 	factMutex    = sync.RWMutex{}
 
-	eventStore   = make([]map[string]interface{}, 0)
+	eventStore    = make([]map[string]interface{}, 0)
 	eventPatterns = make(map[string]interface{})
-	eventMutex   = sync.RWMutex{}
+	eventMutex    = sync.RWMutex{}
 )
 
 // functionType is the interface for all callable functions in the interpreter
@@ -142,33 +142,37 @@ func (f builtinFunction) name() string {
 }
 
 var builtins = map[string]builtinFunction{
-	"append":         {appendFunc, "append"},
-	"char":           {charFunc, "char"},
-	"exit":           {exitFunc, "exit"},
-	"find":           {findFunc, "find"},
-	"import":         {importFunc, "import"},
-	"int":            {intFunc, "int"},
-	"float":          {floatFunc, "float"},
-	"join":           {joinFunc, "join"},
-	"len":            {lenFunc, "len"},
-	"lower":          {lowerFunc, "lower"},
-	"print":          {printFunc, "print"},
-	"range":          {rangeFunc, "range"},
-	"rune":           {runeFunc, "rune"},
-	"slice":          {sliceFunc, "slice"},
-	"sort":           {sortFunc, "sort"},
-	"split":          {splitFunc, "split"},
-	"str":            {strFunc, "str"},
-	"contains":       {containsFunc, "contains"},
-	"str_pad":        {strpadFunc, "str_pad"},
-	"substr":         {substrFunc, "substr"},
-	"upper":          {upperFunc, "upper"},
-	"typeof":         {typeofFunc, "typeof"},
-	"is_regex_match": {isregexFunc, "is_regex_match"},
-	"date_now":       {datenowFunc, "date_now"},
-	"date_format":    {dateformatFunc, "date_format"},
+	// Core System Functions
+	"import": {importFunc, "import"},
+	"exit":   {exitFunc, "exit"},
+	"print":  {printFunc, "print"},
+	"typeof": {typeofFunc, "typeof"},
 
-	// String Manipulation Functions (Point 1)
+	// Type Conversion Functions
+	"int":   {intFunc, "int"},
+	"float": {floatFunc, "float"},
+	"str":   {strFunc, "str"},
+	"char":  {charFunc, "char"},
+	"rune":  {runeFunc, "rune"},
+
+	// Basic Array/Collection Functions
+	"append": {appendFunc, "append"},
+	"len":    {lenFunc, "len"},
+	"range":  {rangeFunc, "range"},
+	"slice":  {sliceFunc, "slice"},
+	"sort":   {sortFunc, "sort"},
+
+	// String Manipulation Functions - Basic
+	"join":     {joinFunc, "join"},
+	"split":    {splitFunc, "split"},
+	"lower":    {lowerFunc, "lower"},
+	"upper":    {upperFunc, "upper"},
+	"contains": {containsFunc, "contains"},
+	"str_pad":  {strpadFunc, "str_pad"},
+	"substr":   {substrFunc, "substr"},
+	"find":     {findFunc, "find"},
+
+	// String Manipulation Functions - Advanced
 	"replace":     {replaceFunc, "replace"},
 	"trim":        {trimFunc, "trim"},
 	"starts_with": {startsWithFunc, "starts_with"},
@@ -176,7 +180,7 @@ var builtins = map[string]builtinFunction{
 	"repeat":      {repeatFunc, "repeat"},
 	"reverse_str": {reverseStrFunc, "reverse_str"},
 
-	// Array Methods (Point 1)
+	// Array/Collection Methods - Advanced
 	"map":           {mapFunc, "map"},
 	"filter":        {filterFunc, "filter"},
 	"reduce":        {reduceFunc, "reduce"},
@@ -188,25 +192,29 @@ var builtins = map[string]builtinFunction{
 	"index_of":      {indexOfFunc, "index_of"},
 	"last_index_of": {lastIndexOfFunc, "last_index_of"},
 
-	// Data Structures (Point 2)
-	"set_new":       {setNewFunc, "set_new"},
-	"set_add":       {setAddFunc, "set_add"},
-	"set_remove":    {setRemoveFunc, "set_remove"},
-	"set_has":       {setHasFunc, "set_has"},
-	"set_size":      {setSizeFunc, "set_size"},
-	"set_to_array":  {setToArrayFunc, "set_to_array"},
-	"stack_new":     {stackNewFunc, "stack_new"},
-	"stack_push":    {stackPushFunc, "stack_push"},
-	"stack_pop":     {stackPopFunc, "stack_pop"},
-	"stack_peek":    {stackPeekFunc, "stack_peek"},
-	"stack_size":    {stackSizeFunc, "stack_size"},
+	// Data Structures - Set Operations
+	"set_new":      {setNewFunc, "set_new"},
+	"set_add":      {setAddFunc, "set_add"},
+	"set_remove":   {setRemoveFunc, "set_remove"},
+	"set_has":      {setHasFunc, "set_has"},
+	"set_size":     {setSizeFunc, "set_size"},
+	"set_to_array": {setToArrayFunc, "set_to_array"},
+
+	// Data Structures - Stack Operations
+	"stack_new":  {stackNewFunc, "stack_new"},
+	"stack_push": {stackPushFunc, "stack_push"},
+	"stack_pop":  {stackPopFunc, "stack_pop"},
+	"stack_peek": {stackPeekFunc, "stack_peek"},
+	"stack_size": {stackSizeFunc, "stack_size"},
+
+	// Data Structures - Queue Operations
 	"queue_new":     {queueNewFunc, "queue_new"},
 	"queue_enqueue": {queueEnqueueFunc, "queue_enqueue"},
 	"queue_dequeue": {queueDequeueFunc, "queue_dequeue"},
 	"queue_front":   {queueFrontFunc, "queue_front"},
 	"queue_size":    {queueSizeFunc, "queue_size"},
 
-	// Basic Math Operations
+	// Mathematical Functions - Basic Operations
 	"abs":  {absFunc, "abs"},
 	"max":  {maxFunc, "max"},
 	"min":  {minFunc, "min"},
@@ -214,13 +222,13 @@ var builtins = map[string]builtinFunction{
 	"sqrt": {sqrtFunc, "sqrt"},
 	"cbrt": {cbrtFunc, "cbrt"},
 
-	// Rounding Functions
+	// Mathematical Functions - Rounding
 	"round": {roundFunc, "round"},
 	"floor": {floorFunc, "floor"},
 	"ceil":  {ceilFunc, "ceil"},
 	"trunc": {truncFunc, "trunc"},
 
-	// Trigonometric Functions
+	// Mathematical Functions - Trigonometric
 	"sin":   {sinFunc, "sin"},
 	"cos":   {cosFunc, "cos"},
 	"tan":   {tanFunc, "tan"},
@@ -229,12 +237,12 @@ var builtins = map[string]builtinFunction{
 	"atan":  {atanFunc, "atan"},
 	"atan2": {atan2Func, "atan2"},
 
-	// Hyperbolic Functions
+	// Mathematical Functions - Hyperbolic
 	"sinh": {sinhFunc, "sinh"},
 	"cosh": {coshFunc, "cosh"},
 	"tanh": {tanhFunc, "tanh"},
 
-	// Logarithmic Functions
+	// Mathematical Functions - Logarithmic & Exponential
 	"log":   {logFunc, "log"},
 	"log10": {log10Func, "log10"},
 	"log2":  {log2Func, "log2"},
@@ -242,7 +250,7 @@ var builtins = map[string]builtinFunction{
 	"exp":   {expFunc, "exp"},
 	"exp2":  {exp2Func, "exp2"},
 
-	// Statistical Functions
+	// Mathematical Functions - Statistical
 	"sum":      {sumFunc, "sum"},
 	"mean":     {meanFunc, "mean"},
 	"median":   {medianFunc, "median"},
@@ -250,7 +258,7 @@ var builtins = map[string]builtinFunction{
 	"std_dev":  {stdDevFunc, "std_dev"},
 	"variance": {varianceFunc, "variance"},
 
-	// Number Theory Functions
+	// Mathematical Functions - Number Theory
 	"gcd":           {gcdFunc, "gcd"},
 	"lcm":           {lcmFunc, "lcm"},
 	"factorial":     {factorialFunc, "factorial"},
@@ -258,7 +266,7 @@ var builtins = map[string]builtinFunction{
 	"is_prime":      {isPrimeFunc, "is_prime"},
 	"prime_factors": {primeFactorsFunc, "prime_factors"},
 
-	// Random Number Functions
+	// Mathematical Functions - Random Numbers
 	"random":        {randomFunc, "random"},
 	"random_int":    {randomIntFunc, "random_int"},
 	"random_float":  {randomFloatFunc, "random_float"},
@@ -266,7 +274,7 @@ var builtins = map[string]builtinFunction{
 	"shuffle":       {shuffleFunc, "shuffle"},
 	"seed_random":   {seedRandomFunc, "seed_random"},
 
-	// Utility Functions
+	// Mathematical Functions - Utility
 	"sign":        {signFunc, "sign"},
 	"clamp":       {clampFunc, "clamp"},
 	"lerp":        {lerpFunc, "lerp"},
@@ -275,50 +283,57 @@ var builtins = map[string]builtinFunction{
 	"is_nan":      {isNanFunc, "is_nan"},
 	"is_infinite": {isInfiniteFunc, "is_infinite"},
 
-	// JSON Functions
+	// Data Serialization - JSON
 	"json_parse":     {jsonParseFunc, "json_parse"},
 	"json_stringify": {jsonStringifyFunc, "json_stringify"},
 
-	// XML Functions
-	"xml_parse":    {xmlParseFunc, "xml_parse"},
+	// Data Serialization - XML
+	"xml_parse":     {xmlParseFunc, "xml_parse"},
 	"xml_stringify": {xmlStringifyFunc, "xml_stringify"},
 
-	// HTTP Client Functions
+	// Network Functions - HTTP Client
 	"http_get":     {httpGetFunc, "http_get"},
 	"http_post":    {httpPostFunc, "http_post"},
 	"http_put":     {httpPutFunc, "http_put"},
 	"http_delete":  {httpDeleteFunc, "http_delete"},
 	"http_request": {httpRequestFunc, "http_request"},
 
-	// HTTP Server Functions
+	// Network Functions - HTTP Server
 	"http_server_start": {httpServerStartFunc, "http_server_start"},
 	"http_server_stop":  {httpServerStopFunc, "http_server_stop"},
 	"http_server_route": {httpServerRouteFunc, "http_server_route"},
 	"http_response":     {httpResponseFunc, "http_response"},
 
-	// Network Functions
+	// Network Functions - TCP
 	"tcp_connect": {tcpConnectFunc, "tcp_connect"},
 	"tcp_listen":  {tcpListenFunc, "tcp_listen"},
 	"tcp_accept":  {tcpAcceptFunc, "tcp_accept"},
 	"tcp_read":    {tcpReadFunc, "tcp_read"},
 	"tcp_write":   {tcpWriteFunc, "tcp_write"},
 	"tcp_close":   {tcpCloseFunc, "tcp_close"},
+
+	// Network Functions - UDP
 	"udp_connect": {udpConnectFunc, "udp_connect"},
 	"udp_listen":  {udpListenFunc, "udp_listen"},
 	"udp_read":    {udpReadFunc, "udp_read"},
 	"udp_write":   {udpWriteFunc, "udp_write"},
 	"udp_close":   {udpCloseFunc, "udp_close"},
+
+	// Network Functions - Utilities
 	"net_resolve": {netResolveFunc, "net_resolve"},
 	"net_ping":    {netPingFunc, "net_ping"},
 
-	// Rule Engine Functions - Pattern Matching & Regex
-	"regex_match":     {regexMatchFunc, "regex_match"},
-	"regex_find":      {regexFindFunc, "regex_find"},
-	"regex_find_all":  {regexFindAllFunc, "regex_find_all"},
-	"regex_replace":   {regexReplaceFunc, "regex_replace"},
-	"regex_split":     {regexSplitFunc, "regex_split"},
+	// Regular Expression Functions
+	"is_regex_match": {isregexFunc, "is_regex_match"},
+	"regex_match":    {regexMatchFunc, "regex_match"},
+	"regex_find":     {regexFindFunc, "regex_find"},
+	"regex_find_all": {regexFindAllFunc, "regex_find_all"},
+	"regex_replace":  {regexReplaceFunc, "regex_replace"},
+	"regex_split":    {regexSplitFunc, "regex_split"},
 
-	// Rule Engine Functions - Enhanced Date/Time Operations
+	// Date/Time Functions - Advanced Operations
+	"date_now":        {datenowFunc, "date_now"},
+	"date_format":     {dateformatFunc, "date_format"},
 	"date_parse":      {dateParseFunc, "date_parse"},
 	"date_format_new": {dateFormatEnhancedFunc, "date_format_new"},
 	"date_add":        {dateAddFunc, "date_add"},
@@ -327,17 +342,17 @@ var builtins = map[string]builtinFunction{
 	"date_between":    {dateBetweenFunc, "date_between"},
 	"date_compare":    {dateCompareFunc, "date_compare"},
 
-	// Rule Engine Functions - Fact Database & Working Memory
-	"fact_assert":     {factAssertFunc, "fact_assert"},
-	"fact_retract":    {factRetractFunc, "fact_retract"},
-	"fact_query":      {factQueryFunc, "fact_query"},
-	"fact_exists":     {factExistsFunc, "fact_exists"},
-	"fact_count":      {factCountFunc, "fact_count"},
-	"fact_clear":      {factClearFunc, "fact_clear"},
-	"fact_get_all":    {factGetAllFunc, "fact_get_all"},
+	// Rule Engine - Fact Database & Working Memory
+	"fact_assert":  {factAssertFunc, "fact_assert"},
+	"fact_retract": {factRetractFunc, "fact_retract"},
+	"fact_query":   {factQueryFunc, "fact_query"},
+	"fact_exists":  {factExistsFunc, "fact_exists"},
+	"fact_count":   {factCountFunc, "fact_count"},
+	"fact_clear":   {factClearFunc, "fact_clear"},
+	"fact_get_all": {factGetAllFunc, "fact_get_all"},
 
-	// Rule Engine Functions - Complex Event Processing (CEP)
-	"event_emit":         {eventEmitFunc, "event_emit"},
+	// Rule Engine - Complex Event Processing (CEP)
+	"event_emit":           {eventEmitFunc, "event_emit"},
 	"event_define_pattern": {eventDefinePatternFunc, "event_define_pattern"},
 	"event_get_window":     {eventGetWindowFunc, "event_get_window"},
 	"event_clear":          {eventClearFunc, "event_clear"},
@@ -4431,7 +4446,7 @@ func dateBetweenFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Check if date is between start and end (inclusive)
 	isBetween := (date.Equal(startDate) || date.After(startDate)) &&
-	            (date.Equal(endDate) || date.Before(endDate))
+		(date.Equal(endDate) || date.Before(endDate))
 
 	return Value(isBetween)
 }
@@ -4786,8 +4801,8 @@ func eventDefinePatternFunc(interp *interpreter, pos Position, args []Value) Val
 
 	// Store pattern
 	pattern := map[string]interface{}{
-		"sequence":  sequence,
-		"created":   time.Now().Format(time.RFC3339),
+		"sequence": sequence,
+		"created":  time.Now().Format(time.RFC3339),
 	}
 
 	// Add optional time window if provided
