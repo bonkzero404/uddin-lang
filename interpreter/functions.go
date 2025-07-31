@@ -375,8 +375,23 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Check if first argument is an array
 	if list, ok := args[0].(*[]Value); ok {
-		// Append all remaining arguments to the array
-		*list = append(*list, args[1:]...)
+		// Fast path: no elements to append
+		if len(args) == 1 {
+			return Value(nil)
+		}
+		
+		// Optimize memory allocation by pre-calculating capacity
+		toAppend := args[1:]
+		if cap(*list)-len(*list) < len(toAppend) {
+			// Need to grow slice, allocate with exact capacity
+			newCap := len(*list) + len(toAppend)
+			newList := make([]Value, len(*list), newCap)
+			copy(newList, *list)
+			*list = append(newList, toAppend...)
+		} else {
+			// Sufficient capacity, direct append
+			*list = append(*list, toAppend...)
+		}
 		return Value(nil)
 	}
 
@@ -557,13 +572,23 @@ func joinFunc(interp *interpreter, pos Position, args []Value) Value {
 	if list, ok := args[0].(*[]Value); ok {
 		// Check if second argument is a string
 		if sep, ok := args[1].(string); ok {
-			// Convert each array element to string
-			strs := make([]string, len(*list))
-			for i, v := range *list {
-				strs[i] = toString(v, true)
+			// Fast path for empty arrays
+			if len(*list) == 0 {
+				return Value("")
 			}
-			// Join the strings with the separator
-			return Value(strings.Join(strs, sep))
+			// Fast path for single element
+			if len(*list) == 1 {
+				return Value(toString((*list)[0], true))
+			}
+			// Use strings.Builder for better performance
+			var builder strings.Builder
+			for i, v := range *list {
+				if i > 0 {
+					builder.WriteString(sep)
+				}
+				builder.WriteString(toString(v, true))
+			}
+			return Value(builder.String())
 		}
 		panic(typeError(pos, "join() requires second argument to be a string"))
 	}
@@ -650,9 +675,15 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 			if n < 0 {
 				panic(valueError(pos, "range() argument must not be negative"))
 			}
+			// Fast path for small ranges
+			if n == 0 {
+				nums := make([]Value, 0)
+				return Value(&nums)
+			}
 			nums := make([]Value, n)
+			// Optimized loop with fewer type conversions
 			for i := 0; i < n; i++ {
-				nums[i] = i
+				nums[i] = Value(i)
 			}
 			return Value(&nums)
 		}
@@ -666,16 +697,17 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 			panic(typeError(pos, "range() requires integer arguments"))
 		}
 
-		if start > stop {
-			// Return empty array if start > stop
+		if start >= stop {
+			// Return empty array if start >= stop
 			nums := make([]Value, 0)
 			return Value(&nums)
 		}
 
 		size := stop - start
 		nums := make([]Value, size)
+		// Optimized loop with direct assignment
 		for i := 0; i < size; i++ {
-			nums[i] = start + i
+			nums[i] = Value(start + i)
 		}
 		return Value(&nums)
 	}
@@ -2228,7 +2260,18 @@ func pushFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "push() requires first argument to be an array"))
 	}
 
-	*arr = append(*arr, args[1:]...)
+	// Optimize memory allocation by pre-calculating capacity
+	toPush := args[1:]
+	if cap(*arr)-len(*arr) < len(toPush) {
+		// Need to grow slice, allocate with exact capacity
+		newCap := len(*arr) + len(toPush)
+		newArr := make([]Value, len(*arr), newCap)
+		copy(newArr, *arr)
+		*arr = append(newArr, toPush...)
+	} else {
+		// Sufficient capacity, direct append
+		*arr = append(*arr, toPush...)
+	}
 	return Value(nil)
 }
 
