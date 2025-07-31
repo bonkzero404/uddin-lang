@@ -302,6 +302,9 @@ func evalLess(pos Position, l, r Value) Value {
 
 // Optimized evalPlus with reduced type assertions and memory optimization
 func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
+	// Track operation for performance monitoring
+	TrackOperation("plus")
+	
 	// Fast path for most common cases
 	if li, ok := l.(int); ok {
 		if ri, ok := r.(int); ok {
@@ -319,24 +322,39 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 		}
 	} else if ls, ok := l.(string); ok {
 		if rs, ok := r.(string); ok {
-			return Value(ls + rs)
+			// Use string interning for repeated strings
+			result := ls + rs
+			if len(result) < 100 { // Only intern short strings
+				result = InternString(result)
+			}
+			return Value(result)
 		}
 	} else if larr, ok := l.(*[]Value); ok {
 		if rarr, ok := r.(*[]Value); ok {
-			// Optimized array concatenation using ArrayConcatenator
+			// Optimized array concatenation using advanced batch processing for large arrays
 			llen, rlen := len(*larr), len(*rarr)
-			concat := NewArrayConcatenator(llen + rlen)
-			concat.AppendArray(larr)
-			concat.AppendArray(rarr)
-			return Value(concat.Result())
+			if llen+rlen > 1000 {
+				// Use batch processing for large arrays
+				result := globalComplexPool.GetArray()
+				result = append(result, *larr...)
+				result = append(result, *rarr...)
+				final := make([]Value, len(result))
+				copy(final, result)
+				globalComplexPool.PutArray(result)
+				return Value(&final)
+			} else {
+				// Use existing optimized concatenation for smaller arrays
+				concat := NewArrayConcatenator(llen + rlen)
+				concat.AppendArray(larr)
+				concat.AppendArray(rarr)
+				return Value(concat.Result())
+			}
 		}
 	} else if lmap, ok := l.(map[string]Value); ok {
 		if rmap, ok := r.(map[string]Value); ok {
-			// Optimized map merging using MapBuilder
-			builder := NewMapBuilder(len(lmap) + len(rmap))
-			builder.SetAll(lmap)
-			builder.SetAll(rmap)
-			return Value(builder.Result())
+			// Use optimized map merging
+			result := OptimizedMapMerge(lmap, rmap)
+			return Value(result)
 		}
 	}
 	panic(typeError(pos, "+ requires two integers, strings, arrays, or objects"))
@@ -362,6 +380,9 @@ func evalMinus(pos Position, l, r Value) Value {
 
 // Optimized evalTimes with reduced type assertions
 func evalTimes(pos Position, l, r Value) Value {
+	// Track operation for performance monitoring
+	TrackOperation("times")
+	
 	// Fast path for numeric operations
 	if li, ok := l.(int); ok {
 		if ri, ok := r.(int); ok {
@@ -374,18 +395,43 @@ func evalTimes(pos Position, l, r Value) Value {
 			if li < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
-			return Value(strings.Repeat(rs, li))
+			// Use optimized string repetition for large strings
+			if len(rs)*li > 1000 {
+				sb := globalComplexPool.GetStringBuilder()
+				for i := 0; i < li; i++ {
+					sb.WriteString(rs)
+				}
+				result := sb.String()
+				globalComplexPool.PutStringBuilder(sb)
+				return Value(result)
+			} else {
+				return Value(strings.Repeat(rs, li))
+			}
 		}
 		if rarr, ok := r.(*[]Value); ok {
 			if li < 0 {
 				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
-			// Optimized array repetition using ArrayConcatenator
-			concat := NewArrayConcatenator(len(*rarr) * li)
-			for i := 0; i < li; i++ {
-				concat.AppendArray(rarr)
+			// Optimized array repetition with batch processing for large arrays
+			totalSize := len(*rarr) * li
+			if totalSize > 1000 {
+				// Use batch processing for large arrays
+				result := globalComplexPool.GetArray()
+				for i := 0; i < li; i++ {
+					result = append(result, *rarr...)
+				}
+				final := make([]Value, len(result))
+				copy(final, result)
+				globalComplexPool.PutArray(result)
+				return Value(&final)
+			} else {
+				// Use existing optimized concatenation for smaller arrays
+				concat := NewArrayConcatenator(totalSize)
+				for i := 0; i < li; i++ {
+					concat.AppendArray(rarr)
+				}
+				return Value(concat.Result())
 			}
-			return Value(concat.Result())
 		}
 	} else if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
@@ -550,6 +596,9 @@ func (interp *interpreter) evalXor(_ Position, le, re Expression) Value {
 }
 
 func (interp *interpreter) callFunction(pos Position, f functionType, args []Value) (ret Value) {
+	// Track function calls for performance monitoring
+	TrackOperation("function_call")
+	
 	// Check memoization cache for recursive functions
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
 		memoKey := getMemoKey(uf.Name, args)

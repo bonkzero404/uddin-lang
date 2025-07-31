@@ -29,6 +29,272 @@ func BenchmarkTokenizer(b *testing.B) {
 	}
 }
 
+// ========================================
+// ADVANCED BENCHMARKS (from benchmark_test.go)
+// ========================================
+
+// BenchmarkAdvancedStringConcatenation tests optimized string concatenation with interning
+func BenchmarkAdvancedStringConcatenation(b *testing.B) {
+	source := []byte(`
+		text = "hello"
+		result = ""
+		for (i in range(1, 100)):
+			result = result + text + " world " + str(i)
+		end
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkAdvancedLargeArrayOperations tests optimized large array operations
+func BenchmarkAdvancedLargeArrayOperations(b *testing.B) {
+	source := []byte(`
+		big_array = []
+		for (i in range(1, 1000)):
+			big_array = big_array + [i]
+		end
+
+		// Test array multiplication with large arrays
+		multiplied = big_array * 2
+
+		// Test filtering
+		filtered = []
+		for (item in big_array):
+			if (item % 2 == 0) then:
+				filtered = filtered + [item * 2]
+			end
+		end
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkAdvancedNestedFunctionCalls tests optimized function calls with scope pooling
+func BenchmarkAdvancedNestedFunctionCalls(b *testing.B) {
+	source := []byte(`
+		fun fibonacci(n):
+			if (n <= 1) then:
+				return n
+			else:
+				return fibonacci(n-1) + fibonacci(n-2)
+			end
+		end
+
+		fun calculate(x, y):
+			return fibonacci(x) + fibonacci(y)
+		end
+
+		result = calculate(10, 8)
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkAdvancedStringRepetition tests optimized string repetition
+func BenchmarkAdvancedStringRepetition(b *testing.B) {
+	source := []byte(`
+		text = "Hello World! "
+		// Test large string repetition
+		big_text = text * 100
+		
+		// Test multiple repetitions
+		for (i in range(1, 10)):
+			repeated = text * (i * 10)
+		end
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkAdvancedMapOperations tests optimized map merging
+func BenchmarkAdvancedMapOperations(b *testing.B) {
+	source := []byte(`
+		map1 = {}
+		for (i in range(1, 100)):
+			key = "key" + str(i)
+			map1 = map1 + {key: i}
+		end
+
+		map2 = {}
+		for (i in range(100, 200)):
+			key = "key" + str(i)
+			map2 = map2 + {key: i * 2}
+		end
+
+		// Test large map merging
+		combined = map1 + map2
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkAdvancedComplexDataStructures tests optimized complex data structure operations
+func BenchmarkAdvancedComplexDataStructures(b *testing.B) {
+	source := []byte(`
+		data = []
+		for (i in range(1, 50)):
+			row = {}
+			for (j in range(1, 10)):
+				key = "col" + str(j)
+				row = row + {key: i * j}
+			end
+			data = data + [row]
+		end
+
+		// Process the data
+		processed = []
+		for (row in data):
+			new_row = {}
+			for (j in range(1, 5)):
+				key = "col" + str(j)
+				if (key in row) then:
+					new_key = "new_" + key
+					new_row = new_row + {new_key: row[key] * 2}
+				end
+			end
+			processed = processed + [new_row]
+		end
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkAdvancedMemoryIntensive tests optimized memory allocation patterns
+func BenchmarkAdvancedMemoryIntensive(b *testing.B) {
+	source := []byte(`
+		// Test large array creation and manipulation
+		big_array = []
+		for (i in range(1, 200)):
+			big_array = big_array + [i]
+		end
+
+		// Test array multiplication
+		doubled = big_array * 2
+		tripled = big_array * 3
+
+		// Test large map creation
+		big_map = {}
+		for (i in range(1, 100)):
+			key = "key" + str(i)
+			value = [i, i*2, i*3]
+			big_map = big_map + {key: value}
+		end
+
+		// Test string operations
+		big_string = "test" * 100
+		for (i in range(1, 20)):
+			big_string = big_string + " iteration " + str(i)
+		end
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+// BenchmarkPerformanceMonitoring tests the performance monitoring overhead
+func BenchmarkPerformanceMonitoring(b *testing.B) {
+	source := []byte(`
+		x = 5
+		y = 10
+		result = x + y
+		result = result * 2
+		result = result - 3
+		result = result / 2
+		text = "hello" + " world"
+		arr = [1, 2, 3] + [4, 5, 6]
+		map_data = {"a": 1} + {"b": 2}
+	`)
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		program, err := ParseProgram(source)
+		if err != nil {
+			b.Fatal(err)
+		}
+
+		_, err = Execute(program, &Config{})
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
 // BenchmarkTokenizerLargeIdentifier tests performance with large identifiers
 func BenchmarkTokenizerLargeIdentifier(b *testing.B) {
 	// Create a large identifier to test strings.Builder efficiency

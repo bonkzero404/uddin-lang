@@ -203,7 +203,7 @@ func (cs *CallStack) Push(functionName string, args []Value, scope map[string]Va
 	frame.Args = append(frame.Args, args...)
 	frame.Scope = scope
 	frame.ReturnValue = nil
-	
+
 	cs.frames = append(cs.frames, *frame)
 }
 
@@ -212,7 +212,7 @@ func (cs *CallStack) Pop() *CallFrame {
 	if len(cs.frames) == 0 {
 		return nil
 	}
-	
+
 	frame := &cs.frames[len(cs.frames)-1]
 	cs.frames = cs.frames[:len(cs.frames)-1]
 	return frame
@@ -250,25 +250,25 @@ func OptimizedJoin(arr []Value, separator string) string {
 	if len(arr) == 0 {
 		return ""
 	}
-	
+
 	if len(arr) == 1 {
 		return toString(arr[0], false)
 	}
-	
+
 	concat := NewStringConcatenator()
 	defer func() {
 		if concat.builder != nil {
 			concat.pool.Put(concat.builder)
 		}
 	}()
-	
+
 	for i, v := range arr {
 		if i > 0 {
 			concat.Append(separator)
 		}
 		concat.Append(toString(v, false))
 	}
-	
+
 	return concat.Result()
 }
 
@@ -277,7 +277,7 @@ func OptimizedArrayCopy(source []Value) []Value {
 	if len(source) == 0 {
 		return make([]Value, 0)
 	}
-	
+
 	result := make([]Value, len(source))
 	copy(result, source)
 	return result
@@ -288,7 +288,7 @@ func OptimizedMapCopy(source map[string]Value) map[string]Value {
 	if len(source) == 0 {
 		return make(map[string]Value)
 	}
-	
+
 	result := make(map[string]Value, len(source))
 	for k, v := range source {
 		result[k] = v
@@ -302,14 +302,14 @@ func BatchArrayAppend(target *[]Value, sources ...*[]Value) {
 	for _, src := range sources {
 		totalLen += len(*src)
 	}
-	
+
 	// Pre-allocate if needed
 	if cap(*target) < totalLen {
 		newTarget := make([]Value, len(*target), totalLen)
 		copy(newTarget, *target)
 		*target = newTarget
 	}
-	
+
 	// Append all sources
 	for _, src := range sources {
 		*target = append(*target, *src...)
