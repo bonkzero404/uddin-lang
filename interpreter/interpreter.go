@@ -33,6 +33,10 @@ type interpreter struct {
 	// stats tracks execution statistics
 	stats Stats
 	inUnitTest bool
+	// Optimization caches
+	memoCache map[string]Value
+	stringBuilderPool sync.Pool
+	arrayPool sync.Pool
 }
 
 // returnResult is used to handle return statements in functions.
@@ -549,16 +553,38 @@ func (interp *interpreter) evalXor(_ Position, le, re Expression) Value {
 }
 
 func (interp *interpreter) callFunction(pos Position, f functionType, args []Value) (ret Value) {
+	// Check memoization cache for recursive functions
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+		memoKey := getMemoKey(uf.Name, args)
+		if cached, exists := interp.memoCache[memoKey]; exists {
+			return cached
+		}
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
+				// Cache the result for memoization
+				if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+					memoKey := getMemoKey(uf.Name, args)
+					interp.memoCache[memoKey] = ret
+				}
 			} else {
 				panic(r)
 			}
 		}
 	}()
-	return f.call(interp, pos, args)
+
+	result := f.call(interp, pos, args)
+	
+	// Cache the result for memoization
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+		memoKey := getMemoKey(uf.Name, args)
+		interp.memoCache[memoKey] = result
+	}
+	
+	return result
 }
 
 func (interp *interpreter) evaluate(expr Expression) Value {
@@ -1006,6 +1032,20 @@ func (interp *interpreter) execute(prog *Program) {
 
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
+	
+	// Initialize optimization caches
+	interp.memoCache = make(map[string]Value)
+	interp.stringBuilderPool = sync.Pool{
+		New: func() interface{} {
+			return &strings.Builder{}
+		},
+	}
+	interp.arrayPool = sync.Pool{
+		New: func() interface{} {
+			return make([]Value, 0, 16) // Pre-allocate with capacity 16
+		},
+	}
+	
 	interp.pushScope(make(map[string]Value))
 	for k, v := range builtins {
 		interp.assign(k, v)
@@ -1137,8 +1177,46 @@ func CreateEmptyScope() map[string]Value {
 // CopyScope creates a copy of a variable scope
 func CopyScope(scope map[string]Value) map[string]Value {
 	newScope := make(map[string]Value)
-	for key, value := range scope {
-		newScope[key] = value
+	for k, v := range scope {
+		newScope[k] = v
 	}
 	return newScope
+}
+
+// getStringBuilder gets a string builder from the pool
+func (interp *interpreter) getStringBuilder() *strings.Builder {
+	return interp.stringBuilderPool.Get().(*strings.Builder)
+}
+
+// putStringBuilder returns a string builder to the pool
+func (interp *interpreter) putStringBuilder(sb *strings.Builder) {
+	sb.Reset()
+	interp.stringBuilderPool.Put(sb)
+}
+
+// getArray gets an array from the pool
+func (interp *interpreter) getArray() []Value {
+	arr := interp.arrayPool.Get().([]Value)
+	return arr[:0] // Reset length but keep capacity
+}
+
+// putArray returns an array to the pool
+func (interp *interpreter) putArray(arr []Value) {
+	if cap(arr) <= 1024 { // Only pool arrays with reasonable capacity
+		interp.arrayPool.Put(arr)
+	}
+}
+
+// getMemoKey generates a memoization key for function calls
+func getMemoKey(funcName string, args []Value) string {
+	var sb strings.Builder
+	sb.WriteString(funcName)
+	sb.WriteString(":")
+	for i, arg := range args {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(fmt.Sprintf("%v", arg))
+	}
+	return sb.String()
 }

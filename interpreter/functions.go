@@ -580,8 +580,9 @@ func joinFunc(interp *interpreter, pos Position, args []Value) Value {
 			if len(*list) == 1 {
 				return Value(toString((*list)[0], true))
 			}
-			// Use strings.Builder for better performance
-			var builder strings.Builder
+			// Use string builder pool for better performance
+			builder := interp.getStringBuilder()
+			defer interp.putStringBuilder(builder)
 			for i, v := range *list {
 				if i > 0 {
 					builder.WriteString(sep)
@@ -1833,15 +1834,26 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(valueError(pos, "fibonacci() argument too large (max 92)"))
 	}
 
-	if n <= 1 {
-		return Value(n)
+	// Check memoization cache
+	memoKey := getMemoKey("fibonacci", args)
+	if cached, exists := interp.memoCache[memoKey]; exists {
+		return cached
 	}
 
-	a, b := 0, 1
-	for i := 2; i <= n; i++ {
-		a, b = b, a+b
+	var result Value
+	if n <= 1 {
+		result = Value(n)
+	} else {
+		a, b := 0, 1
+		for i := 2; i <= n; i++ {
+			a, b = b, a+b
+		}
+		result = Value(b)
 	}
-	return Value(b)
+
+	// Store in memoization cache
+	interp.memoCache[memoKey] = result
+	return result
 }
 
 // isPrimeFunc implements the is_prime() built-in function
