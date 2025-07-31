@@ -75,6 +75,18 @@ func ensureNumArgs(pos Position, name string, args []Value, required int) {
 //
 // Returns the function's return value or nil if no return statement was executed
 func (f *userFunction) call(interp *interpreter, pos Position, args []Value) Value {
+	// Use optimized call stack for function call tracking
+	callStack := GetCallStack()
+	defer PutCallStack(callStack)
+	
+	// Push function call info
+	callStack.PushCall(map[string]interface{}{
+		"function": f.Name,
+		"position": pos,
+		"args_count": len(args),
+	})
+	defer callStack.PopCall()
+
 	// Handle variadic arguments if this is a variadic function
 	if f.Ellipsis {
 		ellipsisArgs := args[len(f.Parameters)-1:]
@@ -1050,28 +1062,50 @@ func toString(value Value, quoteStr bool) string {
 			s = v // Raw string for display
 		}
 	case []Value:
-		// Convert array elements recursively (slice variant)
-		strs := make([]string, len(v))
+		// Convert array elements recursively (slice variant) - optimized
+		concat := GetStringConcatenator()
+		defer PutStringConcatenator(concat)
+		concat.WriteString("[")
 		for i, val := range v {
-			strs[i] = toString(val, true)
+			if i > 0 {
+				concat.WriteString(", ")
+			}
+			concat.WriteString(toString(val, true))
 		}
-		s = fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+		concat.WriteString("]")
+		s = concat.String()
 	case *[]Value:
-		// Convert array elements recursively
-		strs := make([]string, len(*v))
-		for i, v := range *v {
-			strs[i] = toString(v, true)
+		// Convert array elements recursively - optimized
+		concat := GetStringConcatenator()
+		defer PutStringConcatenator(concat)
+		concat.WriteString("[")
+		for i, val := range *v {
+			if i > 0 {
+				concat.WriteString(", ")
+			}
+			concat.WriteString(toString(val, true))
 		}
-		s = fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+		concat.WriteString("]")
+		s = concat.String()
 	case map[string]Value:
-		// Convert object key-value pairs recursively
+		// Convert object key-value pairs recursively - optimized
 		strs := make([]string, 0, len(v))
-		for k, v := range v {
-			item := fmt.Sprintf("%q: %s", k, toString(v, true))
+		for k, val := range v {
+			item := fmt.Sprintf("%q: %s", k, toString(val, true))
 			strs = append(strs, item)
 		}
 		sort.Strings(strs) // Ensure str(output) is consistent
-		s = fmt.Sprintf("{%s}", strings.Join(strs, ", "))
+		concat := GetStringConcatenator()
+		defer PutStringConcatenator(concat)
+		concat.WriteString("{")
+		for i, str := range strs {
+			if i > 0 {
+				concat.WriteString(", ")
+			}
+			concat.WriteString(str)
+		}
+		concat.WriteString("}")
+		s = concat.String()
 	case *map[string]Value:
 		// Convert pointer to object key-value pairs recursively
 		if v == nil {
@@ -1083,7 +1117,17 @@ func toString(value Value, quoteStr bool) string {
 				strs = append(strs, item)
 			}
 			sort.Strings(strs) // Ensure str(output) is consistent
-			s = fmt.Sprintf("{%s}", strings.Join(strs, ", "))
+			concat := GetStringConcatenator()
+			defer PutStringConcatenator(concat)
+			concat.WriteString("{")
+			for i, str := range strs {
+				if i > 0 {
+					concat.WriteString(", ")
+				}
+				concat.WriteString(str)
+			}
+			concat.WriteString("}")
+			s = concat.String()
 		}
 	case functionType:
 		s = v.name() // Function representation

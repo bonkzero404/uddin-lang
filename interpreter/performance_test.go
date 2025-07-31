@@ -1,6 +1,8 @@
 package interpreter
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -14,7 +16,7 @@ func BenchmarkTokenizer(b *testing.B) {
 			print("large number")
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tokenizer := NewTokenizer(source)
@@ -32,7 +34,7 @@ func BenchmarkTokenizerLargeIdentifier(b *testing.B) {
 	// Create a large identifier to test strings.Builder efficiency
 	longIdentifier := "very_long_identifier_name_that_tests_string_building_performance_with_many_characters"
 	source := []byte(longIdentifier + " = 42")
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tokenizer := NewTokenizer(source)
@@ -48,7 +50,7 @@ func BenchmarkTokenizerLargeIdentifier(b *testing.B) {
 // BenchmarkTokenizerStringLiterals tests performance with string literals
 func BenchmarkTokenizerStringLiterals(b *testing.B) {
 	source := []byte(`"This is a long string literal that tests the performance of string building in the tokenizer with escape sequences like \n and \t"`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		tokenizer := NewTokenizer(source)
@@ -73,7 +75,7 @@ func BenchmarkParser(b *testing.B) {
 			result = item * 2
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := ParseProgram(source)
@@ -91,19 +93,222 @@ func BenchmarkEvaluator(b *testing.B) {
 		z = x[2] + y["b"]
 		w = "hello"[1]
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
 		}
 	}
+}
+
+// ========================================
+// OPTIMIZATION BENCHMARKS
+// ========================================
+
+// Benchmark untuk ArrayConcatenator
+func BenchmarkOptimizedArrayConcatenationNew(b *testing.B) {
+	b.Run("Original", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			result := make([]Value, 0)
+			for j := 0; j < 1000; j++ {
+				_ = append(result, Value(j))
+			}
+		}
+	})
+
+	b.Run("Optimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			concat := GetArrayConcatenator()
+			for j := 0; j < 1000; j++ {
+				concat.Append(Value(j))
+			}
+			result := concat.ToArray()
+			PutArrayConcatenator(concat)
+			_ = result
+		}
+	})
+}
+
+// Benchmark untuk StringConcatenator
+func BenchmarkOptimizedStringConcatenationNew(b *testing.B) {
+	b.Run("Original", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var result string
+			for j := 0; j < 1000; j++ {
+				result += fmt.Sprintf("item_%d,", j)
+			}
+		}
+	})
+
+	b.Run("StringBuilder", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var builder strings.Builder
+			for j := 0; j < 1000; j++ {
+				builder.WriteString(fmt.Sprintf("item_%d,", j))
+			}
+			result := builder.String()
+			_ = result
+		}
+	})
+
+	b.Run("Optimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			concat := GetStringConcatenator()
+			for j := 0; j < 1000; j++ {
+				concat.WriteString(fmt.Sprintf("item_%d,", j))
+			}
+			result := concat.String()
+			PutStringConcatenator(concat)
+			_ = result
+		}
+	})
+}
+
+// Benchmark untuk MapBuilder
+func BenchmarkOptimizedMapCreationNew(b *testing.B) {
+	b.Run("Original", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			result := make(map[string]Value)
+			for j := 0; j < 1000; j++ {
+				key := fmt.Sprintf("key_%d", j)
+				result[key] = Value(j)
+			}
+		}
+	})
+
+	b.Run("Optimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			builder := GetMapBuilder()
+			for j := 0; j < 1000; j++ {
+				key := fmt.Sprintf("key_%d", j)
+				builder.Set(key, Value(j))
+			}
+			result := builder.ToMap()
+			PutMapBuilder(builder)
+			_ = result
+		}
+	})
+}
+
+// Benchmark untuk CallStack
+func BenchmarkOptimizedCallStackNew(b *testing.B) {
+	b.Run("Original", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			stack := make([]map[string]interface{}, 0)
+			for j := 0; j < 100; j++ {
+				callInfo := map[string]interface{}{
+					"function": fmt.Sprintf("func_%d", j),
+					"depth":    j,
+				}
+				stack = append(stack, callInfo)
+			}
+			for j := 99; j >= 0; j-- {
+				if len(stack) > 0 {
+					stack = stack[:len(stack)-1]
+				}
+			}
+		}
+	})
+
+	b.Run("Optimized", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			callStack := GetCallStack()
+			for j := 0; j < 100; j++ {
+				callInfo := map[string]interface{}{
+					"function": fmt.Sprintf("func_%d", j),
+					"depth":    j,
+				}
+				callStack.PushCall(callInfo)
+			}
+			for j := 99; j >= 0; j-- {
+				callStack.Pop()
+			}
+			PutCallStack(callStack)
+		}
+	})
+}
+
+// Benchmark untuk toString dengan optimasi
+func BenchmarkOptimizedToStringNew(b *testing.B) {
+	// Create test data
+	testArray := make([]Value, 100)
+	for i := 0; i < 100; i++ {
+		testArray[i] = Value(fmt.Sprintf("item_%d", i))
+	}
+
+	testMap := make(map[string]Value)
+	for i := 0; i < 100; i++ {
+		key := fmt.Sprintf("key_%d", i)
+		testMap[key] = Value(fmt.Sprintf("value_%d", i))
+	}
+
+	b.Run("Array", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			result := toString(Value(&testArray), false)
+			_ = result
+		}
+	})
+
+	b.Run("Map", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			result := toString(Value(testMap), false)
+			_ = result
+		}
+	})
+}
+
+// Benchmark untuk utilitas optimasi
+func BenchmarkOptimizedUtilitiesNew(b *testing.B) {
+	testArray1 := make([]Value, 500)
+	testArray2 := make([]Value, 500)
+	for i := 0; i < 500; i++ {
+		testArray1[i] = Value(i)
+		testArray2[i] = Value(i + 500)
+	}
+
+	testMap1 := make(map[string]Value)
+	testMap2 := make(map[string]Value)
+	for i := 0; i < 500; i++ {
+		testMap1[fmt.Sprintf("key1_%d", i)] = Value(i)
+		testMap2[fmt.Sprintf("key2_%d", i)] = Value(i + 500)
+	}
+
+	b.Run("OptimizedArrayCopy", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			result := OptimizedArrayCopy(testArray1)
+			_ = result
+		}
+	})
+
+	b.Run("OptimizedMapCopy", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			result := OptimizedMapCopy(testMap1)
+			_ = result
+		}
+	})
+
+	b.Run("BatchArrayAppend", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			BatchArrayAppend(&testArray1, &testArray2)
+			result := testArray1
+			_ = result
+		}
+	})
+
+	b.Run("BatchMapMerge", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			BatchMapMerge(testMap1, testMap2)
+			result := testMap1
+			_ = result
+		}
+	})
 }
 
 // BenchmarkComplexExpression tests performance with complex nested expressions
@@ -114,14 +319,14 @@ func BenchmarkComplexExpression(b *testing.B) {
 		map_data = {"first": array[0], "second": array[1], "third": array[2]}
 		final = map_data["second"] + array[2]
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -140,7 +345,7 @@ func BenchmarkTypeChecking(b *testing.B) {
 		&[]Value{1, 2, 3},
 		map[string]Value{"key": "value"},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, v := range values {
@@ -158,7 +363,7 @@ func BenchmarkValueExtraction(b *testing.B) {
 		&[]Value{1, 2, 3},
 		map[string]Value{"key": "value"},
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, v := range values {
@@ -183,14 +388,14 @@ func BenchmarkMathOperations(b *testing.B) {
 		result5 = x % y
 		float_result = 3.14 * 2.71
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -208,14 +413,14 @@ func BenchmarkStringOperations(b *testing.B) {
 		char_access = str1[0]
 		length_check = len(concatenated)
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -233,14 +438,14 @@ func BenchmarkArrayOperations(b *testing.B) {
 		element = arr1[2]
 		length = len(combined)
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -257,14 +462,14 @@ func BenchmarkMapOperations(b *testing.B) {
 		value = map1["b"]
 		length = len(combined)
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -278,7 +483,7 @@ func BenchmarkFunctionCalls(b *testing.B) {
 		fun square(x):
 			return x * x
 		end
-		
+
 		fun factorial(n):
 			if (n <= 1) then:
 				return 1
@@ -286,19 +491,19 @@ func BenchmarkFunctionCalls(b *testing.B) {
 				return n * factorial(n - 1)
 			end
 		end
-		
+
 		result1 = square(10)
 		result2 = factorial(5)
 		result3 = max(result1, result2)
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -313,20 +518,20 @@ func BenchmarkLoopOperations(b *testing.B) {
 		for (i in range(1, 100)):
 			sum = sum + i
 		end
-		
+
 		arr = []
 		for (i in range(1, 20)):
 			arr = arr + [i * 2]
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -339,7 +544,7 @@ func BenchmarkConditionalOperations(b *testing.B) {
 	source := []byte(`
 		x = 50
 		result = (x > 30) ? x * 2 : x / 2
-		
+
 		for (i in range(1, 50)):
 			if (i % 2 == 0) then:
 				even_result = i * 3
@@ -348,14 +553,14 @@ func BenchmarkConditionalOperations(b *testing.B) {
 			end
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -374,14 +579,14 @@ func BenchmarkBuiltinFunctions(b *testing.B) {
 		length = len(arr)
 		reversed = reverse(arr)
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -396,21 +601,21 @@ func BenchmarkMemoryIntensive(b *testing.B) {
 		for (i in range(1, 100)):
 			big_array = big_array + [i]
 		end
-		
+
 		big_map = {}
 		for (i in range(1, 50)):
 			key = "key" + str(i)
 			big_map = big_map + {key: i * i}
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -430,14 +635,14 @@ func BenchmarkNestedDataStructures(b *testing.B) {
 		}
 		result = data["users"][0]["scores"][1]
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -453,36 +658,14 @@ func BenchmarkAppendOptimization(b *testing.B) {
 			arr = arr + [i]
 		end
 	`)
-	
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-		
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
-func BenchmarkStringConcatenation(b *testing.B) {
-	source := []byte(`
-		result = ""
-		for (i in range(1, 50)):
-			result = result + str(i) + ","
-		end
-	`)
-	
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -501,14 +684,14 @@ func BenchmarkTypeAssertionOptimization(b *testing.B) {
 			c = z + "world"
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -523,14 +706,14 @@ func BenchmarkMapAccessOptimization(b *testing.B) {
 			x = data["a"] + data["b"] + data["c"]
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -544,28 +727,28 @@ func BenchmarkNestedFunctionCalls(b *testing.B) {
 		fun add(a, b):
 			return a + b
 		end
-		
+
 		fun multiply(a, b):
 			return a * b
 		end
-		
+
 		fun complex_calc(x):
 			return add(multiply(x, 2), add(x, 1))
 		end
-		
+
 		result = 0
 		for (i in range(1, 100)):
 			result = result + complex_calc(i)
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -583,20 +766,20 @@ func BenchmarkRecursiveOperations(b *testing.B) {
 				return fibonacci(n - 1) + fibonacci(n - 2)
 			end
 		end
-		
+
 		result = 0
 		for (i in range(1, 15)):
 			result = result + fibonacci(i)
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -616,7 +799,7 @@ func BenchmarkComplexDataStructures(b *testing.B) {
 			end
 			data = data + [row]
 		end
-		
+
 		sum = 0
 		for (row in data):
 			// Calculate sum by accessing known keys
@@ -626,14 +809,14 @@ func BenchmarkComplexDataStructures(b *testing.B) {
 			end
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -653,14 +836,14 @@ func BenchmarkStringManipulation(b *testing.B) {
 			end
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -672,7 +855,7 @@ func BenchmarkStringManipulation(b *testing.B) {
 func BenchmarkVariableScoping(b *testing.B) {
 	source := []byte(`
 		global_var = 0
-		
+
 		fun nested_function(depth):
 			local_var = depth
 			if (depth > 0) then:
@@ -681,20 +864,20 @@ func BenchmarkVariableScoping(b *testing.B) {
 				return local_var
 			end
 		end
-		
+
 		result = 0
 		for (i in range(1, 50)):
 			result = result + nested_function(i % 10)
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)
@@ -709,27 +892,27 @@ func BenchmarkLargeArrayOperations(b *testing.B) {
 		for (i in range(1, 500)):
 			big_array = big_array + [i]
 		end
-		
+
 		filtered = []
 		for (item in big_array):
 			if (item % 2 == 0) then:
 				filtered = filtered + [item * 2]
 			end
 		end
-		
+
 		sum = 0
 		for (item in filtered):
 			sum = sum + item
 		end
 	`)
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		program, err := ParseProgram(source)
 		if err != nil {
 			b.Fatal(err)
 		}
-		
+
 		_, err = Execute(program, &Config{})
 		if err != nil {
 			b.Fatal(err)

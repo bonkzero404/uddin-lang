@@ -323,24 +323,20 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 		}
 	} else if larr, ok := l.(*[]Value); ok {
 		if rarr, ok := r.(*[]Value); ok {
-			// Optimized array concatenation with exact capacity
+			// Optimized array concatenation using ArrayConcatenator
 			llen, rlen := len(*larr), len(*rarr)
-			result := make([]Value, llen, llen+rlen)
-			copy(result, *larr)
-			result = append(result, *rarr...)
-			return Value(&result)
+			concat := NewArrayConcatenator(llen + rlen)
+			concat.AppendArray(larr)
+			concat.AppendArray(rarr)
+			return Value(concat.Result())
 		}
 	} else if lmap, ok := l.(map[string]Value); ok {
 		if rmap, ok := r.(map[string]Value); ok {
-			// Optimized map merging with pool
-			result := interp.getMap()
-			for k, v := range lmap {
-				result[k] = v
-			}
-			for k, v := range rmap {
-				result[k] = v
-			}
-			return Value(result)
+			// Optimized map merging using MapBuilder
+			builder := NewMapBuilder(len(lmap) + len(rmap))
+			builder.SetAll(lmap)
+			builder.SetAll(rmap)
+			return Value(builder.Result())
 		}
 	}
 	panic(typeError(pos, "+ requires two integers, strings, arrays, or objects"))
@@ -384,11 +380,12 @@ func evalTimes(pos Position, l, r Value) Value {
 			if li < 0 {
 				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
-			lst := make([]Value, 0, len(*rarr)*li)
+			// Optimized array repetition using ArrayConcatenator
+			concat := NewArrayConcatenator(len(*rarr) * li)
 			for i := 0; i < li; i++ {
-				lst = append(lst, (*rarr)...)
+				concat.AppendArray(rarr)
 			}
-			return Value(&lst)
+			return Value(concat.Result())
 		}
 	} else if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
@@ -409,11 +406,12 @@ func evalTimes(pos Position, l, r Value) Value {
 			if ri < 0 {
 				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
-			lst := make([]Value, 0, len(*larr)*ri)
+			// Optimized array repetition using ArrayConcatenator
+			concat := NewArrayConcatenator(len(*larr) * ri)
 			for i := 0; i < ri; i++ {
-				lst = append(lst, (*larr)...)
+				concat.AppendArray(larr)
 			}
-			return Value(&lst)
+			return Value(concat.Result())
 		}
 	}
 	panic(typeError(pos, "* requires two integers or floats, or a string or array and an integer"))
