@@ -296,40 +296,45 @@ func evalLess(pos Position, l, r Value) Value {
 	panic(typeError(pos, "comparison requires two integers or two strings (or arrays of integers or strings)"))
 }
 
+// Optimized evalPlus with reduced type assertions and memory optimization
 func evalPlus(pos Position, l, r Value) Value {
-	switch l := l.(type) {
-	case int:
-		if r, ok := r.(int); ok {
-			return Value(l + r)
+	// Fast path for most common cases
+	if li, ok := l.(int); ok {
+		if ri, ok := r.(int); ok {
+			return Value(li + ri)
 		}
-		if r, ok := r.(float64); ok {
-			return Value(float64(l) + r)
+		if rf, ok := r.(float64); ok {
+			return Value(float64(li) + rf)
 		}
-	case float64:
-		if r, ok := r.(float64); ok {
-			return Value(l + r)
+	} else if lf, ok := l.(float64); ok {
+		if rf, ok := r.(float64); ok {
+			return Value(lf + rf)
 		}
-		if r, ok := r.(int); ok {
-			return Value(l + float64(r))
+		if ri, ok := r.(int); ok {
+			return Value(lf + float64(ri))
 		}
-	case string:
-		if r, ok := r.(string); ok {
-			return Value(l + r)
+	} else if ls, ok := l.(string); ok {
+		if rs, ok := r.(string); ok {
+			return Value(ls + rs)
 		}
-	case *[]Value:
-		if r, ok := r.(*[]Value); ok {
-			result := make([]Value, 0, len(*l)+len(*r))
-			result = append(result, *l...)
-			result = append(result, *r...)
+	} else if larr, ok := l.(*[]Value); ok {
+		if rarr, ok := r.(*[]Value); ok {
+			// Optimized array concatenation with exact capacity
+			llen, rlen := len(*larr), len(*rarr)
+			result := make([]Value, llen, llen+rlen)
+			copy(result, *larr)
+			result = append(result, *rarr...)
 			return Value(&result)
 		}
-	case map[string]Value:
-		if r, ok := r.(map[string]Value); ok {
-			result := make(map[string]Value)
-			for k, v := range l {
+	} else if lmap, ok := l.(map[string]Value); ok {
+		if rmap, ok := r.(map[string]Value); ok {
+			// Optimized map merging
+			llen, rlen := len(lmap), len(rmap)
+			result := make(map[string]Value, llen+rlen)
+			for k, v := range lmap {
 				result[k] = v
 			}
-			for k, v := range r {
+			for k, v := range rmap {
 				result[k] = v
 			}
 			return Value(result)
@@ -356,48 +361,54 @@ func evalMinus(pos Position, l, r Value) Value {
 	panic(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
 }
 
+// Optimized evalTimes with reduced type assertions
 func evalTimes(pos Position, l, r Value) Value {
-	switch l := l.(type) {
-	case int:
-		switch r := r.(type) {
-		case int:
-			return Value(l * r)
-		case float64:
-			return Value(float64(l) * r)
-		case string:
-			if l < 0 {
+	// Fast path for numeric operations
+	if li, ok := l.(int); ok {
+		if ri, ok := r.(int); ok {
+			return Value(li * ri)
+		}
+		if rf, ok := r.(float64); ok {
+			return Value(float64(li) * rf)
+		}
+		if rs, ok := r.(string); ok {
+			if li < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
-			return Value(strings.Repeat(r, l))
-		case *[]Value:
-			lst := make([]Value, 0, len(*r)*l)
-			for i := 0; i < l; i++ {
-				lst = append(lst, (*r)...)
+			return Value(strings.Repeat(rs, li))
+		}
+		if rarr, ok := r.(*[]Value); ok {
+			if li < 0 {
+				panic(valueError(pos, "can't multiply array by a negative number"))
+			}
+			lst := make([]Value, 0, len(*rarr)*li)
+			for i := 0; i < li; i++ {
+				lst = append(lst, (*rarr)...)
 			}
 			return Value(&lst)
 		}
-	case float64:
-		if r, ok := r.(float64); ok {
-			return Value(l * r)
+	} else if lf, ok := l.(float64); ok {
+		if rf, ok := r.(float64); ok {
+			return Value(lf * rf)
 		}
-		if r, ok := r.(int); ok {
-			return Value(l * float64(r))
+		if ri, ok := r.(int); ok {
+			return Value(lf * float64(ri))
 		}
-	case string:
-		if r, ok := r.(int); ok {
-			if r < 0 {
+	} else if ls, ok := l.(string); ok {
+		if ri, ok := r.(int); ok {
+			if ri < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
-			return Value(strings.Repeat(l, r))
+			return Value(strings.Repeat(ls, ri))
 		}
-	case *[]Value:
-		if r, ok := r.(int); ok {
-			if r < 0 {
+	} else if larr, ok := l.(*[]Value); ok {
+		if ri, ok := r.(int); ok {
+			if ri < 0 {
 				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
-			lst := make([]Value, 0, len(*l)*r)
-			for i := 0; i < r; i++ {
-				lst = append(lst, (*l)...)
+			lst := make([]Value, 0, len(*larr)*ri)
+			for i := 0; i < ri; i++ {
+				lst = append(lst, (*larr)...)
 			}
 			return Value(&lst)
 		}

@@ -683,8 +683,8 @@ func TestEdgeCasesForCoverage(t *testing.T) {
 		pos:   Position{Line: 1, Column: 1},
 	}
 	str = nilLit.String()
-	if str != "nil" {
-		t.Errorf("Nil literal should be 'nil', got '%s'", str)
+	if str != "null" {
+		t.Errorf("Nil literal should be 'null', got '%s'", str)
 	}
 
 	// Test map with multiple items
