@@ -250,13 +250,14 @@ Monitor execution performance and optimization metrics:
 
 #### Available CLI Commands
 
-| Command      | Short | Description                       |
-| ------------ | ----- | --------------------------------- |
-| `--help`     | `-h`  | Show usage information            |
-| `--version`  | `-v`  | Display version information       |
-| `--examples` | `-e`  | List all available example files  |
-| `--analyze`  | `-a`  | Syntax analysis without execution |
-| `--profile`  | `-p`  | Enable performance profiling      |
+| Command        | Short | Description                       |
+| -------------- | ----- | --------------------------------- |
+| `--help`       | `-h`  | Show usage information            |
+| `--version`    | `-v`  | Display version information       |
+| `--examples`   | `-e`  | List all available example files  |
+| `--analyze`    | `-a`  | Syntax analysis without execution |
+| `--profile`    | `-p`  | Enable performance profiling      |
+| `--from_json`  |       | Execute code from JSON AST format |
 
 #### Usage Examples
 
@@ -267,6 +268,9 @@ Monitor execution performance and optimization metrics:
 # Development workflow
 ./uddinlang --analyze script.din    # Check syntax first
 ./uddinlang --profile script.din    # Run with performance monitoring
+
+# JSON AST execution
+./uddinlang --from_json script.json  # Execute from JSON AST format
 
 # Flexible flag positioning
 ./uddinlang script.din --analyze    # Flags can be placed after filename
@@ -1767,6 +1771,7 @@ The project includes comprehensive tests:
 -   **Integration Tests**: Test component interaction
 -   **Example Tests**: Validate example programs
 -   **Benchmark Tests**: Performance measurements
+-   **JSON Compatibility Tests**: Validate `--from_json` feature
 
 ```bash
 # Run all tests
@@ -1778,7 +1783,27 @@ go test -v ./...
 # Run tests with coverage report
 go test -cover ./... -coverprofile=coverage.out
 go tool cover -html=coverage.out
+
+# Test JSON serialization/deserialization compatibility
+./scripts/test_from_json.sh
 ```
+
+#### JSON Compatibility Testing
+
+The `test_from_json.sh` script validates the `--from_json` feature by testing all example files:
+
+```bash
+# Run JSON compatibility tests for all examples
+./scripts/test_from_json.sh
+
+# The script performs these steps for each .din file:
+# 1. Convert .din file to JSON format
+# 2. Convert JSON back to .din format
+# 3. Verify structural integrity (STRUCT-OK)
+# 4. Test execution compatibility (EXEC-OK)
+```
+
+**Test Coverage**: The script tests all 30+ example files and ensures 100% compatibility for the `--from_json` feature. Note that comments are not preserved during JSON conversion by design, as the AST focuses on executable code structure.
 
 ---
 
