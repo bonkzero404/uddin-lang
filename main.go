@@ -12,10 +12,11 @@ import (
 
 // CLI represents the command line interface
 type CLI struct {
-	args    []string
-	profile bool
-	analyze bool
-	toJson  bool
+	args     []string
+	profile  bool
+	analyze  bool
+	toJson   bool
+	fromJson bool
 }
 
 // NewCLI creates a new CLI instance
@@ -44,6 +45,10 @@ func (c *CLI) Run() error {
 			c.args = append(c.args[:i], c.args[i+1:]...)
 		case "--to_json":
 			c.toJson = true
+			// Remove the flag from args
+			c.args = append(c.args[:i], c.args[i+1:]...)
+		case "--from_json":
+			c.fromJson = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
 		}
@@ -77,6 +82,7 @@ func (c *CLI) printUsage() {
 	fmt.Println("  uddinlang --profile <filename.din> - Run with performance profiling")
 	fmt.Println("  uddinlang --analyze <filename.din> - Analyze syntax without execution")
 	fmt.Println("  uddinlang --to_json <filename.din> - Convert Uddin-Lang code to JSON AST")
+	fmt.Println("  uddinlang --from_json <filename.json> - Convert JSON AST back to Uddin-Lang code")
 	fmt.Println("  uddinlang --examples       - List available example files")
 	fmt.Println("  uddinlang --version        - Show version information")
 	fmt.Println("  uddinlang --help           - Show this help message")
@@ -121,6 +127,10 @@ func (c *CLI) runScript(filename string) error {
 	// Handle transpiler flags
 	if c.toJson {
 		return c.convertToJson(filename)
+	}
+
+	if c.fromJson {
+		return c.convertFromJson(filename)
 	}
 
 	// Validate file extension for normal execution
@@ -190,11 +200,35 @@ func (c *CLI) convertToJson(filename string) error {
 	return nil
 }
 
+func (c *CLI) convertFromJson(filename string) error {
+	// Validate file extension (allow stdin)
+	if filename != "/dev/stdin" && filepath.Ext(filename) != ".json" {
+		return fmt.Errorf("file must have .json extension for --from_json")
+	}
+
+	// Read the JSON file
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("error reading file %s: %w", filename, err)
+	}
+
+	// Parse JSON into Program struct
+	var program interpreter.Program
+	if err := json.Unmarshal(content, &program); err != nil {
+		return fmt.Errorf("error parsing JSON: %w", err)
+	}
+
+	// Convert AST back to source code
+	sourceCode := program.String()
+
+	// Print the generated source code
+	fmt.Println(sourceCode)
+	return nil
+}
+
 func main() {
 	cli := NewCLI(os.Args)
-
 	if err := cli.Run(); err != nil {
-		log.Printf("Error: %v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
