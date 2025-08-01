@@ -129,9 +129,12 @@ func (fcc *FunctionCallCache) Set(key string, value Value) {
 
 // ComplexOperationPool provides pooled resources for complex operations
 type ComplexOperationPool struct {
-	arrayPool  sync.Pool
-	mapPool    sync.Pool
-	stringPool sync.Pool
+	arrayPool      sync.Pool
+	mapPool        sync.Pool
+	stringPool     sync.Pool
+	smallArrayPool sync.Pool // For small arrays (capacity <= 16)
+	largeArrayPool sync.Pool // For large arrays (capacity > 1024)
+	intSlicePool   sync.Pool // For int slices
 }
 
 // NewComplexOperationPool creates a new complex operation pool
@@ -142,14 +145,29 @@ func NewComplexOperationPool() *ComplexOperationPool {
 				return make([]Value, 0, 64)
 			},
 		},
+		smallArrayPool: sync.Pool{
+			New: func() any {
+				return make([]Value, 0, 16)
+			},
+		},
+		largeArrayPool: sync.Pool{
+			New: func() any {
+				return make([]Value, 0, 2048) // For large arrays
+			},
+		},
 		mapPool: sync.Pool{
 			New: func() any {
-				return make(map[string]Value)
+				return make(map[string]Value, 16)
 			},
 		},
 		stringPool: sync.Pool{
 			New: func() any {
 				return &strings.Builder{}
+			},
+		},
+		intSlicePool: sync.Pool{
+			New: func() any {
+				return make([]int, 0, 32)
 			},
 		},
 	}
@@ -161,10 +179,51 @@ func (cop *ComplexOperationPool) GetArray() []Value {
 	return arr[:0]
 }
 
+// GetSmallArray gets a pooled small array (capacity <= 16)
+func (cop *ComplexOperationPool) GetSmallArray() []Value {
+	arr := cop.smallArrayPool.Get().([]Value)
+	return arr[:0]
+}
+
+// GetLargeArray gets a pooled large array (capacity > 1024)
+func (cop *ComplexOperationPool) GetLargeArray() []Value {
+	arr := cop.largeArrayPool.Get().([]Value)
+	return arr[:0]
+}
+
+// GetIntSlice gets a pooled int slice
+func (cop *ComplexOperationPool) GetIntSlice() []int {
+	slice := cop.intSlicePool.Get().([]int)
+	return slice[:0]
+}
+
 // PutArray returns an array to the pool
 func (cop *ComplexOperationPool) PutArray(arr []Value) {
-	if cap(arr) <= 1024 {
+	// Only pool arrays with reasonable capacity to avoid memory bloat
+	if cap(arr) <= 1024 && cap(arr) >= 8 {
 		cop.arrayPool.Put(arr)
+	}
+}
+
+// PutSmallArray returns a small array to the pool
+func (cop *ComplexOperationPool) PutSmallArray(arr []Value) {
+	if cap(arr) <= 16 && cap(arr) >= 4 {
+		cop.smallArrayPool.Put(arr)
+	}
+}
+
+// PutLargeArray returns a large array to the pool
+func (cop *ComplexOperationPool) PutLargeArray(arr []Value) {
+	// Only pool large arrays with reasonable upper bound to avoid excessive memory usage
+	if cap(arr) > 1024 && cap(arr) <= 8192 {
+		cop.largeArrayPool.Put(arr)
+	}
+}
+
+// PutIntSlice returns an int slice to the pool
+func (cop *ComplexOperationPool) PutIntSlice(slice []int) {
+	if cap(slice) <= 128 && cap(slice) >= 8 {
+		cop.intSlicePool.Put(slice)
 	}
 }
 
@@ -180,7 +239,12 @@ func (cop *ComplexOperationPool) GetMap() map[string]Value {
 
 // PutMap returns a map to the pool
 func (cop *ComplexOperationPool) PutMap(m map[string]Value) {
+	// Only pool maps with reasonable size to avoid memory bloat
 	if len(m) <= 256 {
+		// Clear the map before returning to pool
+		for k := range m {
+			delete(m, k)
+		}
 		cop.mapPool.Put(m)
 	}
 }
@@ -194,7 +258,11 @@ func (cop *ComplexOperationPool) GetStringBuilder() *strings.Builder {
 
 // PutStringBuilder returns a string builder to the pool
 func (cop *ComplexOperationPool) PutStringBuilder(sb *strings.Builder) {
-	cop.stringPool.Put(sb)
+	// Only pool string builders with reasonable capacity
+	if sb.Cap() <= 4096 {
+		sb.Reset()
+		cop.stringPool.Put(sb)
+	}
 }
 
 // Global complex operation pool
@@ -242,8 +310,31 @@ func (fta *FastTypeAssertion) GetTypeName(v any) string {
 
 // OptimizedArrayFilter provides efficient array filtering
 func OptimizedArrayFilter(arr []Value, predicate func(Value) bool) []Value {
-	result := globalComplexPool.GetArray()
-	defer globalComplexPool.PutArray(result)
+	// Use appropriate pool based on input array size
+	var result []Value
+	var poolType int // 0=small, 1=medium, 2=large
+	
+	if len(arr) <= 32 {
+		result = globalComplexPool.GetSmallArray()
+		poolType = 0
+	} else if len(arr) > 2048 {
+		result = globalComplexPool.GetLargeArray()
+		poolType = 2
+	} else {
+		result = globalComplexPool.GetArray()
+		poolType = 1
+	}
+	
+	defer func() {
+		switch poolType {
+		case 0:
+			globalComplexPool.PutSmallArray(result)
+		case 1:
+			globalComplexPool.PutArray(result)
+		case 2:
+			globalComplexPool.PutLargeArray(result)
+		}
+	}()
 
 	for _, v := range arr {
 		if predicate(v) {
@@ -349,4 +440,152 @@ func (pm *PerformanceMonitor) GetAllCounts() map[string]int64 {
 // TrackOperation tracks an operation
 func TrackOperation(operation string) {
 	globalPerfMonitor.IncrementOperation(operation)
+}
+
+// ========================================
+// MEMORY OPTIMIZATION UTILITIES
+// ========================================
+
+// GetPooledArray returns an appropriately sized pooled array
+func GetPooledArray(expectedSize int) []Value {
+	if expectedSize <= 16 {
+		return globalComplexPool.GetSmallArray()
+	} else if expectedSize > 1024 {
+		return globalComplexPool.GetLargeArray()
+	}
+	return globalComplexPool.GetArray()
+}
+
+// PutPooledArray returns an array to the appropriate pool
+func PutPooledArray(arr []Value) {
+	if cap(arr) <= 16 {
+		globalComplexPool.PutSmallArray(arr)
+	} else if cap(arr) > 1024 {
+		globalComplexPool.PutLargeArray(arr)
+	} else {
+		globalComplexPool.PutArray(arr)
+	}
+}
+
+// GetPooledMap returns a pooled map
+func GetPooledMap() map[string]Value {
+	return globalComplexPool.GetMap()
+}
+
+// PutPooledMap returns a map to the pool
+func PutPooledMap(m map[string]Value) {
+	globalComplexPool.PutMap(m)
+}
+
+// GetPooledStringBuilder returns a pooled string builder
+func GetPooledStringBuilder() *strings.Builder {
+	return globalComplexPool.GetStringBuilder()
+}
+
+// PutPooledStringBuilder returns a string builder to the pool
+func PutPooledStringBuilder(sb *strings.Builder) {
+	globalComplexPool.PutStringBuilder(sb)
+}
+
+// OptimizedMakeSlice creates a slice with optimized capacity
+func OptimizedMakeSlice(length, expectedGrowth int) []Value {
+	// Pre-allocate with some buffer to reduce reallocations
+	capacity := length + expectedGrowth
+	if capacity < 8 {
+		capacity = 8
+	} else if capacity > 100000 {
+		// For very large arrays, use chunked growth to avoid excessive memory usage
+		capacity = length + (expectedGrowth / 4) // More conservative growth
+		if capacity > 100000 {
+			capacity = 100000 // Cap at 100k to prevent memory bloat
+		}
+	} else if capacity > 1024 {
+		capacity = 1024
+	}
+	return make([]Value, length, capacity)
+}
+
+// OptimizedMakeMap creates a map with optimized initial capacity
+func OptimizedMakeMap(expectedSize int) map[string]Value {
+	if expectedSize <= 0 {
+		return make(map[string]Value, 8)
+	}
+	// Add 25% buffer to reduce hash collisions
+	capacity := expectedSize + (expectedSize / 4)
+	return make(map[string]Value, capacity)
+}
+
+// ========================================
+// LARGE ARRAY HANDLING UTILITIES
+// ========================================
+
+// ChunkedArrayProcessor processes large arrays in chunks to reduce memory pressure
+type ChunkedArrayProcessor struct {
+	chunkSize int
+}
+
+// NewChunkedArrayProcessor creates a new chunked array processor
+func NewChunkedArrayProcessor(chunkSize int) *ChunkedArrayProcessor {
+	if chunkSize <= 0 {
+		chunkSize = 1000 // Default chunk size
+	}
+	return &ChunkedArrayProcessor{chunkSize: chunkSize}
+}
+
+// ProcessInChunks processes a large array in chunks with a given processor function
+func (cap *ChunkedArrayProcessor) ProcessInChunks(arr []Value, processor func([]Value) []Value) []Value {
+	if len(arr) <= cap.chunkSize {
+		// Small array, process directly
+		return processor(arr)
+	}
+	
+	// Process in chunks
+	result := GetPooledArray(len(arr))
+	defer PutPooledArray(result)
+	
+	for i := 0; i < len(arr); i += cap.chunkSize {
+		end := i + cap.chunkSize
+		if end > len(arr) {
+			end = len(arr)
+		}
+		
+		chunk := arr[i:end]
+		processed := processor(chunk)
+		result = append(result, processed...)
+	}
+	
+	// Return a copy
+	final := make([]Value, len(result))
+	copy(final, result)
+	return final
+}
+
+// OptimizedLargeArrayFilter filters large arrays efficiently using chunking
+func OptimizedLargeArrayFilter(arr []Value, predicate func(Value) bool) []Value {
+	if len(arr) <= 10000 {
+		// Use regular optimized filter for smaller arrays
+		return OptimizedArrayFilter(arr, predicate)
+	}
+	
+	// Use chunked processing for very large arrays
+	processor := NewChunkedArrayProcessor(5000)
+	return processor.ProcessInChunks(arr, func(chunk []Value) []Value {
+		return OptimizedArrayFilter(chunk, predicate)
+	})
+}
+
+// GetOptimalArrayCapacity returns optimal capacity based on expected size
+func GetOptimalArrayCapacity(expectedSize int) int {
+	if expectedSize <= 16 {
+		return 16
+	} else if expectedSize <= 64 {
+		return 64
+	} else if expectedSize <= 1024 {
+		return 1024
+	} else if expectedSize <= 8192 {
+		return 8192
+	} else {
+		// For very large arrays, use a more conservative approach
+		return expectedSize + (expectedSize / 8) // 12.5% buffer
+	}
 }
