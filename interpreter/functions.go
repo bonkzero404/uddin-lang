@@ -22,11 +22,11 @@ import (
 
 // Global variables for Rule Engine features
 var (
-	factDatabase = make(map[string]interface{})
+	factDatabase = make(map[string]any)
 	factMutex    = sync.RWMutex{}
 
-	eventStore    = make([]map[string]interface{}, 0)
-	eventPatterns = make(map[string]interface{})
+	eventStore    = make([]map[string]any, 0)
+	eventPatterns = make(map[string]any)
 	eventMutex    = sync.RWMutex{}
 )
 
@@ -78,11 +78,11 @@ func (f *userFunction) call(interp *interpreter, pos Position, args []Value) Val
 	// Use optimized call stack for function call tracking
 	callStack := GetCallStack()
 	defer PutCallStack(callStack)
-	
+
 	// Push function call info
-	callStack.PushCall(map[string]interface{}{
-		"function": f.Name,
-		"position": pos,
+	callStack.PushCall(map[string]any{
+		"function":   f.Name,
+		"position":   pos,
 		"args_count": len(args),
 	})
 	defer callStack.PopCall()
@@ -91,8 +91,8 @@ func (f *userFunction) call(interp *interpreter, pos Position, args []Value) Val
 	if f.Ellipsis {
 		ellipsisArgs := args[len(f.Parameters)-1:]
 		newArgs := make([]Value, 0, len(f.Parameters)+1)
-		newArgs = append(newArgs, args[:len(f.Parameters)-1]...)
-		args = append(newArgs, Value(&ellipsisArgs))
+		newArgs = SmartAppend(newArgs, args[:len(f.Parameters)-1]...)
+		args = SmartAppend(newArgs, Value(&ellipsisArgs))
 	}
 
 	// Verify argument count
@@ -391,7 +391,7 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 		if len(args) == 1 {
 			return Value(nil)
 		}
-		
+
 		// Optimize memory allocation by pre-calculating capacity
 		toAppend := args[1:]
 		if cap(*list)-len(*list) < len(toAppend) {
@@ -399,10 +399,10 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 			newCap := len(*list) + len(toAppend)
 			newList := make([]Value, len(*list), newCap)
 			copy(newList, *list)
-			*list = append(newList, toAppend...)
+			*list = SmartAppend(newList, toAppend...)
 		} else {
 			// Sufficient capacity, direct append
-			*list = append(*list, toAppend...)
+			*list = SmartAppend(*list, toAppend...)
 		}
 		return Value(nil)
 	}
@@ -1092,7 +1092,7 @@ func toString(value Value, quoteStr bool) string {
 		strs := make([]string, 0, len(v))
 		for k, val := range v {
 			item := fmt.Sprintf("%q: %s", k, toString(val, true))
-			strs = append(strs, item)
+			strs = SmartAppendString(strs, item)
 		}
 		sort.Strings(strs) // Ensure str(output) is consistent
 		concat := GetStringConcatenator()
@@ -1114,7 +1114,7 @@ func toString(value Value, quoteStr bool) string {
 			strs := make([]string, 0, len(*v))
 			for k, val := range *v {
 				item := fmt.Sprintf("%q: %s", k, toString(val, true))
-				strs = append(strs, item)
+				strs = SmartAppendString(strs, item)
 			}
 			sort.Strings(strs) // Ensure str(output) is consistent
 			concat := GetStringConcatenator()
@@ -4701,7 +4701,7 @@ func factQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 1 {
 		// Return all facts in category
 		prefix := category + ":"
-		results := make(map[string]interface{})
+		results := make(map[string]any)
 		for key, value := range factDatabase {
 			if strings.HasPrefix(key, prefix) {
 				actualKey := key[len(prefix):]
@@ -4791,7 +4791,7 @@ func factClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 0 {
 		// Clear all facts
 		count := len(factDatabase)
-		factDatabase = make(map[string]interface{})
+		factDatabase = make(map[string]any)
 		return Value(int64(count))
 	}
 
@@ -4846,7 +4846,7 @@ func eventEmitFunc(interp *interpreter, pos Position, args []Value) Value {
 	defer eventMutex.Unlock()
 
 	// Create event structure
-	event := map[string]interface{}{
+	event := map[string]any{
 		"type":      eventType,
 		"timestamp": time.Now().Format(time.RFC3339),
 		"id":        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -4899,7 +4899,7 @@ func eventDefinePatternFunc(interp *interpreter, pos Position, args []Value) Val
 	defer eventMutex.Unlock()
 
 	// Store pattern
-	pattern := map[string]interface{}{
+	pattern := map[string]any{
 		"sequence": sequence,
 		"created":  time.Now().Format(time.RFC3339),
 	}
@@ -4938,7 +4938,7 @@ func eventGetWindowFunc(interp *interpreter, pos Position, args []Value) Value {
 	defer eventMutex.RUnlock()
 
 	cutoffTime := time.Now().Add(-duration)
-	var filteredEvents []map[string]interface{}
+	var filteredEvents []map[string]any
 
 	for _, event := range eventStore {
 		// Parse event timestamp
@@ -4984,7 +4984,7 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 0 {
 		// Clear all events
 		count := len(eventStore)
-		eventStore = make([]map[string]interface{}, 0)
+		eventStore = make([]map[string]any, 0)
 		return Value(count) // int, not int64
 	}
 
@@ -4994,7 +4994,7 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "event_clear() requires first argument to be an event type string"))
 	}
 
-	var filteredEvents []map[string]interface{}
+	var filteredEvents []map[string]any
 	count := 0
 
 	for _, event := range eventStore {

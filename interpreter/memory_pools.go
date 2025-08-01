@@ -38,7 +38,7 @@ func (bap *BatchArrayProcessor) ProcessBatch(input []Value) []Value {
 		}
 		batch := input[i:end]
 		processed := bap.processor(batch)
-		bap.result = append(bap.result, processed...)
+		bap.result = SmartAppend(bap.result, processed...)
 	}
 	return bap.result
 }
@@ -138,17 +138,17 @@ type ComplexOperationPool struct {
 func NewComplexOperationPool() *ComplexOperationPool {
 	return &ComplexOperationPool{
 		arrayPool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				return make([]Value, 0, 64)
 			},
 		},
 		mapPool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				return make(map[string]Value)
 			},
 		},
 		stringPool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				return &strings.Builder{}
 			},
 		},
@@ -206,16 +206,16 @@ var globalComplexPool = NewComplexOperationPool()
 
 // FastTypeAssertion provides optimized type assertions with caching
 type FastTypeAssertion struct {
-	cache map[interface{}]string
+	cache map[any]string
 	mutex sync.RWMutex
 }
 
 var globalTypeCache = &FastTypeAssertion{
-	cache: make(map[interface{}]string),
+	cache: make(map[any]string),
 }
 
 // GetTypeName returns the cached type name
-func (fta *FastTypeAssertion) GetTypeName(v interface{}) string {
+func (fta *FastTypeAssertion) GetTypeName(v any) string {
 	fta.mutex.RLock()
 	if typeName, exists := fta.cache[v]; exists {
 		fta.mutex.RUnlock()

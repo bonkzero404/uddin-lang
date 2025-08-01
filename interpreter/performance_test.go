@@ -129,7 +129,7 @@ func BenchmarkAdvancedStringRepetition(b *testing.B) {
 		text = "Hello World! "
 		// Test large string repetition
 		big_text = text * 100
-		
+
 		// Test multiple repetitions
 		for (i in range(1, 10)):
 			repeated = text * (i * 10)
@@ -467,9 +467,9 @@ func BenchmarkOptimizedMapCreationNew(b *testing.B) {
 func BenchmarkOptimizedCallStackNew(b *testing.B) {
 	b.Run("Original", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			stack := make([]map[string]interface{}, 0)
+			stack := make([]map[string]any, 0)
 			for j := 0; j < 100; j++ {
-				callInfo := map[string]interface{}{
+				callInfo := map[string]any{
 					"function": fmt.Sprintf("func_%d", j),
 					"depth":    j,
 				}
@@ -487,7 +487,7 @@ func BenchmarkOptimizedCallStackNew(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			callStack := GetCallStack()
 			for j := 0; j < 100; j++ {
-				callInfo := map[string]interface{}{
+				callInfo := map[string]any{
 					"function": fmt.Sprintf("func_%d", j),
 					"depth":    j,
 				}

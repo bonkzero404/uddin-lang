@@ -13,8 +13,6 @@ import (
 // This includes nil, boolean, integer, float, string, array, object, and function values.
 type Value any
 
-
-
 // interpreter represents the internal state of the interpreter.
 // It maintains variable scopes, I/O streams, and execution statistics.
 type interpreter struct {
@@ -31,13 +29,13 @@ type interpreter struct {
 	// exit is the function called by the exit() builtin
 	exit func(int)
 	// stats tracks execution statistics
-	stats Stats
+	stats      Stats
 	inUnitTest bool
 	// Optimization caches
-	memoCache map[string]Value
+	memoCache         map[string]Value
 	stringBuilderPool sync.Pool
-	arrayPool sync.Pool
-	mapPool sync.Pool
+	arrayPool         sync.Pool
+	mapPool           sync.Pool
 }
 
 // returnResult is used to handle return statements in functions.
@@ -304,7 +302,7 @@ func evalLess(pos Position, l, r Value) Value {
 func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("plus")
-	
+
 	// Fast path for most common cases
 	if li, ok := l.(int); ok {
 		if ri, ok := r.(int); ok {
@@ -336,8 +334,8 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 			if llen+rlen > 1000 {
 				// Use batch processing for large arrays
 				result := globalComplexPool.GetArray()
-				result = append(result, *larr...)
-				result = append(result, *rarr...)
+				result = SmartAppend(result, *larr...)
+				result = SmartAppend(result, *rarr...)
 				final := make([]Value, len(result))
 				copy(final, result)
 				globalComplexPool.PutArray(result)
@@ -382,7 +380,7 @@ func evalMinus(pos Position, l, r Value) Value {
 func evalTimes(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("times")
-	
+
 	// Fast path for numeric operations
 	if li, ok := l.(int); ok {
 		if ri, ok := r.(int); ok {
@@ -418,7 +416,7 @@ func evalTimes(pos Position, l, r Value) Value {
 				// Use batch processing for large arrays
 				result := globalComplexPool.GetArray()
 				for i := 0; i < li; i++ {
-					result = append(result, *rarr...)
+					result = SmartAppend(result, *rarr...)
 				}
 				final := make([]Value, len(result))
 				copy(final, result)
@@ -598,7 +596,7 @@ func (interp *interpreter) evalXor(_ Position, le, re Expression) Value {
 func (interp *interpreter) callFunction(pos Position, f functionType, args []Value) (ret Value) {
 	// Track function calls for performance monitoring
 	TrackOperation("function_call")
-	
+
 	// Check memoization cache for recursive functions
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
 		memoKey := getMemoKey(uf.Name, args)
@@ -623,13 +621,13 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	}()
 
 	result := f.call(interp, pos, args)
-	
+
 	// Cache the result for memoization
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
 		memoKey := getMemoKey(uf.Name, args)
 		interp.memoCache[memoKey] = result
 	}
-	
+
 	return result
 }
 
@@ -668,13 +666,13 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		if f, ok := function.(functionType); ok {
 			args := []Value{}
 			for _, a := range e.Arguments {
-				args = append(args, interp.evaluate(a))
+				args = SmartAppend(args, interp.evaluate(a))
 			}
 			if e.Ellipsis {
 				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
 				args = args[:len(args)-1]
 				for iterator.HasNext() {
-					args = append(args, iterator.Value())
+					args = SmartAppend(args, iterator.Value())
 				}
 			}
 			return interp.callFunction(e.Function.Position(), f, args)
@@ -726,7 +724,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 func (interp *interpreter) pushScope(scope map[string]Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
-	interp.vars = append(interp.vars, scope)
+	interp.vars = SmartAppendMapValue(interp.vars, scope)
 }
 
 func (interp *interpreter) popScope() {
@@ -784,7 +782,7 @@ func getIterator(pos Position, value Value) iteratorType {
 	case string:
 		strs := []Value{}
 		for _, r := range iterable {
-			strs = append(strs, string(r))
+			strs = SmartAppend(strs, string(r))
 		}
 		return &listIterator{strs, 0}
 	case *[]Value:
@@ -1086,20 +1084,20 @@ func (interp *interpreter) execute(prog *Program) {
 
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
-	
+
 	// Initialize optimization caches
 	interp.memoCache = make(map[string]Value)
 	interp.stringBuilderPool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return &strings.Builder{}
 		},
 	}
 	interp.arrayPool = sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return make([]Value, 0, 16) // Pre-allocate with capacity 16
 		},
 	}
-	
+
 	interp.pushScope(make(map[string]Value))
 	for k, v := range builtins {
 		interp.assign(k, v)
@@ -1108,8 +1106,8 @@ func newInterpreter(config *Config) *interpreter {
 	// Add mathematical constants
 	interp.assign("PI", Value(math.Pi))
 	interp.assign("E", Value(math.E))
-	interp.assign("TAU", Value(2 * math.Pi))
-	interp.assign("PHI", Value((1 + math.Sqrt(5)) / 2))  // Golden ratio
+	interp.assign("TAU", Value(2*math.Pi))
+	interp.assign("PHI", Value((1+math.Sqrt(5))/2)) // Golden ratio
 	interp.assign("LN2", Value(math.Ln2))
 	interp.assign("LN10", Value(math.Ln10))
 	interp.assign("SQRT2", Value(math.Sqrt2))

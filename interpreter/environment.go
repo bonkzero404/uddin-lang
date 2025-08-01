@@ -71,7 +71,7 @@ func NewEnvironment(config *Config) *Environment {
 
 // PushScope creates a new variable scope
 func (env *Environment) PushScope() {
-	env.vars = append(env.vars, make(map[string]Value))
+	env.vars = SmartAppendMapValue(env.vars, make(map[string]Value))
 }
 
 // PopScope removes the most local variable scope

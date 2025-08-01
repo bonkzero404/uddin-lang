@@ -25,12 +25,12 @@ func NewArrayConcatenator(estimatedSize int) *ArrayConcatenator {
 
 // Append adds values efficiently without repeated allocations
 func (ac *ArrayConcatenator) Append(values ...Value) {
-	ac.result = append(ac.result, values...)
+	ac.result = SmartAppend(ac.result, values...)
 }
 
 // AppendArray adds an entire array efficiently
 func (ac *ArrayConcatenator) AppendArray(arr *[]Value) {
-	ac.result = append(ac.result, *arr...)
+	ac.result = SmartAppend(ac.result, *arr...)
 }
 
 // Result returns the final concatenated array
@@ -55,7 +55,7 @@ type StringConcatenator struct {
 
 // Global string builder pool for reuse
 var stringBuilderPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &strings.Builder{}
 	},
 }
@@ -105,7 +105,7 @@ type MapBuilder struct {
 
 // Global map pool for reuse
 var mapPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return make(map[string]Value)
 	},
 }
@@ -170,7 +170,7 @@ type CallStack struct {
 
 // Global call frame pool
 var callFramePool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &CallFrame{
 			Args:  make([]Value, 0, 8), // Pre-allocate for 8 args
 			Scope: make(map[string]Value),
@@ -180,7 +180,7 @@ var callFramePool = sync.Pool{
 
 // Global call stack pool
 var callStackPool = sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &CallStack{
 			frames: make([]CallFrame, 0, 32), // Pre-allocate for 32 frames
 			pool:   &callFramePool,
@@ -200,11 +200,11 @@ func (cs *CallStack) Push(functionName string, args []Value, scope map[string]Va
 	frame := cs.pool.Get().(*CallFrame)
 	frame.FunctionName = functionName
 	frame.Args = frame.Args[:0] // Reset length
-	frame.Args = append(frame.Args, args...)
+	frame.Args = SmartAppend(frame.Args, args...)
 	frame.Scope = scope
 	frame.ReturnValue = nil
 
-	cs.frames = append(cs.frames, *frame)
+	cs.frames = SmartAppendCallFrame(cs.frames, *frame)
 }
 
 // Pop removes and returns the top call frame
@@ -312,7 +312,7 @@ func BatchArrayAppend(target *[]Value, sources ...*[]Value) {
 
 	// Append all sources
 	for _, src := range sources {
-		*target = append(*target, *src...)
+		*target = SmartAppend(*target, *src...)
 	}
 }
 
@@ -393,7 +393,7 @@ func PutCallStack(cs *CallStack) {
 }
 
 // PushCall adds a call info to the stack (compatibility version)
-func (cs *CallStack) PushCall(callInfo map[string]interface{}) {
+func (cs *CallStack) PushCall(callInfo map[string]any) {
 	// For compatibility with existing code
 	if functionName, ok := callInfo["function"].(string); ok {
 		cs.frames = append(cs.frames, CallFrame{
