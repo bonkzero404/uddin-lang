@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"strings"
@@ -1229,9 +1230,7 @@ func CreateEmptyScope() map[string]Value {
 // CopyScope creates a copy of a variable scope
 func CopyScope(scope map[string]Value) map[string]Value {
 	newScope := make(map[string]Value)
-	for k, v := range scope {
-		newScope[k] = v
-	}
+	maps.Copy(newScope, scope)
 	return newScope
 }
 
