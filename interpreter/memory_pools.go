@@ -6,7 +6,7 @@ import (
 )
 
 // ========================================
-// ADVANCED OPTIMIZATION 1: Batch Operations for Large Arrays
+// Batch Operations for Large Arrays
 // ========================================
 
 // BatchArrayProcessor provides optimized batch processing for large arrays
@@ -44,7 +44,7 @@ func (bap *BatchArrayProcessor) ProcessBatch(input []Value) []Value {
 }
 
 // ========================================
-// ADVANCED OPTIMIZATION 2: String Interning for Repeated Strings
+// String Interning for Repeated Strings
 // ========================================
 
 // StringInterner provides string interning to reduce memory usage
@@ -84,7 +84,7 @@ func InternString(s string) string {
 }
 
 // ========================================
-// ADVANCED OPTIMIZATION 3: Function Call Optimization
+// Function Call Optimization
 // ========================================
 
 // FunctionCallCache provides caching for pure function calls
@@ -124,7 +124,7 @@ func (fcc *FunctionCallCache) Set(key string, value Value) {
 }
 
 // ========================================
-// ADVANCED OPTIMIZATION 4: Memory Pool for Complex Operations
+// Memory Pool for Complex Operations
 // ========================================
 
 // ComplexOperationPool provides pooled resources for complex operations
@@ -201,7 +201,7 @@ func (cop *ComplexOperationPool) PutStringBuilder(sb *strings.Builder) {
 var globalComplexPool = NewComplexOperationPool()
 
 // ========================================
-// ADVANCED OPTIMIZATION 5: Optimized Type Assertions
+// Optimized Type Assertions
 // ========================================
 
 // FastTypeAssertion provides optimized type assertions with caching
@@ -237,7 +237,7 @@ func (fta *FastTypeAssertion) GetTypeName(v any) string {
 }
 
 // ========================================
-// UTILITY FUNCTIONS FOR ADVANCED OPTIMIZATIONS
+// UTILITY FUNCTIONS
 // ========================================
 
 // OptimizedArrayFilter provides efficient array filtering
