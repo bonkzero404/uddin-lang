@@ -210,7 +210,7 @@ type FastTypeAssertion struct {
 	mutex sync.RWMutex
 }
 
-var globalTypeCache = &FastTypeAssertion{
+var _ = &FastTypeAssertion{
 	cache: make(map[any]string),
 }
 
