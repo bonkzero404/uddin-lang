@@ -1440,6 +1440,192 @@ end
 | `read_file(path)`           | Read file content | `content = read_file("data.txt")` |
 | `write_file(path, content)` | Write to file     | `write_file("out.txt", "Hello")`  |
 
+### 📁 File System Operations
+
+Uddin-Lang provides comprehensive file system operations for file and directory management, enabling robust file handling with proper error handling.
+
+#### File Operations
+
+| Function                        | Description                    | Example                                      | Return Type |
+| ------------------------------- | ------------------------------ | -------------------------------------------- | ----------- |
+| `read_file(path)`               | Read file content              | `content = read_file("data.txt")`            | string      |
+| `write_file(path, content)`     | Write content to file          | `write_file("output.txt", "Hello World")`   | bool        |
+| `file_exists(path)`             | Check if file/directory exists | `file_exists("config.json")` → `true`       | bool        |
+| `file_size(path)`               | Get file size in bytes         | `file_size("data.txt")` → `1024`            | int         |
+| `file_modified(path)`           | Get last modification time     | `file_modified("log.txt")` → `"2024-01-15"` | string      |
+| `file_permissions(path)`        | Get file permissions           | `file_permissions("script.sh")` → `"755"`   | string      |
+| `copy_file(source, destination)` | Copy file to new location      | `copy_file("src.txt", "backup.txt")`       | bool        |
+| `move_file(source, destination)` | Move/rename file               | `move_file("old.txt", "new.txt")`          | bool        |
+| `delete_file(path)`             | Delete file                    | `delete_file("temp.txt")`                  | bool        |
+
+#### Directory Operations
+
+| Function        | Description                   | Example                              | Return Type |
+| --------------- | ----------------------------- | ------------------------------------ | ----------- |
+| `mkdir(path)`   | Create directory              | `mkdir("logs")`                      | bool        |
+| `rmdir(path)`   | Remove empty directory        | `rmdir("temp")`                      | bool        |
+| `list_dir(path)` | List directory contents       | `list_dir(".")` → `["file1", "dir1"]` | array       |
+| `getcwd()`      | Get current working directory | `getcwd()` → `"/home/user/project"`  | string      |
+| `chdir(path)`   | Change working directory      | `chdir("/tmp")`                      | bool        |
+
+#### Path Operations
+
+| Function              | Description                  | Example                                    | Return Type |
+| --------------------- | ---------------------------- | ------------------------------------------ | ----------- |
+| `path_join(parts...)` | Join path components         | `path_join("home", "user", "file.txt")`    | string      |
+| `path_dirname(path)`  | Get directory name           | `path_dirname("/home/user/file.txt")`      | string      |
+| `path_basename(path)` | Get base filename            | `path_basename("/home/user/file.txt")`     | string      |
+| `path_ext(path)`      | Get file extension           | `path_ext("document.pdf")` → `".pdf"`     | string      |
+
+#### File System Examples
+
+```go
+// File operations example
+fun file_operations_demo():
+    // Create a directory
+    if mkdir("test_dir"):
+        print("Directory created successfully")
+    end
+    
+    // Write content to a file
+    content = "Hello, Uddin-Lang!\nThis is a test file."
+    if write_file("test_dir/sample.txt", content):
+        print("File written successfully")
+    end
+    
+    // Check if file exists
+    if file_exists("test_dir/sample.txt"):
+        print("File exists")
+        
+        // Get file information
+        size = file_size("test_dir/sample.txt")
+        modified = file_modified("test_dir/sample.txt")
+        permissions = file_permissions("test_dir/sample.txt")
+        
+        print("File size: " + str(size) + " bytes")
+        print("Last modified: " + modified)
+        print("Permissions: " + permissions)
+        
+        // Read file content
+        file_content = read_file("test_dir/sample.txt")
+        print("File content: " + file_content)
+    end
+    
+    // Copy file
+    if copy_file("test_dir/sample.txt", "test_dir/backup.txt"):
+        print("File copied successfully")
+    end
+    
+    // List directory contents
+    files = list_dir("test_dir")
+    print("Directory contents:")
+    for file in files:
+        print("  - " + file)
+    end
+end
+
+// Path manipulation example
+fun path_operations_demo():
+    // Join path components
+    full_path = path_join("home", "user", "documents", "report.pdf")
+    print("Full path: " + full_path)
+    
+    // Extract path components
+    dir_name = path_dirname(full_path)
+    base_name = path_basename(full_path)
+    extension = path_ext(full_path)
+    
+    print("Directory: " + dir_name)
+    print("Filename: " + base_name)
+    print("Extension: " + extension)
+end
+
+// Working directory example
+fun directory_navigation_demo():
+    // Get current directory
+    current_dir = getcwd()
+    print("Current directory: " + current_dir)
+    
+    // Create and navigate to new directory
+    if mkdir("workspace"):
+        if chdir("workspace"):
+            print("Changed to workspace directory")
+            print("New current directory: " + getcwd())
+            
+            // Go back to original directory
+            chdir(current_dir)
+            print("Returned to: " + getcwd())
+        end
+    end
+end
+
+// File management utility
+fun organize_files(source_dir, target_dir):
+    if not file_exists(target_dir):
+        mkdir(target_dir)
+    end
+    
+    files = list_dir(source_dir)
+    for file in files:
+        source_path = path_join(source_dir, file)
+        if file_exists(source_path):
+            extension = path_ext(file)
+            
+            // Organize by file extension
+            if extension == ".txt":
+                target_path = path_join(target_dir, "text_files", file)
+                if not file_exists(path_dirname(target_path)):
+                    mkdir(path_dirname(target_path))
+                end
+                copy_file(source_path, target_path)
+            elif extension == ".pdf":
+                target_path = path_join(target_dir, "documents", file)
+                if not file_exists(path_dirname(target_path)):
+                    mkdir(path_dirname(target_path))
+                end
+                copy_file(source_path, target_path)
+            end
+        end
+    end
+end
+```
+
+#### Error Handling
+
+All file system operations return appropriate values to indicate success or failure:
+
+- **Boolean functions** (`mkdir`, `write_file`, `copy_file`, etc.) return `true` on success, `false` on failure
+- **String functions** (`read_file`, `getcwd`, etc.) return the result on success, or trigger an error on failure
+- **Array functions** (`list_dir`) return an array on success, or trigger an error on failure
+
+```go
+// Safe file operations with error checking
+fun safe_file_operations():
+    // Always check if operations succeed
+    if write_file("important.txt", "Critical data"):
+        print("File saved successfully")
+    else:
+        print("Failed to save file")
+    end
+    
+    // Check file existence before operations
+    if file_exists("config.json"):
+        config_content = read_file("config.json")
+        // Process config...
+    else:
+        print("Configuration file not found")
+    end
+end
+```
+
+#### Important Notes
+
+- **Cross-platform compatibility**: All file system functions work across Windows, macOS, and Linux
+- **Path separators**: Use forward slashes (`/`) in paths; they work on all platforms
+- **Permissions**: File permissions are returned as octal strings (e.g., "755", "644")
+- **Error handling**: Functions return `false` or trigger errors for invalid operations
+- **Resource management**: File operations are automatically managed; no manual cleanup required
+
 ### 🔄 JSON Functions
 
 Uddin-Lang provides built-in JSON parsing and serialization capabilities for working with JSON data seamlessly.
@@ -1719,6 +1905,27 @@ end
 | `date_format(date, fmt)` | Format date                | `date_format(date_now(), "YYYY-MM-DD")` |
 | `exit(code)`             | Exit program               | `exit(0)`                               |
 | `sleep(seconds)`         | Pause execution            | `sleep(1.5)`                            |
+
+---
+
+## 📋 Recent Updates
+
+### File System Operations Enhancement
+
+**Improved Error Handling (Latest)**
+- **Enhanced error handling**: All file system operations now use consistent error handling with `return Value(fmt.Errorf(...))` instead of `panic()` for better stability and user experience
+- **Graceful error recovery**: File operations that fail now return appropriate error values instead of crashing the program
+- **Consistent behavior**: All file system functions (`read_file`, `write_file`, `file_exists`, `mkdir`, `copy_file`, etc.) now follow the same error handling pattern
+
+**New Demo Example**
+- **Added comprehensive demo**: `examples/27_filesystem_operations_demo.din` showcases all file system operations with practical examples
+- **Complete coverage**: The demo includes file operations, directory management, path manipulation, and error handling patterns
+- **English documentation**: All comments and examples use English for better accessibility
+
+**Technical Improvements**
+- **Replaced panic calls**: Converted all `panic()` calls in file system functions to proper error returns
+- **Better error messages**: More descriptive error messages for file operation failures
+- **Cross-platform compatibility**: Ensured all file system operations work consistently across Windows, macOS, and Linux
 
 ---
 
