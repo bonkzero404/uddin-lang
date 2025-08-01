@@ -12,7 +12,7 @@ func BenchmarkBuiltinAppend(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var slice []any
 		for j := 0; j < 1000; j++ {
-			slice = append(slice, j)
+			_ = append(slice, j)
 		}
 	}
 }
@@ -35,7 +35,7 @@ func BenchmarkBuiltinAppendLarge(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var slice []any
 		for j := 0; j < 10000; j++ {
-			slice = append(slice, j)
+			_ = append(slice, j)
 		}
 	}
 }
@@ -63,7 +63,7 @@ func BenchmarkBuiltinAppendBatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		var slice []any
 		for j := 0; j < 100; j++ {
-			slice = append(slice, batch...)
+			_ = append(slice, batch...)
 		}
 	}
 }
@@ -130,7 +130,7 @@ func BenchmarkMemoryReallocation(b *testing.B) {
 			var slice []any
 			// Start small and grow to trigger multiple reallocations
 			for j := 0; j < 2048; j++ {
-				slice = append(slice, j)
+				_ = append(slice, j)
 			}
 		}
 	})
@@ -149,7 +149,7 @@ func BenchmarkMemoryReallocation(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			slice := make([]any, 0, 2048) // Pre-allocate
 			for j := 0; j < 2048; j++ {
-				slice = append(slice, j)
+				_ = append(slice, j)
 			}
 		}
 	})
@@ -199,7 +199,7 @@ func BenchmarkAppendStrategiesComparison(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var slice []any
 			for j := 0; j < 1000; j++ {
-				slice = append(slice, j)
+				_ = append(slice, j)
 			}
 		}
 	})

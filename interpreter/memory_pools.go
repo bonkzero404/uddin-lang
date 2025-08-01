@@ -142,17 +142,20 @@ func NewComplexOperationPool() *ComplexOperationPool {
 	return &ComplexOperationPool{
 		arrayPool: sync.Pool{
 			New: func() any {
-				return make([]Value, 0, 64)
+				arr := make([]Value, 0, 64)
+				return &arr
 			},
 		},
 		smallArrayPool: sync.Pool{
 			New: func() any {
-				return make([]Value, 0, 16)
+				arr := make([]Value, 0, 16)
+				return &arr
 			},
 		},
 		largeArrayPool: sync.Pool{
 			New: func() any {
-				return make([]Value, 0, 2048) // For large arrays
+				arr := make([]Value, 0, 2048) // For large arrays
+				return &arr
 			},
 		},
 		mapPool: sync.Pool{
@@ -167,7 +170,8 @@ func NewComplexOperationPool() *ComplexOperationPool {
 		},
 		intSlicePool: sync.Pool{
 			New: func() any {
-				return make([]int, 0, 32)
+				slice := make([]int, 0, 32)
+				return &slice
 			},
 		},
 	}
@@ -175,54 +179,70 @@ func NewComplexOperationPool() *ComplexOperationPool {
 
 // GetArray gets a pooled array
 func (cop *ComplexOperationPool) GetArray() []Value {
-	arr := cop.arrayPool.Get().([]Value)
-	return arr[:0]
+	if ptr := cop.arrayPool.Get(); ptr != nil {
+		if arr, ok := ptr.(*[]Value); ok {
+			return (*arr)[:0]
+		}
+	}
+	return make([]Value, 0, 32)
 }
 
 // GetSmallArray gets a pooled small array (capacity <= 16)
 func (cop *ComplexOperationPool) GetSmallArray() []Value {
-	arr := cop.smallArrayPool.Get().([]Value)
-	return arr[:0]
+	if ptr := cop.smallArrayPool.Get(); ptr != nil {
+		if arr, ok := ptr.(*[]Value); ok {
+			return (*arr)[:0]
+		}
+	}
+	return make([]Value, 0, 8)
 }
 
 // GetLargeArray gets a pooled large array (capacity > 1024)
 func (cop *ComplexOperationPool) GetLargeArray() []Value {
-	arr := cop.largeArrayPool.Get().([]Value)
-	return arr[:0]
+	if ptr := cop.largeArrayPool.Get(); ptr != nil {
+		if arr, ok := ptr.(*[]Value); ok {
+			return (*arr)[:0]
+		}
+	}
+	return make([]Value, 0, 2048)
 }
 
 // GetIntSlice gets a pooled int slice
 func (cop *ComplexOperationPool) GetIntSlice() []int {
-	slice := cop.intSlicePool.Get().([]int)
-	return slice[:0]
+	if ptr := cop.intSlicePool.Get(); ptr != nil {
+		if slice, ok := ptr.(*[]int); ok {
+			return (*slice)[:0]
+		}
+	}
+	return make([]int, 0, 32)
 }
 
 // PutArray returns an array to the pool
-func (cop *ComplexOperationPool) PutArray(arr []Value) {
+func (cop *ComplexOperationPool) PutArray(arr *[]Value) {
 	// Only pool arrays with reasonable capacity to avoid memory bloat
-	if cap(arr) <= 1024 && cap(arr) >= 8 {
+	if cap(*arr) <= 1024 && cap(*arr) >= 8 {
 		cop.arrayPool.Put(arr)
 	}
 }
 
 // PutSmallArray returns a small array to the pool
-func (cop *ComplexOperationPool) PutSmallArray(arr []Value) {
-	if cap(arr) <= 16 && cap(arr) >= 4 {
+func (cop *ComplexOperationPool) PutSmallArray(arr *[]Value) {
+	if cap(*arr) <= 16 && cap(*arr) >= 4 {
 		cop.smallArrayPool.Put(arr)
 	}
 }
 
 // PutLargeArray returns a large array to the pool
-func (cop *ComplexOperationPool) PutLargeArray(arr []Value) {
+func (cop *ComplexOperationPool) PutLargeArray(arr *[]Value) {
 	// Only pool large arrays with reasonable upper bound to avoid excessive memory usage
-	if cap(arr) > 1024 && cap(arr) <= 8192 {
+	if cap(*arr) > 1024 && cap(*arr) <= 8192 {
 		cop.largeArrayPool.Put(arr)
 	}
 }
 
 // PutIntSlice returns an int slice to the pool
-func (cop *ComplexOperationPool) PutIntSlice(slice []int) {
-	if cap(slice) <= 128 && cap(slice) >= 8 {
+func (cop *ComplexOperationPool) PutIntSlice(slice *[]int) {
+	if cap(*slice) <= 128 && cap(*slice) >= 8 {
 		cop.intSlicePool.Put(slice)
 	}
 }
@@ -238,14 +258,14 @@ func (cop *ComplexOperationPool) GetMap() map[string]Value {
 }
 
 // PutMap returns a map to the pool
-func (cop *ComplexOperationPool) PutMap(m map[string]Value) {
+func (cop *ComplexOperationPool) PutMap(m *map[string]Value) {
 	// Only pool maps with reasonable size to avoid memory bloat
-	if len(m) <= 256 {
+	if len(*m) <= 256 {
 		// Clear the map before returning to pool
-		for k := range m {
-			delete(m, k)
+		for k := range *m {
+			delete(*m, k)
 		}
-		cop.mapPool.Put(m)
+		cop.mapPool.Put(*m)
 	}
 }
 
@@ -328,11 +348,11 @@ func OptimizedArrayFilter(arr []Value, predicate func(Value) bool) []Value {
 	defer func() {
 		switch poolType {
 		case 0:
-			globalComplexPool.PutSmallArray(result)
+			globalComplexPool.PutSmallArray(&result)
 		case 1:
-			globalComplexPool.PutArray(result)
+			globalComplexPool.PutArray(&result)
 		case 2:
-			globalComplexPool.PutLargeArray(result)
+			globalComplexPool.PutLargeArray(&result)
 		}
 	}()
 
@@ -459,11 +479,11 @@ func GetPooledArray(expectedSize int) []Value {
 // PutPooledArray returns an array to the appropriate pool
 func PutPooledArray(arr []Value) {
 	if cap(arr) <= 16 {
-		globalComplexPool.PutSmallArray(arr)
+		globalComplexPool.PutSmallArray(&arr)
 	} else if cap(arr) > 1024 {
-		globalComplexPool.PutLargeArray(arr)
+		globalComplexPool.PutLargeArray(&arr)
 	} else {
-		globalComplexPool.PutArray(arr)
+		globalComplexPool.PutArray(&arr)
 	}
 }
 
@@ -474,7 +494,7 @@ func GetPooledMap() map[string]Value {
 
 // PutPooledMap returns a map to the pool
 func PutPooledMap(m map[string]Value) {
-	globalComplexPool.PutMap(m)
+	globalComplexPool.PutMap(&m)
 }
 
 // GetPooledStringBuilder returns a pooled string builder

@@ -338,8 +338,8 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 				result = SmartAppend(result, *larr...)
 				result = SmartAppend(result, *rarr...)
 				final := make([]Value, len(result))
-				copy(final, result)
-				globalComplexPool.PutArray(result)
+			copy(final, result)
+			globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -420,8 +420,8 @@ func evalTimes(pos Position, l, r Value) Value {
 					result = SmartAppend(result, *rarr...)
 				}
 				final := make([]Value, len(result))
-				copy(final, result)
-				globalComplexPool.PutArray(result)
+			copy(final, result)
+			globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays

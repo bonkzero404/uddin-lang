@@ -24,7 +24,8 @@ func NewFastSlice(initialCapacity int) *FastSlice {
 		length:   0,
 		pool: &sync.Pool{
 			New: func() any {
-				return make([]any, initialCapacity)
+				slice := make([]any, initialCapacity)
+				return &slice
 			},
 		},
 	}
@@ -60,10 +61,15 @@ func (fs *FastSlice) grow(minCapacity int) {
 	// Try to get a slice from the pool first
 	var newData []any
 	if pooled := fs.pool.Get(); pooled != nil {
-		if pooledSlice := pooled.([]any); cap(pooledSlice) >= newCapacity {
-			newData = pooledSlice[:newCapacity]
+		if pooledPtr, ok := pooled.(*[]any); ok {
+			pooledSlice := *pooledPtr
+			if cap(pooledSlice) >= newCapacity {
+				newData = pooledSlice[:newCapacity]
+			} else {
+				fs.pool.Put(pooled) // Return to pool if not suitable
+				newData = make([]any, newCapacity)
+			}
 		} else {
-			fs.pool.Put(pooled) // Return to pool if not suitable
 			newData = make([]any, newCapacity)
 		}
 	} else {
@@ -75,7 +81,7 @@ func (fs *FastSlice) grow(minCapacity int) {
 
 	// Return old slice to pool if it's large enough to be useful
 	if cap(fs.data) >= 16 {
-		fs.pool.Put(fs.data)
+		fs.pool.Put(&fs.data)
 	}
 
 	fs.data = newData
@@ -103,7 +109,7 @@ func (fs *FastSlice) Reset() {
 }
 
 // FastAppendGlobal provides a global optimized append function
-var globalSlicePool = &sync.Pool{
+var _ = &sync.Pool{
 	New: func() any {
 		return make([]any, 0, 64)
 	},
@@ -132,7 +138,7 @@ func (h *HybridAppendStrategy) AppendValues(slice []Value, values ...Value) []Va
 	if len(values) == 1 {
 		return append(slice, values...)
 	}
-	
+
 	totalSize := len(slice) + len(values)
 	// For larger batch operations, use pre-allocation
 	if totalSize >= h.threshold && cap(slice) < totalSize {
@@ -309,7 +315,7 @@ func SmartAppendString(slice []string, values ...string) []string {
 	if totalSize < 1000 {
 		return append(slice, values...)
 	}
-	
+
 	// For large datasets, pre-allocate capacity
 	if cap(slice) < totalSize {
 		newSlice := make([]string, len(slice), totalSize)
@@ -326,7 +332,7 @@ func SmartAppendInterface(slice []any, values ...any) []any {
 	if totalSize < 1000 {
 		return append(slice, values...)
 	}
-	
+
 	// For large datasets, pre-allocate capacity
 	if cap(slice) < totalSize {
 		newSlice := make([]any, len(slice), totalSize)
@@ -426,12 +432,4 @@ func GetOptimalStrategy(expectedSize int) string {
 	} else {
 		return "FastSliceAppend with pre-allocation (large dataset)"
 	}
-}
-
-// Helper function for max
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }

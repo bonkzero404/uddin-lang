@@ -24,7 +24,7 @@ func BenchmarkLargeArrayDirectAllocation(b *testing.B) {
 		// Direct large array allocation
 		arr := make([]Value, 0, 5000)
 		for j := 0; j < 5000; j++ {
-			arr = append(arr, Value(float64(j)))
+			_ = append(arr, Value(float64(j)))
 		}
 	}
 }
@@ -36,7 +36,7 @@ func BenchmarkLargeArrayFilter(b *testing.B) {
 	for i := 0; i < 10000; i++ {
 		testArray[i] = Value(float64(i))
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Filter even numbers
@@ -57,7 +57,7 @@ func BenchmarkLargeArrayFilterDirect(b *testing.B) {
 	for i := 0; i < 10000; i++ {
 		testArray[i] = Value(float64(i))
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Filter even numbers without pool
@@ -82,7 +82,7 @@ func BenchmarkVeryLargeArrayOperations(b *testing.B) {
 		for j := 0; j < 50000; j++ {
 			arr = append(arr, Value(float64(j)))
 		}
-		
+
 		// Simulate some processing
 		count := 0
 		for _, v := range arr {
@@ -90,7 +90,7 @@ func BenchmarkVeryLargeArrayOperations(b *testing.B) {
 				count++
 			}
 		}
-		
+
 		PutPooledArray(arr)
 		_ = count // Use count to prevent optimization
 	}
@@ -99,7 +99,7 @@ func BenchmarkVeryLargeArrayOperations(b *testing.B) {
 // BenchmarkMemoryGrowthPattern tests memory growth patterns
 func BenchmarkMemoryGrowthPattern(b *testing.B) {
 	sizes := []int{100, 1000, 5000, 10000, 50000}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, size := range sizes {
@@ -119,7 +119,7 @@ func BenchmarkChunkedArrayProcessing(b *testing.B) {
 	for i := 0; i < 100000; i++ {
 		testArray[i] = Value(float64(i))
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Filter using chunked processing
@@ -140,7 +140,7 @@ func BenchmarkRegularArrayProcessing(b *testing.B) {
 	for i := 0; i < 100000; i++ {
 		testArray[i] = Value(float64(i))
 	}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		// Filter using regular processing
@@ -157,7 +157,7 @@ func BenchmarkRegularArrayProcessing(b *testing.B) {
 // BenchmarkOptimalCapacity tests optimal capacity calculation
 func BenchmarkOptimalCapacity(b *testing.B) {
 	sizes := []int{10, 100, 1000, 10000, 100000}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		for _, size := range sizes {
