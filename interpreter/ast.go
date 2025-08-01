@@ -1,9 +1,10 @@
 package interpreter
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // Program represents the root node of the abstract syntax tree (AST).

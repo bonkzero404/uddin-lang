@@ -128,17 +128,20 @@ func NewHybridAppendStrategy(threshold int) *HybridAppendStrategy {
 
 // AppendValues appends values to a slice using the optimal strategy
 func (h *HybridAppendStrategy) AppendValues(slice []Value, values ...Value) []Value {
-	// Always use built-in append but with smart pre-allocation for large datasets
-	if len(slice)+len(values) >= h.threshold {
-		// Pre-allocate capacity for large datasets to reduce reallocations
-		if cap(slice) < len(slice)+len(values) {
-			newSlice := make([]Value, len(slice), len(slice)+len(values))
-			copy(newSlice, slice)
-			return append(newSlice, values...)
-		}
+	// For single element appends, always use built-in append (most common case)
+	if len(values) == 1 {
+		return append(slice, values...)
+	}
+	
+	totalSize := len(slice) + len(values)
+	// For larger batch operations, use pre-allocation
+	if totalSize >= h.threshold && cap(slice) < totalSize {
+		newSlice := make([]Value, len(slice), totalSize)
+		copy(newSlice, slice)
+		return append(newSlice, values...)
 	}
 
-	// For small datasets or when capacity is sufficient, use built-in append
+	// Default case: use built-in append
 	return append(slice, values...)
 }
 
@@ -151,28 +154,13 @@ func (h *HybridAppendStrategy) AppendStrings(slice []string, values ...string) [
 		return append(slice, values...)
 	}
 
-	// For large datasets, use FastSliceAppend
-	fs := NewFastSlice(totalSize)
-
-	// Add existing elements
-	for _, v := range slice {
-		fs.FastAppend(v)
+	// For large datasets, use pre-allocation instead of FastSlice conversion
+	if cap(slice) < totalSize {
+		newSlice := make([]string, len(slice), totalSize)
+		copy(newSlice, slice)
+		return append(newSlice, values...)
 	}
-
-	// Add new elements
-	for _, v := range values {
-		fs.FastAppend(v)
-	}
-
-	// Convert back to string slice
-	result := make([]string, 0, totalSize)
-	for _, v := range fs.ToSlice() {
-		if str, ok := v.(string); ok {
-			result = append(result, str)
-		}
-	}
-
-	return result
+	return append(slice, values...)
 }
 
 // AppendInterface appends any values using the optimal strategy
@@ -184,26 +172,13 @@ func (h *HybridAppendStrategy) AppendInterface(slice []any, values ...any) []any
 		return append(slice, values...)
 	}
 
-	// For large datasets, use FastSliceAppend
-	fs := NewFastSlice(totalSize)
-
-	// Add existing elements
-	for _, v := range slice {
-		fs.FastAppend(v)
+	// For large datasets, use pre-allocation instead of FastSlice conversion
+	if cap(slice) < totalSize {
+		newSlice := make([]any, len(slice), totalSize)
+		copy(newSlice, slice)
+		return append(newSlice, values...)
 	}
-
-	// Add new elements
-	for _, v := range values {
-		fs.FastAppend(v)
-	}
-
-	// Convert back to any slice
-	result := make([]any, 0, totalSize)
-	for _, v := range fs.ToSlice() {
-		result = append(result, v)
-	}
-
-	return result
+	return append(slice, values...)
 }
 
 // FastSlice-based wrapper functions for better performance
@@ -314,23 +289,51 @@ func FastSliceAppendMapItem(slice []MapItem, items ...MapItem) []MapItem {
 
 // Smart append functions that use hybrid strategy
 
+// Global strategy instance to avoid repeated allocations
+var globalHybridStrategy = NewHybridAppendStrategy(1000)
+
 // SmartAppend is a convenience function that automatically chooses
 // the best append strategy based on data size
 func SmartAppend(slice []Value, values ...Value) []Value {
-	strategy := NewHybridAppendStrategy(1000)
-	return strategy.AppendValues(slice, values...)
+	// Fast path for single element appends (most common case)
+	if len(values) == 1 {
+		return append(slice, values...)
+	}
+	return globalHybridStrategy.AppendValues(slice, values...)
 }
 
 // SmartAppendString is a convenience function for string slices
 func SmartAppendString(slice []string, values ...string) []string {
-	strategy := NewHybridAppendStrategy(1000)
-	return strategy.AppendStrings(slice, values...)
+	// Optimized version without unnecessary conversions
+	totalSize := len(slice) + len(values)
+	if totalSize < 1000 {
+		return append(slice, values...)
+	}
+	
+	// For large datasets, pre-allocate capacity
+	if cap(slice) < totalSize {
+		newSlice := make([]string, len(slice), totalSize)
+		copy(newSlice, slice)
+		return append(newSlice, values...)
+	}
+	return append(slice, values...)
 }
 
 // SmartAppendInterface is a convenience function for any slices
 func SmartAppendInterface(slice []any, values ...any) []any {
-	strategy := NewHybridAppendStrategy(1000)
-	return strategy.AppendInterface(slice, values...)
+	// Optimized version without unnecessary conversions
+	totalSize := len(slice) + len(values)
+	if totalSize < 1000 {
+		return append(slice, values...)
+	}
+	
+	// For large datasets, pre-allocate capacity
+	if cap(slice) < totalSize {
+		newSlice := make([]any, len(slice), totalSize)
+		copy(newSlice, slice)
+		return append(newSlice, values...)
+	}
+	return append(slice, values...)
 }
 
 // SmartAppendCallFrame uses hybrid strategy for CallFrame slices
