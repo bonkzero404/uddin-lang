@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"bytes"
-	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -18,15 +17,17 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/goccy/go-json"
 )
 
 // Global variables for Rule Engine features
 var (
-	factDatabase = make(map[string]interface{})
+	factDatabase = make(map[string]any)
 	factMutex    = sync.RWMutex{}
 
-	eventStore    = make([]map[string]interface{}, 0)
-	eventPatterns = make(map[string]interface{})
+	eventStore    = make([]map[string]any, 0)
+	eventPatterns = make(map[string]any)
 	eventMutex    = sync.RWMutex{}
 )
 
@@ -75,12 +76,24 @@ func ensureNumArgs(pos Position, name string, args []Value, required int) {
 //
 // Returns the function's return value or nil if no return statement was executed
 func (f *userFunction) call(interp *interpreter, pos Position, args []Value) Value {
+	// Use optimized call stack for function call tracking
+	callStack := GetCallStack()
+	defer PutCallStack(callStack)
+
+	// Push function call info
+	callStack.PushCall(map[string]any{
+		"function":   f.Name,
+		"position":   pos,
+		"args_count": len(args),
+	})
+	defer callStack.PopCall()
+
 	// Handle variadic arguments if this is a variadic function
 	if f.Ellipsis {
 		ellipsisArgs := args[len(f.Parameters)-1:]
 		newArgs := make([]Value, 0, len(f.Parameters)+1)
-		newArgs = append(newArgs, args[:len(f.Parameters)-1]...)
-		args = append(newArgs, Value(&ellipsisArgs))
+		newArgs = SmartAppend(newArgs, args[:len(f.Parameters)-1]...)
+		args = SmartAppend(newArgs, Value(&ellipsisArgs))
 	}
 
 	// Verify argument count
@@ -375,8 +388,23 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Check if first argument is an array
 	if list, ok := args[0].(*[]Value); ok {
-		// Append all remaining arguments to the array
-		*list = append(*list, args[1:]...)
+		// Fast path: no elements to append
+		if len(args) == 1 {
+			return Value(nil)
+		}
+
+		// Optimize memory allocation by pre-calculating capacity
+		toAppend := args[1:]
+		if cap(*list)-len(*list) < len(toAppend) {
+			// Need to grow slice, allocate with exact capacity
+			newCap := len(*list) + len(toAppend)
+			newList := make([]Value, len(*list), newCap)
+			copy(newList, *list)
+			*list = SmartAppend(newList, toAppend...)
+		} else {
+			// Sufficient capacity, direct append
+			*list = SmartAppend(*list, toAppend...)
+		}
 		return Value(nil)
 	}
 
@@ -557,13 +585,24 @@ func joinFunc(interp *interpreter, pos Position, args []Value) Value {
 	if list, ok := args[0].(*[]Value); ok {
 		// Check if second argument is a string
 		if sep, ok := args[1].(string); ok {
-			// Convert each array element to string
-			strs := make([]string, len(*list))
-			for i, v := range *list {
-				strs[i] = toString(v, true)
+			// Fast path for empty arrays
+			if len(*list) == 0 {
+				return Value("")
 			}
-			// Join the strings with the separator
-			return Value(strings.Join(strs, sep))
+			// Fast path for single element
+			if len(*list) == 1 {
+				return Value(toString((*list)[0], true))
+			}
+			// Use string builder pool for better performance
+			builder := interp.getStringBuilder()
+			defer interp.putStringBuilder(builder)
+			for i, v := range *list {
+				if i > 0 {
+					builder.WriteString(sep)
+				}
+				builder.WriteString(toString(v, true))
+			}
+			return Value(builder.String())
 		}
 		panic(typeError(pos, "join() requires second argument to be a string"))
 	}
@@ -650,9 +689,15 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 			if n < 0 {
 				panic(valueError(pos, "range() argument must not be negative"))
 			}
+			// Fast path for small ranges
+			if n == 0 {
+				nums := make([]Value, 0)
+				return Value(&nums)
+			}
 			nums := make([]Value, n)
+			// Optimized loop with fewer type conversions
 			for i := 0; i < n; i++ {
-				nums[i] = i
+				nums[i] = Value(i)
 			}
 			return Value(&nums)
 		}
@@ -666,16 +711,17 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 			panic(typeError(pos, "range() requires integer arguments"))
 		}
 
-		if start > stop {
-			// Return empty array if start > stop
+		if start >= stop {
+			// Return empty array if start >= stop
 			nums := make([]Value, 0)
 			return Value(&nums)
 		}
 
 		size := stop - start
 		nums := make([]Value, size)
+		// Optimized loop with direct assignment
 		for i := 0; i < size; i++ {
-			nums[i] = start + i
+			nums[i] = Value(start + i)
 		}
 		return Value(&nums)
 	}
@@ -1017,28 +1063,50 @@ func toString(value Value, quoteStr bool) string {
 			s = v // Raw string for display
 		}
 	case []Value:
-		// Convert array elements recursively (slice variant)
-		strs := make([]string, len(v))
+		// Convert array elements recursively (slice variant) - optimized
+		concat := GetStringConcatenator()
+		defer PutStringConcatenator(concat)
+		concat.WriteString("[")
 		for i, val := range v {
-			strs[i] = toString(val, true)
+			if i > 0 {
+				concat.WriteString(", ")
+			}
+			concat.WriteString(toString(val, true))
 		}
-		s = fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+		concat.WriteString("]")
+		s = concat.String()
 	case *[]Value:
-		// Convert array elements recursively
-		strs := make([]string, len(*v))
-		for i, v := range *v {
-			strs[i] = toString(v, true)
+		// Convert array elements recursively - optimized
+		concat := GetStringConcatenator()
+		defer PutStringConcatenator(concat)
+		concat.WriteString("[")
+		for i, val := range *v {
+			if i > 0 {
+				concat.WriteString(", ")
+			}
+			concat.WriteString(toString(val, true))
 		}
-		s = fmt.Sprintf("[%s]", strings.Join(strs, ", "))
+		concat.WriteString("]")
+		s = concat.String()
 	case map[string]Value:
-		// Convert object key-value pairs recursively
+		// Convert object key-value pairs recursively - optimized
 		strs := make([]string, 0, len(v))
-		for k, v := range v {
-			item := fmt.Sprintf("%q: %s", k, toString(v, true))
-			strs = append(strs, item)
+		for k, val := range v {
+			item := fmt.Sprintf("%q: %s", k, toString(val, true))
+			strs = SmartAppendString(strs, item)
 		}
 		sort.Strings(strs) // Ensure str(output) is consistent
-		s = fmt.Sprintf("{%s}", strings.Join(strs, ", "))
+		concat := GetStringConcatenator()
+		defer PutStringConcatenator(concat)
+		concat.WriteString("{")
+		for i, str := range strs {
+			if i > 0 {
+				concat.WriteString(", ")
+			}
+			concat.WriteString(str)
+		}
+		concat.WriteString("}")
+		s = concat.String()
 	case *map[string]Value:
 		// Convert pointer to object key-value pairs recursively
 		if v == nil {
@@ -1047,10 +1115,20 @@ func toString(value Value, quoteStr bool) string {
 			strs := make([]string, 0, len(*v))
 			for k, val := range *v {
 				item := fmt.Sprintf("%q: %s", k, toString(val, true))
-				strs = append(strs, item)
+				strs = SmartAppendString(strs, item)
 			}
 			sort.Strings(strs) // Ensure str(output) is consistent
-			s = fmt.Sprintf("{%s}", strings.Join(strs, ", "))
+			concat := GetStringConcatenator()
+			defer PutStringConcatenator(concat)
+			concat.WriteString("{")
+			for i, str := range strs {
+				if i > 0 {
+					concat.WriteString(", ")
+				}
+				concat.WriteString(str)
+			}
+			concat.WriteString("}")
+			s = concat.String()
 		}
 	case functionType:
 		s = v.name() // Function representation
@@ -1801,15 +1879,26 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(valueError(pos, "fibonacci() argument too large (max 92)"))
 	}
 
-	if n <= 1 {
-		return Value(n)
+	// Check memoization cache
+	memoKey := getMemoKey("fibonacci", args)
+	if cached, exists := interp.memoCache[memoKey]; exists {
+		return cached
 	}
 
-	a, b := 0, 1
-	for i := 2; i <= n; i++ {
-		a, b = b, a+b
+	var result Value
+	if n <= 1 {
+		result = Value(n)
+	} else {
+		a, b := 0, 1
+		for i := 2; i <= n; i++ {
+			a, b = b, a+b
+		}
+		result = Value(b)
 	}
-	return Value(b)
+
+	// Store in memoization cache
+	interp.memoCache[memoKey] = result
+	return result
 }
 
 // isPrimeFunc implements the is_prime() built-in function
@@ -2228,7 +2317,18 @@ func pushFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "push() requires first argument to be an array"))
 	}
 
-	*arr = append(*arr, args[1:]...)
+	// Optimize memory allocation by pre-calculating capacity
+	toPush := args[1:]
+	if cap(*arr)-len(*arr) < len(toPush) {
+		// Need to grow slice, allocate with exact capacity
+		newCap := len(*arr) + len(toPush)
+		newArr := make([]Value, len(*arr), newCap)
+		copy(newArr, *arr)
+		*arr = append(newArr, toPush...)
+	} else {
+		// Sufficient capacity, direct append
+		*arr = append(*arr, toPush...)
+	}
 	return Value(nil)
 }
 
@@ -4602,7 +4702,7 @@ func factQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 1 {
 		// Return all facts in category
 		prefix := category + ":"
-		results := make(map[string]interface{})
+		results := make(map[string]any)
 		for key, value := range factDatabase {
 			if strings.HasPrefix(key, prefix) {
 				actualKey := key[len(prefix):]
@@ -4692,7 +4792,7 @@ func factClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 0 {
 		// Clear all facts
 		count := len(factDatabase)
-		factDatabase = make(map[string]interface{})
+		factDatabase = make(map[string]any)
 		return Value(int64(count))
 	}
 
@@ -4747,7 +4847,7 @@ func eventEmitFunc(interp *interpreter, pos Position, args []Value) Value {
 	defer eventMutex.Unlock()
 
 	// Create event structure
-	event := map[string]interface{}{
+	event := map[string]any{
 		"type":      eventType,
 		"timestamp": time.Now().Format(time.RFC3339),
 		"id":        fmt.Sprintf("%d", time.Now().UnixNano()),
@@ -4800,7 +4900,7 @@ func eventDefinePatternFunc(interp *interpreter, pos Position, args []Value) Val
 	defer eventMutex.Unlock()
 
 	// Store pattern
-	pattern := map[string]interface{}{
+	pattern := map[string]any{
 		"sequence": sequence,
 		"created":  time.Now().Format(time.RFC3339),
 	}
@@ -4839,7 +4939,7 @@ func eventGetWindowFunc(interp *interpreter, pos Position, args []Value) Value {
 	defer eventMutex.RUnlock()
 
 	cutoffTime := time.Now().Add(-duration)
-	var filteredEvents []map[string]interface{}
+	var filteredEvents []map[string]any
 
 	for _, event := range eventStore {
 		// Parse event timestamp
@@ -4885,7 +4985,7 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 0 {
 		// Clear all events
 		count := len(eventStore)
-		eventStore = make([]map[string]interface{}, 0)
+		eventStore = make([]map[string]any, 0)
 		return Value(count) // int, not int64
 	}
 
@@ -4895,7 +4995,7 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "event_clear() requires first argument to be an event type string"))
 	}
 
-	var filteredEvents []map[string]interface{}
+	var filteredEvents []map[string]any
 	count := 0
 
 	for _, event := range eventStore {

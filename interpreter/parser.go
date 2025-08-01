@@ -84,7 +84,7 @@ func (p *parser) program() *Program {
 func (p *parser) statements(end Token) Block {
 	statements := Block{}
 	for p.tok != end && p.tok != EOF {
-		statements = append(statements, p.statement())
+		statements = SmartAppendBlock(statements, p.statement())
 	}
 	return statements
 }
@@ -146,7 +146,7 @@ func (p *parser) block() Block {
 		// We'll collect statements until we hit END, ELSE, or CATCH
 		statements := Block{}
 		for p.tok != END && p.tok != ELSE && p.tok != CATCH && p.tok != EOF {
-			statements = append(statements, p.statement())
+			statements = SmartAppendBlock(statements, p.statement())
 		}
 
 		// Only expect END if we're not at ELSE or CATCH
@@ -288,7 +288,7 @@ func (p *parser) params() ([]string, bool) {
 		}
 		param := p.val
 		p.expect(NAME)
-		params = append(params, param)
+		params = SmartAppendString(params, param)
 		if p.tok == ELLIPSIS {
 			gotEllipsis = true
 			p.next()
@@ -419,7 +419,7 @@ func (p *parser) call() Expression {
 					p.error("missing comma ',' between function arguments")
 				}
 				arg := p.expression()
-				args = append(args, arg)
+			args = SmartAppendExpression(args, arg)
 				if p.tok == ELLIPSIS {
 					gotEllipsis = true
 					p.next()
@@ -535,7 +535,7 @@ func (p *parser) list() Expression {
 			p.error("missing comma ',' between array elements")
 		}
 		value := p.expression()
-		values = append(values, value)
+		values = SmartAppendExpression(values, value)
 		if p.tok == COMMA {
 			gotComma = true
 			p.next()
@@ -563,7 +563,7 @@ func (p *parser) map_() Expression {
 		key := p.mapKey()
 		p.expect(COLON)
 		value := p.expression()
-		items = append(items, MapItem{key, value})
+		items = SmartAppendMapItem(items, MapItem{key, value})
 		if p.tok == COMMA {
 			gotComma = true
 			p.next()

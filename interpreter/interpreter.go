@@ -13,8 +13,6 @@ import (
 // This includes nil, boolean, integer, float, string, array, object, and function values.
 type Value any
 
-
-
 // interpreter represents the internal state of the interpreter.
 // It maintains variable scopes, I/O streams, and execution statistics.
 type interpreter struct {
@@ -31,8 +29,13 @@ type interpreter struct {
 	// exit is the function called by the exit() builtin
 	exit func(int)
 	// stats tracks execution statistics
-	stats Stats
+	stats      Stats
 	inUnitTest bool
+	// Optimization caches
+	memoCache         map[string]Value
+	stringBuilderPool sync.Pool
+	arrayPool         sync.Pool
+	mapPool           sync.Pool
 }
 
 // returnResult is used to handle return statements in functions.
@@ -62,7 +65,6 @@ var binaryEvalFuncs = map[Token]binaryEvalFunc{
 	MINUS:    evalMinus,                                                                    // Subtraction operator: -
 	MODULO:   evalModulo,                                                                   // Modulo operator: %
 	NOTEQUAL: func(pos Position, l, r Value) Value { return !evalEqual(pos, l, r).(bool) }, // Inequality operator: !=
-	PLUS:     evalPlus,                                                                     // Addition operator: +
 	TIMES:    evalTimes,                                                                    // Multiplication operator: *
 }
 
@@ -296,42 +298,60 @@ func evalLess(pos Position, l, r Value) Value {
 	panic(typeError(pos, "comparison requires two integers or two strings (or arrays of integers or strings)"))
 }
 
-func evalPlus(pos Position, l, r Value) Value {
-	switch l := l.(type) {
-	case int:
-		if r, ok := r.(int); ok {
-			return Value(l + r)
+// Optimized evalPlus with reduced type assertions and memory optimization
+func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
+	// Track operation for performance monitoring
+	TrackOperation("plus")
+
+	// Fast path for most common cases
+	if li, ok := l.(int); ok {
+		if ri, ok := r.(int); ok {
+			return Value(li + ri)
 		}
-		if r, ok := r.(float64); ok {
-			return Value(float64(l) + r)
+		if rf, ok := r.(float64); ok {
+			return Value(float64(li) + rf)
 		}
-	case float64:
-		if r, ok := r.(float64); ok {
-			return Value(l + r)
+	} else if lf, ok := l.(float64); ok {
+		if rf, ok := r.(float64); ok {
+			return Value(lf + rf)
 		}
-		if r, ok := r.(int); ok {
-			return Value(l + float64(r))
+		if ri, ok := r.(int); ok {
+			return Value(lf + float64(ri))
 		}
-	case string:
-		if r, ok := r.(string); ok {
-			return Value(l + r)
-		}
-	case *[]Value:
-		if r, ok := r.(*[]Value); ok {
-			result := make([]Value, 0, len(*l)+len(*r))
-			result = append(result, *l...)
-			result = append(result, *r...)
-			return Value(&result)
-		}
-	case map[string]Value:
-		if r, ok := r.(map[string]Value); ok {
-			result := make(map[string]Value)
-			for k, v := range l {
-				result[k] = v
+	} else if ls, ok := l.(string); ok {
+		if rs, ok := r.(string); ok {
+			// Use string interning for repeated strings
+			result := ls + rs
+			if len(result) < 100 { // Only intern short strings
+				result = InternString(result)
 			}
-			for k, v := range r {
-				result[k] = v
+			return Value(result)
+		}
+	} else if larr, ok := l.(*[]Value); ok {
+		if rarr, ok := r.(*[]Value); ok {
+			// Optimized array concatenation using advanced batch processing for large arrays
+			llen, rlen := len(*larr), len(*rarr)
+			if llen+rlen > 1000 {
+				// Use batch processing for large arrays
+				result := globalComplexPool.GetArray()
+				result = SmartAppend(result, *larr...)
+				result = SmartAppend(result, *rarr...)
+				final := make([]Value, len(result))
+				copy(final, result)
+				globalComplexPool.PutArray(result)
+				return Value(&final)
+			} else {
+				// Use existing optimized concatenation for smaller arrays
+				concat := NewArrayConcatenator(llen + rlen)
+				concat.AppendArray(larr)
+				concat.AppendArray(rarr)
+				return Value(concat.Result())
 			}
+		}
+	} else if lmap, ok := l.(map[string]Value); ok {
+		if rmap, ok := r.(map[string]Value); ok {
+			// Use optimized map merging
+			result := OptimizedMapMerge(lmap, rmap)
 			return Value(result)
 		}
 	}
@@ -356,50 +376,86 @@ func evalMinus(pos Position, l, r Value) Value {
 	panic(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
 }
 
+// Optimized evalTimes with reduced type assertions
 func evalTimes(pos Position, l, r Value) Value {
-	switch l := l.(type) {
-	case int:
-		switch r := r.(type) {
-		case int:
-			return Value(l * r)
-		case float64:
-			return Value(float64(l) * r)
-		case string:
-			if l < 0 {
+	// Track operation for performance monitoring
+	TrackOperation("times")
+
+	// Fast path for numeric operations
+	if li, ok := l.(int); ok {
+		if ri, ok := r.(int); ok {
+			return Value(li * ri)
+		}
+		if rf, ok := r.(float64); ok {
+			return Value(float64(li) * rf)
+		}
+		if rs, ok := r.(string); ok {
+			if li < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
-			return Value(strings.Repeat(r, l))
-		case *[]Value:
-			lst := make([]Value, 0, len(*r)*l)
-			for i := 0; i < l; i++ {
-				lst = append(lst, (*r)...)
+			// Use optimized string repetition for large strings
+			if len(rs)*li > 1000 {
+				sb := globalComplexPool.GetStringBuilder()
+				for i := 0; i < li; i++ {
+					sb.WriteString(rs)
+				}
+				result := sb.String()
+				globalComplexPool.PutStringBuilder(sb)
+				return Value(result)
+			} else {
+				return Value(strings.Repeat(rs, li))
 			}
-			return Value(&lst)
 		}
-	case float64:
-		if r, ok := r.(float64); ok {
-			return Value(l * r)
-		}
-		if r, ok := r.(int); ok {
-			return Value(l * float64(r))
-		}
-	case string:
-		if r, ok := r.(int); ok {
-			if r < 0 {
-				panic(valueError(pos, "can't multiply string by a negative number"))
-			}
-			return Value(strings.Repeat(l, r))
-		}
-	case *[]Value:
-		if r, ok := r.(int); ok {
-			if r < 0 {
+		if rarr, ok := r.(*[]Value); ok {
+			if li < 0 {
 				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
-			lst := make([]Value, 0, len(*l)*r)
-			for i := 0; i < r; i++ {
-				lst = append(lst, (*l)...)
+			// Optimized array repetition with batch processing for large arrays
+			totalSize := len(*rarr) * li
+			if totalSize > 1000 {
+				// Use batch processing for large arrays
+				result := globalComplexPool.GetArray()
+				for i := 0; i < li; i++ {
+					result = SmartAppend(result, *rarr...)
+				}
+				final := make([]Value, len(result))
+				copy(final, result)
+				globalComplexPool.PutArray(result)
+				return Value(&final)
+			} else {
+				// Use existing optimized concatenation for smaller arrays
+				concat := NewArrayConcatenator(totalSize)
+				for i := 0; i < li; i++ {
+					concat.AppendArray(rarr)
+				}
+				return Value(concat.Result())
 			}
-			return Value(&lst)
+		}
+	} else if lf, ok := l.(float64); ok {
+		if rf, ok := r.(float64); ok {
+			return Value(lf * rf)
+		}
+		if ri, ok := r.(int); ok {
+			return Value(lf * float64(ri))
+		}
+	} else if ls, ok := l.(string); ok {
+		if ri, ok := r.(int); ok {
+			if ri < 0 {
+				panic(valueError(pos, "can't multiply string by a negative number"))
+			}
+			return Value(strings.Repeat(ls, ri))
+		}
+	} else if larr, ok := l.(*[]Value); ok {
+		if ri, ok := r.(int); ok {
+			if ri < 0 {
+				panic(valueError(pos, "can't multiply array by a negative number"))
+			}
+			// Optimized array repetition using ArrayConcatenator
+			concat := NewArrayConcatenator(len(*larr) * ri)
+			for i := 0; i < ri; i++ {
+				concat.AppendArray(larr)
+			}
+			return Value(concat.Result())
 		}
 	}
 	panic(typeError(pos, "* requires two integers or floats, or a string or array and an integer"))
@@ -538,23 +594,50 @@ func (interp *interpreter) evalXor(_ Position, le, re Expression) Value {
 }
 
 func (interp *interpreter) callFunction(pos Position, f functionType, args []Value) (ret Value) {
+	// Track function calls for performance monitoring
+	TrackOperation("function_call")
+
+	// Check memoization cache for recursive functions
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+		memoKey := getMemoKey(uf.Name, args)
+		if cached, exists := interp.memoCache[memoKey]; exists {
+			return cached
+		}
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
+				// Cache the result for memoization
+				if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+					memoKey := getMemoKey(uf.Name, args)
+					interp.memoCache[memoKey] = ret
+				}
 			} else {
 				panic(r)
 			}
 		}
 	}()
-	return f.call(interp, pos, args)
+
+	result := f.call(interp, pos, args)
+
+	// Cache the result for memoization
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+		memoKey := getMemoKey(uf.Name, args)
+		interp.memoCache[memoKey] = result
+	}
+
+	return result
 }
 
 func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.stats.Ops++
 	switch e := expr.(type) {
 	case *Binary:
-		if f, ok := binaryEvalFuncs[e.Operator]; ok {
+		if e.Operator == PLUS {
+			return interp.evalPlus(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
+		} else if f, ok := binaryEvalFuncs[e.Operator]; ok {
 			return f(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
 		} else if e.Operator == AND {
 			return interp.evalAnd(e.Position(), e.Left, e.Right)
@@ -583,13 +666,13 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		if f, ok := function.(functionType); ok {
 			args := []Value{}
 			for _, a := range e.Arguments {
-				args = append(args, interp.evaluate(a))
+				args = SmartAppend(args, interp.evaluate(a))
 			}
 			if e.Ellipsis {
 				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
 				args = args[:len(args)-1]
 				for iterator.HasNext() {
-					args = append(args, iterator.Value())
+					args = SmartAppend(args, iterator.Value())
 				}
 			}
 			return interp.callFunction(e.Function.Position(), f, args)
@@ -603,13 +686,19 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		panic(nameError(e.Position(), "name %q not found", e.Name))
 	case *List:
-		values := make([]Value, len(e.Values))
+		// Use array pool for better memory management
+		values := interp.getArray()
+		if cap(values) < len(e.Values) {
+			values = make([]Value, len(e.Values))
+		} else {
+			values = values[:len(e.Values)]
+		}
 		for i, v := range e.Values {
 			values[i] = interp.evaluate(v)
 		}
 		return Value(&values)
 	case *Map:
-		value := make(map[string]Value)
+		value := interp.getMap()
 		for _, item := range e.Items {
 			key := interp.evaluate(item.Key)
 			if k, ok := key.(string); ok {
@@ -635,7 +724,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 func (interp *interpreter) pushScope(scope map[string]Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
-	interp.vars = append(interp.vars, scope)
+	interp.vars = SmartAppendMapValue(interp.vars, scope)
 }
 
 func (interp *interpreter) popScope() {
@@ -693,7 +782,7 @@ func getIterator(pos Position, value Value) iteratorType {
 	case string:
 		strs := []Value{}
 		for _, r := range iterable {
-			strs = append(strs, string(r))
+			strs = SmartAppend(strs, string(r))
 		}
 		return &listIterator{strs, 0}
 	case *[]Value:
@@ -758,7 +847,7 @@ func (interp *interpreter) evaluateAssignmentValue(operator Token, target any, v
 	// Perform the compound operation
 	switch operator {
 	case PLUSEQUAL:
-		return evalPlus(value.Position(), currentValue, rightValue)
+		return interp.evalPlus(value.Position(), currentValue, rightValue)
 	case MINUSEQUAL:
 		return evalMinus(value.Position(), currentValue, rightValue)
 	case TIMESEQUAL:
@@ -787,7 +876,7 @@ func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, cont
 	// Perform the compound operation
 	switch operator {
 	case PLUSEQUAL:
-		return evalPlus(value.Position(), currentValue, rightValue)
+		return interp.evalPlus(value.Position(), currentValue, rightValue)
 	case MINUSEQUAL:
 		return evalMinus(value.Position(), currentValue, rightValue)
 	case TIMESEQUAL:
@@ -995,6 +1084,20 @@ func (interp *interpreter) execute(prog *Program) {
 
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
+
+	// Initialize optimization caches
+	interp.memoCache = make(map[string]Value)
+	interp.stringBuilderPool = sync.Pool{
+		New: func() any {
+			return &strings.Builder{}
+		},
+	}
+	interp.arrayPool = sync.Pool{
+		New: func() any {
+			return make([]Value, 0, 16) // Pre-allocate with capacity 16
+		},
+	}
+
 	interp.pushScope(make(map[string]Value))
 	for k, v := range builtins {
 		interp.assign(k, v)
@@ -1003,8 +1106,8 @@ func newInterpreter(config *Config) *interpreter {
 	// Add mathematical constants
 	interp.assign("PI", Value(math.Pi))
 	interp.assign("E", Value(math.E))
-	interp.assign("TAU", Value(2 * math.Pi))
-	interp.assign("PHI", Value((1 + math.Sqrt(5)) / 2))  // Golden ratio
+	interp.assign("TAU", Value(2*math.Pi))
+	interp.assign("PHI", Value((1+math.Sqrt(5))/2)) // Golden ratio
 	interp.assign("LN2", Value(math.Ln2))
 	interp.assign("LN10", Value(math.Ln10))
 	interp.assign("SQRT2", Value(math.Sqrt2))
@@ -1126,8 +1229,62 @@ func CreateEmptyScope() map[string]Value {
 // CopyScope creates a copy of a variable scope
 func CopyScope(scope map[string]Value) map[string]Value {
 	newScope := make(map[string]Value)
-	for key, value := range scope {
-		newScope[key] = value
+	for k, v := range scope {
+		newScope[k] = v
 	}
 	return newScope
+}
+
+// getStringBuilder gets a string builder from the pool
+func (interp *interpreter) getStringBuilder() *strings.Builder {
+	return interp.stringBuilderPool.Get().(*strings.Builder)
+}
+
+// putStringBuilder returns a string builder to the pool
+func (interp *interpreter) putStringBuilder(sb *strings.Builder) {
+	sb.Reset()
+	interp.stringBuilderPool.Put(sb)
+}
+
+// getArray gets an array from the pool
+func (interp *interpreter) getArray() []Value {
+	arr := interp.arrayPool.Get().([]Value)
+	return arr[:0] // Reset length but keep capacity
+}
+
+// putArray returns an array to the pool
+func (interp *interpreter) putArray(arr []Value) {
+	if cap(arr) <= 1024 { // Only pool arrays with reasonable capacity
+		interp.arrayPool.Put(arr)
+	}
+}
+
+// getMemoKey generates a memoization key for function calls
+func getMemoKey(funcName string, args []Value) string {
+	var sb strings.Builder
+	sb.WriteString(funcName)
+	sb.WriteString(":")
+	for i, arg := range args {
+		if i > 0 {
+			sb.WriteString(",")
+		}
+		sb.WriteString(fmt.Sprintf("%v", arg))
+	}
+	return sb.String()
+}
+
+// Map pool helpers
+func (interp *interpreter) getMap() map[string]Value {
+	if m := interp.mapPool.Get(); m != nil {
+		return m.(map[string]Value)
+	}
+	return make(map[string]Value)
+}
+
+func (interp *interpreter) putMap(m map[string]Value) {
+	// Clear the map before returning to pool
+	for k := range m {
+		delete(m, k)
+	}
+	interp.mapPool.Put(m)
 }

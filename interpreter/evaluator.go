@@ -1,6 +1,8 @@
 package interpreter
 
 // Type-specific value extractors for better performance
+// Optimized with inline hints for better performance
+//go:inline
 func asInt(v Value) (int, bool) {
 	if i, ok := v.(int); ok {
 		return i, true
@@ -8,6 +10,7 @@ func asInt(v Value) (int, bool) {
 	return 0, false
 }
 
+//go:inline
 func asFloat(v Value) (float64, bool) {
 	if f, ok := v.(float64); ok {
 		return f, true
@@ -15,6 +18,7 @@ func asFloat(v Value) (float64, bool) {
 	return 0, false
 }
 
+//go:inline
 func asString(v Value) (string, bool) {
 	if s, ok := v.(string); ok {
 		return s, true
@@ -22,6 +26,7 @@ func asString(v Value) (string, bool) {
 	return "", false
 }
 
+//go:inline
 func asArray(v Value) (*[]Value, bool) {
 	if arr, ok := v.(*[]Value); ok {
 		return arr, true
@@ -29,6 +34,7 @@ func asArray(v Value) (*[]Value, bool) {
 	return nil, false
 }
 
+//go:inline
 func asMap(v Value) (map[string]Value, bool) {
 	if m, ok := v.(map[string]Value); ok {
 		return m, true
@@ -40,59 +46,58 @@ func asMap(v Value) (map[string]Value, bool) {
 type Evaluator struct {
 	env   *Environment
 	stats *Stats
+	interp *interpreter
 }
 
 // NewEvaluator creates a new expression evaluator
-func NewEvaluator(env *Environment, stats *Stats) *Evaluator {
+func NewEvaluator(env *Environment, stats *Stats, interp *interpreter) *Evaluator {
 	return &Evaluator{
 		env:   env,
 		stats: stats,
+		interp: interp,
 	}
 }
 
-// EvaluateExpression evaluates an expression and returns its value
+// Optimized EvaluateExpression with type-specific fast paths
 func (e *Evaluator) EvaluateExpression(expr Expression) Value {
 	e.stats.Ops++
 
-	switch node := expr.(type) {
-	case *Literal:
-		return node.Value
-
-	case *Variable:
-		if value, exists := e.env.Lookup(node.Name); exists {
+	// Fast path for most common expression types
+	if literal, ok := expr.(*Literal); ok {
+		return literal.Value
+	}
+	if variable, ok := expr.(*Variable); ok {
+		if value, exists := e.env.Lookup(variable.Name); exists {
 			return value
 		}
-		panic(nameError(node.Position(), "name '%s' is not defined", node.Name))
-
-	case *Binary:
-		return e.evaluateBinary(node)
-
+		panic(nameError(variable.Position(), "name '%s' is not defined", variable.Name))
+	}
+	if binary, ok := expr.(*Binary); ok {
+		return e.evaluateBinary(binary)
+	}
+	if call, ok := expr.(*Call); ok {
+		return e.evaluateCall(call)
+	}
+	
+	// Less common types
+	switch node := expr.(type) {
 	case *Unary:
 		return e.evaluateUnary(node)
-
 	case *Ternary:
 		return e.evaluateTernary(node)
-
-	case *Call:
-		return e.evaluateCall(node)
-
 	case *List:
 		return e.evaluateList(node)
-
 	case *Map:
 		return e.evaluateMap(node)
-
 	case *Subscript:
 		return e.evaluateSubscript(node)
-
 	case *FunctionExpression:
 		return &userFunction{
-			Name:       "",
+			Name:       "<anonymous>",
 			Parameters: node.Parameters,
 			Body:       node.Body,
-			Closure:    e.env.vars[len(e.env.vars)-1], // Capture current scope
+			Closure:    e.env.vars[len(e.env.vars)-1],
 		}
-
 	default:
 		panic(runtimeError(expr.Position(), "unexpected expression type %T", expr))
 	}
@@ -363,7 +368,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 
 // evalPlus handles addition operation
 func (e *Evaluator) evalPlus(pos Position, l, r Value) Value {
-	return evalPlus(pos, l, r)
+	return e.interp.evalPlus(pos, l, r)
 }
 
 // evalMinus handles subtraction operation

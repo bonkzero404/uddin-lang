@@ -1,9 +1,10 @@
 package interpreter
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 // Program represents the root node of the abstract syntax tree (AST).
@@ -24,7 +25,7 @@ type Block []Statement
 func (b Block) String() string {
 	lines := []string{}
 	for _, stmt := range b {
-		lines = append(lines, stmt.String())
+		lines = SmartAppendString(lines, stmt.String())
 	}
 	return strings.Join(lines, "\n")
 }
@@ -449,15 +450,15 @@ func needsParentheses(expr Expression, parentOp Token, isRightOperand bool) bool
 	if !ok {
 		return false
 	}
-	
+
 	parentPrec := getOperatorPrecedence(parentOp)
 	childPrec := getOperatorPrecedence(binary.Operator)
-	
+
 	// Lower precedence needs parentheses
 	if childPrec < parentPrec {
 		return true
 	}
-	
+
 	// Same precedence: need parentheses for proper associativity
 	if childPrec == parentPrec {
 		// For same precedence, left operand needs parentheses if operators are different
@@ -470,14 +471,14 @@ func needsParentheses(expr Expression, parentOp Token, isRightOperand bool) bool
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 func (e *Binary) String() string {
 	leftStr := e.Left.String()
 	rightStr := e.Right.String()
-	
+
 	// Add parentheses if needed
 	if needsParentheses(e.Left, e.Operator, false) {
 		leftStr = "(" + leftStr + ")"
@@ -485,7 +486,7 @@ func (e *Binary) String() string {
 	if needsParentheses(e.Right, e.Operator, true) {
 		rightStr = "(" + rightStr + ")"
 	}
-	
+
 	return fmt.Sprintf("%s %s %s", leftStr, e.Operator, rightStr)
 }
 
@@ -896,7 +897,7 @@ func (s *Break) String() string {
 
 // MarshalJSON implements custom JSON marshaling for Break
 func (s *Break) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"Type": "Break",
 		"pos":  s.pos,
 	})
@@ -930,7 +931,7 @@ func (s *Continue) String() string {
 
 // MarshalJSON implements custom JSON marshaling for Continue
 func (s *Continue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
+	return json.Marshal(map[string]any{
 		"Type": "Continue",
 		"pos":  s.pos,
 	})
