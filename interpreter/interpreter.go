@@ -1252,13 +1252,6 @@ func (interp *interpreter) getArray() []Value {
 	return arr[:0] // Reset length but keep capacity
 }
 
-// putArray returns an array to the pool
-func (interp *interpreter) putArray(arr []Value) {
-	if cap(arr) <= 1024 { // Only pool arrays with reasonable capacity
-		interp.arrayPool.Put(arr)
-	}
-}
-
 // getMemoKey generates a memoization key for function calls
 func getMemoKey(funcName string, args []Value) string {
 	var sb strings.Builder
@@ -1279,12 +1272,4 @@ func (interp *interpreter) getMap() map[string]Value {
 		return m.(map[string]Value)
 	}
 	return make(map[string]Value)
-}
-
-func (interp *interpreter) putMap(m map[string]Value) {
-	// Clear the map before returning to pool
-	for k := range m {
-		delete(m, k)
-	}
-	interp.mapPool.Put(m)
 }
