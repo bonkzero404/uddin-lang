@@ -15,14 +15,14 @@ func BenchmarkMemoryPoolUsage(b *testing.B) {
 			arr = append(arr, Value(float64(j)))
 		}
 		PutPooledArray(arr)
-		
+
 		// Test map pool
 		m := GetPooledMap()
 		for j := 0; j < 5; j++ {
 			m["key"+string(rune(j))] = Value(float64(j))
 		}
 		PutPooledMap(m)
-		
+
 		// Test string builder pool
 		sb := GetPooledStringBuilder()
 		for j := 0; j < 10; j++ {
@@ -39,15 +39,15 @@ func BenchmarkDirectAllocation(b *testing.B) {
 		// Direct array allocation
 		arr := make([]Value, 0, 16)
 		for j := 0; j < 10; j++ {
-			arr = append(arr, Value(float64(j)))
+			_ = append(arr, Value(float64(j)))
 		}
-		
+
 		// Direct map allocation
 		m := make(map[string]Value)
 		for j := 0; j < 5; j++ {
 			m["key"+string(rune(j))] = Value(float64(j))
 		}
-		
+
 		// Direct string builder allocation
 		var sb strings.Builder
 		for j := 0; j < 10; j++ {
@@ -61,7 +61,7 @@ func BenchmarkOptimizedMakeSlice(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		arr := OptimizedMakeSlice(5, 10)
-		for j := 0; j < 15; j++ {
+		for j := range [15]int{} {
 			arr = append(arr, Value(float64(j)))
 		}
 	}
@@ -72,8 +72,8 @@ func BenchmarkRegularMakeSlice(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		arr := make([]Value, 5)
-		for j := 0; j < 15; j++ {
-			arr = append(arr, Value(float64(j)))
+		for j := range [15]int{} {
+			_ = append(arr, Value(float64(j)))
 		}
 	}
 }

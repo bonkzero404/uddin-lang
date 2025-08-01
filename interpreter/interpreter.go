@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"strings"
@@ -337,8 +338,8 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 				result = SmartAppend(result, *larr...)
 				result = SmartAppend(result, *rarr...)
 				final := make([]Value, len(result))
-				copy(final, result)
-				globalComplexPool.PutArray(result)
+			copy(final, result)
+			globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -419,8 +420,8 @@ func evalTimes(pos Position, l, r Value) Value {
 					result = SmartAppend(result, *rarr...)
 				}
 				final := make([]Value, len(result))
-				copy(final, result)
-				globalComplexPool.PutArray(result)
+			copy(final, result)
+			globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -1229,9 +1230,7 @@ func CreateEmptyScope() map[string]Value {
 // CopyScope creates a copy of a variable scope
 func CopyScope(scope map[string]Value) map[string]Value {
 	newScope := make(map[string]Value)
-	for k, v := range scope {
-		newScope[k] = v
-	}
+	maps.Copy(newScope, scope)
 	return newScope
 }
 
@@ -1250,13 +1249,6 @@ func (interp *interpreter) putStringBuilder(sb *strings.Builder) {
 func (interp *interpreter) getArray() []Value {
 	arr := interp.arrayPool.Get().([]Value)
 	return arr[:0] // Reset length but keep capacity
-}
-
-// putArray returns an array to the pool
-func (interp *interpreter) putArray(arr []Value) {
-	if cap(arr) <= 1024 { // Only pool arrays with reasonable capacity
-		interp.arrayPool.Put(arr)
-	}
 }
 
 // getMemoKey generates a memoization key for function calls
@@ -1279,12 +1271,4 @@ func (interp *interpreter) getMap() map[string]Value {
 		return m.(map[string]Value)
 	}
 	return make(map[string]Value)
-}
-
-func (interp *interpreter) putMap(m map[string]Value) {
-	// Clear the map before returning to pool
-	for k := range m {
-		delete(m, k)
-	}
-	interp.mapPool.Put(m)
 }
