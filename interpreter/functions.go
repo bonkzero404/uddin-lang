@@ -221,11 +221,12 @@ var builtins = map[string]builtinFunction{
 	"set_to_array": {setToArrayFunc, "set_to_array"},
 
 	// Data Structures - Stack Operations
-	"stack_new":  {stackNewFunc, "stack_new"},
-	"stack_push": {stackPushFunc, "stack_push"},
-	"stack_pop":  {stackPopFunc, "stack_pop"},
-	"stack_peek": {stackPeekFunc, "stack_peek"},
-	"stack_size": {stackSizeFunc, "stack_size"},
+	"stack_new":   {stackNewFunc, "stack_new"},
+	"stack_push":  {stackPushFunc, "stack_push"},
+	"stack_pop":   {stackPopFunc, "stack_pop"},
+	"stack_peek":  {stackPeekFunc, "stack_peek"},
+	"stack_size":  {stackSizeFunc, "stack_size"},
+	"stack_empty": {stackEmptyFunc, "stack_empty"},
 
 	// Data Structures - Queue Operations
 	"queue_new":     {queueNewFunc, "queue_new"},
@@ -233,6 +234,7 @@ var builtins = map[string]builtinFunction{
 	"queue_dequeue": {queueDequeueFunc, "queue_dequeue"},
 	"queue_front":   {queueFrontFunc, "queue_front"},
 	"queue_size":    {queueSizeFunc, "queue_size"},
+	"queue_empty":   {queueEmptyFunc, "queue_empty"},
 
 	// Mathematical Functions - Basic Operations
 	"abs":  {absFunc, "abs"},
@@ -522,10 +524,10 @@ func findFunc(interp *interpreter, pos Position, args []Value) Value {
 // intFunc implements the int() built-in function
 // Converts a value to an integer
 // Parameters:
-//   - value: Value to convert (string or int)
+//   - value: Value to convert (string, int, float, or boolean)
 //
 // Returns the integer value, or null if conversion fails
-// Example: int("42") -> 42
+// Example: int("42") -> 42, int(45.67) -> 45
 func intFunc(interp *interpreter, pos Position, args []Value) Value {
 	ensureNumArgs(pos, "int", args, 1)
 	switch arg := args[0].(type) {
@@ -533,14 +535,26 @@ func intFunc(interp *interpreter, pos Position, args []Value) Value {
 		return args[0] // Already an integer
 	case int64:
 		return Value(int(arg)) // Convert int64 to int
-	case string:
-		i, err := strconv.Atoi(arg)
-		if err != nil {
-			return Value(nil) // Return null if conversion fails
+	case float64:
+		return Value(int(arg)) // Convert float64 to int (truncation)
+	case bool:
+		if arg {
+			return Value(1) // true -> 1
+		} else {
+			return Value(0) // false -> 0
 		}
-		return Value(i)
+	case string:
+		// Try to parse as integer first
+		if i, err := strconv.Atoi(arg); err == nil {
+			return Value(i)
+		}
+		// Try to parse as float and convert to int
+		if f, err := strconv.ParseFloat(arg, 64); err == nil {
+			return Value(int(f))
+		}
+		return Value(nil) // Return null if conversion fails
 	default:
-		panic(typeError(pos, "int() requires an int, int64, or a string"))
+		panic(typeError(pos, "int() requires an int, int64, float64, bool, or a string"))
 	}
 }
 
@@ -738,12 +752,14 @@ func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 // Parameters:
 //   - If 1 arg: n (upper bound, exclusive) -> [0, 1, ..., n-1]
 //   - If 2 args: start, stop -> [start, start+1, ..., stop-1]
+//   - If 3 args: start, stop, step -> [start, start+step, ..., stop-1]
 //
 // Returns an array of integers
 // Examples:
 //
 //	range(3) -> [0, 1, 2]
 //	range(1, 4) -> [1, 2, 3]
+//	range(0, 10, 2) -> [0, 2, 4, 6, 8]
 func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 1 {
 		// Single argument: range(n) -> [0, 1, ..., n-1]
@@ -786,9 +802,38 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 			nums[i] = Value(start + i)
 		}
 		return Value(&nums)
+	} else if len(args) == 3 {
+		// Three arguments: range(start, stop, step) -> [start, start+step, ..., stop-1]
+		start, startOk := args[0].(int)
+		stop, stopOk := args[1].(int)
+		step, stepOk := args[2].(int)
+
+		if !startOk || !stopOk || !stepOk {
+			panic(typeError(pos, "range() requires integer arguments"))
+		}
+
+		if step == 0 {
+			panic(valueError(pos, "range() step argument must not be zero"))
+		}
+
+		// Calculate the size of the result array
+		var nums []Value
+		if step > 0 {
+			// Positive step: start < stop
+			for i := start; i < stop; i += step {
+				nums = append(nums, Value(i))
+			}
+		} else {
+			// Negative step: start > stop
+			for i := start; i > stop; i += step {
+				nums = append(nums, Value(i))
+			}
+		}
+
+		return Value(&nums)
 	}
 
-	panic(valueError(pos, "range() requires 1 or 2 arguments, got %d", len(args)))
+	panic(valueError(pos, "range() requires 1, 2, or 3 arguments, got %d", len(args)))
 }
 
 // runeFunc implements the rune() built-in function
@@ -2695,6 +2740,19 @@ func stackSizeFunc(interp *interpreter, pos Position, args []Value) Value {
 	return Value(len(stack.data))
 }
 
+// stackEmptyFunc implements the stack_empty() built-in function
+// stack_empty(stack) -> bool
+// Example: stack_empty(s) -> true/false
+func stackEmptyFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "stack_empty", args, 1)
+	stack, ok := args[0].(*Stack)
+	if !ok {
+		panic(typeError(pos, "stack_empty() requires a stack argument"))
+	}
+
+	return Value(len(stack.data) == 0)
+}
+
 // queueNewFunc implements the queue_new() built-in function
 // queue_new() -> queue
 // Example: q = queue_new()
@@ -2766,6 +2824,19 @@ func queueSizeFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	return Value(len(queue.data))
+}
+
+// queueEmptyFunc implements the queue_empty() built-in function
+// queue_empty(queue) -> bool
+// Example: queue_empty(q) -> true/false
+func queueEmptyFunc(interp *interpreter, pos Position, args []Value) Value {
+	ensureNumArgs(pos, "queue_empty", args, 1)
+	queue, ok := args[0].(*Queue)
+	if !ok {
+		panic(typeError(pos, "queue_empty() requires a queue argument"))
+	}
+
+	return Value(len(queue.data) == 0)
 }
 
 // HTTP Client Functions

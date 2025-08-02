@@ -1,0 +1,102 @@
+// Digit Separator Demo - Uddin-Lang
+// Demonstrates the use of underscore (_) as digit separator for better readability
+
+fun main():
+    print("=== Digit Separator Demo ===")
+    print("")
+    
+    // Basic integer examples
+    print("Basic Integer Examples:")
+    million = 1_000_000
+    billion = 1_000_000_000
+    print("One million: " + str(million))
+    print("One billion: " + str(billion))
+    print("")
+    
+    // Floating point examples
+    print("Floating Point Examples:")
+    pi_precise = 3.141_592_653_589_793
+    large_decimal = 123_456.789_012
+    print("Pi (precise): " + str(pi_precise))
+    print("Large decimal: " + str(large_decimal))
+    print("")
+    
+    // Scientific notation with digit separators
+    print("Scientific Notation Examples:")
+    avogadro = 6.022_140_76e2_3
+    speed_of_light = 2.997_924_58e0_8
+    planck = 6.626_070_15e-3_4
+    print("Avogadro's number: " + str(avogadro))
+    print("Speed of light (m/s): " + str(speed_of_light))
+    print("Planck constant: " + str(planck))
+    print("")
+    
+    // Mathematical operations
+    print("Mathematical Operations:")
+    large_sum = 1_234_567 + 9_876_543
+    large_product = 1_000 * 2_500
+    percentage = 15_000 / 100_000
+    print("Large sum: " + str(large_sum))
+    print("Large product: " + str(large_product))
+    print("Percentage: " + str(percentage))
+    print("")
+    
+    // Arrays with digit separators
+    print("Arrays with Large Numbers:")
+    populations = [1_400_000_000, 1_380_000_000, 331_000_000, 273_000_000]
+    distances = [149_597_870.7, 778_500_000.0, 1_432_000_000.0]
+    
+    print("World populations (top 4):")
+    for (i in range(len(populations))):
+        print("  Country " + str(i + 1) + ": " + str(populations[i]))
+    end
+    
+    print("Planetary distances from Sun (km):")
+    planets = ["Earth", "Jupiter", "Saturn"]
+    for (i in range(len(distances))):
+        print("  " + planets[i] + ": " + str(distances[i]))
+    end
+    print("")
+    
+    // Financial calculations
+    print("Financial Examples:")
+    salary = 75_000
+    bonus = 12_500
+    total_income = salary + bonus
+    tax_rate = 0.25
+    tax_amount = total_income * tax_rate
+    net_income = total_income - tax_amount
+    
+    print("Annual salary: $" + str(salary))
+    print("Bonus: $" + str(bonus))
+    print("Total income: $" + str(total_income))
+    print("Tax (25%): $" + str(tax_amount))
+    print("Net income: $" + str(net_income))
+    print("")
+    
+    // Binary-like numbers (for demonstration)
+    print("Large Binary-style Numbers:")
+    binary_like_1 = 1_010_101_010
+    binary_like_2 = 1_111_000_111
+    print("Binary-like 1: " + str(binary_like_1))
+    print("Binary-like 2: " + str(binary_like_2))
+    print("XOR simulation: " + str(binary_like_1 + binary_like_2))
+    print("")
+    
+    // Memory sizes (bytes)
+    print("Memory Size Examples:")
+    kilobyte = 1_024
+    megabyte = 1_048_576
+    gigabyte = 1_073_741_824
+    terabyte = 1_099_511_627_776
+    
+    print("1 KB = " + str(kilobyte) + " bytes")
+    print("1 MB = " + str(megabyte) + " bytes")
+    print("1 GB = " + str(gigabyte) + " bytes")
+    print("1 TB = " + str(terabyte) + " bytes")
+    print("")
+    
+    print("=== Demo Complete ===")
+end
+
+main()

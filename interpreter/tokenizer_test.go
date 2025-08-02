@@ -188,6 +188,13 @@ func TestTokenizerNumberLiterals(t *testing.T) {
 		{"1E10", FLOAT, "1E10"},
 		{"3.14E+2", FLOAT, "3.14E+2"},
 		{"6.022e-23", FLOAT, "6.022e-23"},
+		// Digit separator tests
+		{"1_000", INT, "1000"},
+		{"1_000_000", INT, "1000000"},
+		{"3_14.15_92", FLOAT, "314.1592"},
+		{"1_000.5_00", FLOAT, "1000.500"},
+		{"1_23e4_56", FLOAT, "123e456"},
+		{"9_87.6_54e-3_21", FLOAT, "987.654e-321"},
 	}
 
 	for i, test := range tests {
@@ -200,6 +207,33 @@ func TestTokenizerNumberLiterals(t *testing.T) {
 
 		if test.value != "" && value != test.value {
 			t.Errorf("Test %d: expected value '%s', got '%s'", i, test.value, value)
+		}
+	}
+}
+
+// TestTokenizerDigitSeparatorErrors tests invalid digit separator usage
+func TestTokenizerDigitSeparatorErrors(t *testing.T) {
+	errorTests := []struct {
+		input string
+		expectedError string
+	}{
+		{"1__000", "consecutive digit separators '_' are not allowed"},
+		{"1_000_", "number cannot end with digit separator '_'"},
+		{"1_.5", "digit separator '_' cannot be followed by '.'"},
+		{"1e2__3", "consecutive digit separators '_' are not allowed in exponent"},
+		{"1e2_", "exponent cannot end with digit separator '_'"},
+	}
+
+	for i, test := range errorTests {
+		tokenizer := NewTokenizer([]byte(test.input))
+		_, token, value := tokenizer.Next()
+
+		if token != ILLEGAL {
+			t.Errorf("Test %d: expected ILLEGAL token, got %s", i, token)
+		}
+
+		if value != test.expectedError {
+			t.Errorf("Test %d: expected error '%s', got '%s'", i, test.expectedError, value)
 		}
 	}
 }

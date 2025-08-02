@@ -500,17 +500,37 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		builder.Grow(16) // Pre-allocate for typical number length
 		builder.WriteRune(ch)
 		isFloat := false
+		lastWasUnderscore := false
 
-		// Collect all digits and at most one decimal point
-		for t.ch >= '0' && t.ch <= '9' || t.ch == '.' {
+		// Collect all digits, underscores (digit separators), and at most one decimal point
+		for t.ch >= '0' && t.ch <= '9' || t.ch == '.' || t.ch == '_' {
 			if t.ch == '.' {
 				if isFloat {
 					return pos, ILLEGAL, "unexpected second '.' in number"
 				}
+				if lastWasUnderscore {
+					return pos, ILLEGAL, "digit separator '_' cannot be followed by '.'"
+				}
 				isFloat = true
+				builder.WriteRune(t.ch)
+				lastWasUnderscore = false
+			} else if t.ch == '_' {
+				if lastWasUnderscore {
+					return pos, ILLEGAL, "consecutive digit separators '_' are not allowed"
+				}
+				// Skip underscore in the final number value (don't add to builder)
+				lastWasUnderscore = true
+			} else {
+				// Regular digit
+				builder.WriteRune(t.ch)
+				lastWasUnderscore = false
 			}
-			builder.WriteRune(t.ch)
 			t.next()
+		}
+
+		// Check if number ends with underscore
+		if lastWasUnderscore {
+			return pos, ILLEGAL, "number cannot end with digit separator '_'"
 		}
 
 		// Check for scientific notation (e or E)
@@ -530,10 +550,26 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 				return pos, ILLEGAL, "expected digit after exponent"
 			}
 
-			// Collect exponent digits
-			for t.ch >= '0' && t.ch <= '9' {
-				builder.WriteRune(t.ch)
+			// Collect exponent digits with digit separator support
+			lastWasUnderscore = false
+			for t.ch >= '0' && t.ch <= '9' || t.ch == '_' {
+				if t.ch == '_' {
+					if lastWasUnderscore {
+						return pos, ILLEGAL, "consecutive digit separators '_' are not allowed in exponent"
+					}
+					// Skip underscore in the final number value (don't add to builder)
+					lastWasUnderscore = true
+				} else {
+					// Regular digit
+					builder.WriteRune(t.ch)
+					lastWasUnderscore = false
+				}
 				t.next()
+			}
+
+			// Check if exponent ends with underscore
+			if lastWasUnderscore {
+				return pos, ILLEGAL, "exponent cannot end with digit separator '_'"
 			}
 		}
 
