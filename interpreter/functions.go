@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -159,6 +160,7 @@ var builtins = map[string]builtinFunction{
 	"import": {importFunc, "import"},
 	"exit":   {exitFunc, "exit"},
 	"print":  {printFunc, "print"},
+	"input":  {inputFunc, "input"},
 	"typeof": {typeofFunc, "typeof"},
 
 	// File I/O Functions
@@ -684,13 +686,52 @@ func lowerFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: print("hello", 42) -> hello 42
 func printFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Convert all arguments to strings
-	strs := make([]any, len(args))
+	strs := make([]string, len(args))
 	for i, a := range args {
 		strs[i] = toString(a, false)
 	}
-	// Print to stdout with a newline
-	fmt.Fprintln(interp.stdout, strs...)
+	// Join strings with space and add newline
+	output := strings.Join(strs, " ") + "\n"
+	// Write directly to stdout and flush
+	// Write output
+	os.Stdout.WriteString(output)
+	// Force flush using syscall
+	syscall.Syscall(syscall.SYS_FSYNC, uintptr(os.Stdout.Fd()), 0, 0)
 	return Value(nil)
+}
+
+// inputFunc implements the input() built-in function
+// Reads user input from stdin with an optional prompt
+// Parameters:
+//   - prompt (optional): string to display before reading input
+// Returns the input string (without newline)
+// Example: name = input("Enter your name: ")
+func inputFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) > 1 {
+		panic(typeError(pos, "input() takes at most 1 argument (%d given)", len(args)))
+	}
+	
+	// Print prompt if provided
+	if len(args) == 1 {
+		prompt := toString(args[0], false)
+		// Write prompt directly to stdout and force flush
+		os.Stdout.WriteString(prompt)
+		syscall.Syscall(syscall.SYS_FSYNC, uintptr(os.Stdout.Fd()), 0, 0)
+	}
+	
+	// Read a line from stdin using persistent reader
+	line, err := interp.stdinReader.ReadString('\n')
+	if err != nil {
+		// Handle EOF or other errors
+		return Value("")
+	}
+	
+	// Remove trailing newline
+	if len(line) > 0 && line[len(line)-1] == '\n' {
+		line = line[:len(line)-1]
+	}
+	
+	return Value(line)
 }
 
 // rangeFunc implements the range() built-in function

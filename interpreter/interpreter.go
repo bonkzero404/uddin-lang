@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"maps"
@@ -25,6 +26,8 @@ type interpreter struct {
 	args []string
 	// stdin is the input stream for the read() builtin
 	stdin io.Reader
+	// stdinReader is a persistent bufio.Reader for stdin
+	stdinReader *bufio.Reader
 	// stdout is the output stream for the print() builtin
 	stdout io.Writer
 	// exit is the function called by the exit() builtin
@@ -1122,6 +1125,7 @@ func newInterpreter(config *Config) *interpreter {
 	if interp.stdin == nil {
 		interp.stdin = os.Stdin
 	}
+	interp.stdinReader = bufio.NewReader(interp.stdin)
 	interp.stdout = config.Stdout
 	if interp.stdout == nil {
 		interp.stdout = os.Stdout
