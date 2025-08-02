@@ -1,0 +1,82 @@
+// Scientific Notation Demo
+// Demonstrates various scientific notation formats supported in Uddin-Lang
+
+fun main():
+    print("=== Scientific Notation Demo ===")
+    print()
+    
+    // Basic scientific notation
+    avogadro = 6.022e23
+    print("Avogadro's number: " + str(avogadro))
+    
+    // Negative exponents
+    electron_mass = 9.109e-31
+    print("Electron mass (kg): " + str(electron_mass))
+    
+    // Positive exponents with explicit + sign
+    speed_of_light = 2.998E+8
+    print("Speed of light (m/s): " + str(speed_of_light))
+    
+    // Large numbers
+    distance_to_andromeda = 2.537e22  // meters
+    print("Distance to Andromeda (m): " + str(distance_to_andromeda))
+    
+    // Small numbers
+    planck_constant = 6.626e-34
+    print("Planck constant (J⋅s): " + str(planck_constant))
+    
+    // Integer with scientific notation (becomes float)
+    large_int = 1e6
+    print("One million: " + str(large_int))
+    
+    // Uppercase E notation
+    boltzmann = 1.381E-23
+    print("Boltzmann constant (J/K): " + str(boltzmann))
+    
+    print()
+    print("=== Mathematical Operations ===")
+    
+    // Operations with scientific notation
+    result1 = 1e3 * 2e2  // 1000 * 200
+    print("1e3 * 2e2 = " + str(result1))
+    
+    result2 = 5e-2 + 3e-2  // 0.05 + 0.03
+    print("5e-2 + 3e-2 = " + str(result2))
+    
+    result3 = 1e10 / 2e5  // 10,000,000,000 / 200,000
+    print("1e10 / 2e5 = " + str(result3))
+    
+    print()
+    print("=== Comparison Operations ===")
+    
+    // Comparisons
+    if (1e3 > 999) then:
+        print("1e3 is greater than 999")
+    end
+    
+    if (1e-6 < 0.001) then:
+        print("1e-6 is less than 0.001")
+    end
+    
+    // Array of scientific notation values
+    scientific_values = [1e1, 2e2, 3e3, 4e4, 5e5]
+    print("Scientific array: " + str(scientific_values))
+    
+    print()
+    print("=== Physical Constants ===")
+    
+    // Common physical constants in scientific notation
+    constants = {
+        "speed_of_light": 2.998e8,
+        "gravitational_constant": 6.674e-11,
+        "elementary_charge": 1.602e-19,
+        "proton_mass": 1.673e-27,
+        "neutron_mass": 1.675e-27
+    }
+    
+    for (key in constants):
+        print(key + ": " + str(constants[key]))
+    end
+end
+
+main()

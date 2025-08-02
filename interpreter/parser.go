@@ -389,9 +389,22 @@ func (p *parser) addition() Expression {
 	return p.binary(p.multiply, PLUS, MINUS)
 }
 
-// multiply = negative ((TIMES | DIVIDE | MODULO) negative)*
+// multiply = power ((TIMES | DIVIDE | MODULO) power)*
 func (p *parser) multiply() Expression {
-	return p.binary(p.negative, TIMES, DIVIDE, MODULO)
+	return p.binary(p.power, TIMES, DIVIDE, MODULO)
+}
+
+// power = negative (POWER power)? (right-associative)
+func (p *parser) power() Expression {
+	expr := p.negative()
+	if p.tok == POWER {
+		op := p.tok
+		pos := p.pos
+		p.next()
+		right := p.power() // Right-associative: recurse to power, not negative
+		expr = &Binary{pos, expr, op, right}
+	}
+	return expr
 }
 
 // negative = MINUS negative | call

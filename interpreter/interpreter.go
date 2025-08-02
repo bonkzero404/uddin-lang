@@ -69,6 +69,7 @@ var binaryEvalFuncs = map[Token]binaryEvalFunc{
 	MINUS:    evalMinus,                                                                    // Subtraction operator: -
 	MODULO:   evalModulo,                                                                   // Modulo operator: %
 	NOTEQUAL: func(pos Position, l, r Value) Value { return !evalEqual(pos, l, r).(bool) }, // Inequality operator: !=
+	POWER:    evalPower,                                                                    // Power operator: **
 	TIMES:    evalTimes,                                                                    // Multiplication operator: *
 }
 
@@ -481,6 +482,14 @@ func evalModulo(pos Position, l, r Value) Value {
 	return Value(int(li) % int(ri))
 }
 
+// evalPower evaluates the power operation (exponentiation).
+// It converts operands to floats and uses math.Pow for calculation.
+func evalPower(pos Position, l, r Value) Value {
+	li, ri := ensureIntToFloats(pos, l, r, "**")
+	result := math.Pow(li, ri)
+	return Value(result)
+}
+
 // Unary operator evaluation functions
 type unaryEvalFunc func(pos Position, v Value) Value
 
@@ -602,6 +611,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	TrackOperation("function_call")
 
 	// Check memoization cache for recursive functions
+	// Only cache functions that return non-nil values to avoid caching side-effect functions
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
 		memoKey := getMemoKey(uf.Name, args)
 		if cached, exists := interp.memoCache[memoKey]; exists {
@@ -613,8 +623,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 		if r := recover(); r != nil {
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
-				// Cache the result for memoization
-				if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+				// Cache the result for memoization only if it's not nil
+				if uf, ok := f.(*userFunction); ok && uf.Name != "" && ret != nil {
 					memoKey := getMemoKey(uf.Name, args)
 					interp.memoCache[memoKey] = ret
 				}
@@ -626,8 +636,9 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 	result := f.call(interp, pos, args)
 
-	// Cache the result for memoization
-	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+	// Cache the result for memoization only if it's not nil
+	// This prevents caching functions with side effects that return nil
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && result != nil {
 		memoKey := getMemoKey(uf.Name, args)
 		interp.memoCache[memoKey] = result
 	}

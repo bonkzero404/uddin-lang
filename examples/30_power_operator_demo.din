@@ -1,0 +1,104 @@
+// Power Operator (**) Demo
+// Demonstrates the exponentiation operator in Uddin-Lang
+
+fun main():
+    print("=== Power Operator (**) Demo ===")
+    print()
+    
+    // Basic power operations
+    print("Basic power operations:")
+    print("2 ** 3 = " + str(2 ** 3))           // 8
+    print("5 ** 2 = " + str(5 ** 2))           // 25
+    print("10 ** 0 = " + str(10 ** 0))         // 1
+    print("3 ** 4 = " + str(3 ** 4))           // 81
+    print()
+    
+    // Floating point powers
+    print("Floating point powers:")
+    print("2.5 ** 2 = " + str(2.5 ** 2))       // 6.25
+    print("4.0 ** 0.5 = " + str(4.0 ** 0.5))   // 2 (square root)
+    print("8.0 ** (1.0/3.0) = " + str(8.0 ** (1.0/3.0))) // 2 (cube root)
+    print("9.0 ** 1.5 = " + str(9.0 ** 1.5))   // 27
+    print()
+    
+    // Negative exponents
+    print("Negative exponents:")
+    print("2 ** -1 = " + str(2 ** -1))         // 0.5
+    print("10 ** -2 = " + str(10 ** -2))       // 0.01
+    print("5 ** -3 = " + str(5 ** -3))         // 0.008
+    print()
+    
+    // Negative bases
+    print("Negative bases:")
+    print("(-2) ** 3 = " + str((-2) ** 3))     // -8
+    print("(-2) ** 4 = " + str((-2) ** 4))     // 16
+    print("(-3) ** 2 = " + str((-3) ** 2))     // 9
+    print()
+    
+    // Right associativity (power is right-associative)
+    print("Right associativity (a ** b ** c = a ** (b ** c)):")
+    print("2 ** 3 ** 2 = " + str(2 ** 3 ** 2)) // 2 ** (3 ** 2) = 2 ** 9 = 512
+    print("3 ** 2 ** 2 = " + str(3 ** 2 ** 2)) // 3 ** (2 ** 2) = 3 ** 4 = 81
+    print()
+    
+    // Operator precedence
+    print("Operator precedence (** has higher precedence than *, /, +, -):")
+    print("2 + 3 ** 2 = " + str(2 + 3 ** 2))     // 2 + 9 = 11
+    print("2 * 3 ** 2 = " + str(2 * 3 ** 2))     // 2 * 9 = 18
+    print("10 - 2 ** 3 = " + str(10 - 2 ** 3))   // 10 - 8 = 2
+    print("20 / 2 ** 2 = " + str(20 / 2 ** 2))   // 20 / 4 = 5
+    print()
+    
+    // Using parentheses to change precedence
+    print("Using parentheses to change precedence:")
+    print("(2 + 3) ** 2 = " + str((2 + 3) ** 2)) // 5 ** 2 = 25
+    print("(2 * 3) ** 2 = " + str((2 * 3) ** 2)) // 6 ** 2 = 36
+    print("(10 - 2) ** 3 = " + str((10 - 2) ** 3)) // 8 ** 3 = 512
+    print()
+    
+    // Mathematical constants and formulas
+    print("Mathematical constants and formulas:")
+    e_approx = (1 + 1.0/1000000) ** 1000000
+    print("Approximation of e: " + str(e_approx))
+    
+    // Compound interest formula: A = P(1 + r)^t
+    principal = 1000.0
+    rate = 0.05  // 5%
+    time = 10
+    amount = principal * (1 + rate) ** time
+    print("Compound interest: $" + str(principal) + " at " + str(rate * 100) + "% for " + str(time) + " years = $" + str(amount))
+    print()
+    
+    // Powers in arrays and calculations
+    print("Powers in arrays and calculations:")
+    powers_of_2 = []
+    for (i in [0, 1, 2, 3, 4, 5]):
+        powers_of_2 = powers_of_2 + [2 ** i]
+    end
+    print("Powers of 2: " + str(powers_of_2))
+    
+    squares = []
+    for (i in [1, 2, 3, 4, 5]):
+        squares = squares + [i ** 2]
+    end
+    print("Squares: " + str(squares))
+    print()
+    
+    // Power function with variables
+    print("Power function with variables:")
+    base = 3
+    exponent = 4
+    result = base ** exponent
+    print(str(base) + " raised to the power of " + str(exponent) + " = " + str(result))
+    
+    // Scientific notation equivalent
+    print("\nScientific notation equivalents:")
+    print("10 ** 3 = " + str(10 ** 3) + " (same as 1e3)")
+    print("10 ** 6 = " + str(10 ** 6) + " (same as 1e6)")
+    print("10 ** -3 = " + str(10 ** -3) + " (same as 1e-3)")
+    
+    print()
+    print("=== Power operator demo completed! ===")
+end
+
+main()

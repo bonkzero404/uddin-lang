@@ -51,6 +51,16 @@ func TestTokenizer(t *testing.T) {
 			values:   []string{"", "", "x", "", "1", "", "0", "", "", "err", "", "", "print", "", "err", "", "", ""},
 		},
 		{
+			input:    "power = a ** b",
+			expected: []Token{NAME, ASSIGN, NAME, POWER, NAME, EOF},
+			values:   []string{"power", "", "a", "", "b", ""},
+		},
+		{
+			input:    "result = 2 ** 3 ** 2",
+			expected: []Token{NAME, ASSIGN, INT, POWER, INT, POWER, INT, EOF},
+			values:   []string{"result", "", "2", "", "3", "", "2", ""},
+		},
+		{
 			input:    "/* This is a multiline comment */ x = 5",
 			expected: []Token{NAME, ASSIGN, INT, EOF},
 			values:   []string{"x", "", "5", ""},
@@ -171,6 +181,13 @@ func TestTokenizerNumberLiterals(t *testing.T) {
 		{"3.14", FLOAT, "3.14"},
 		{"0.5", FLOAT, "0.5"},
 		{"-42", MINUS, ""}, // This will be tokenized as MINUS followed by INT
+		// Scientific notation tests
+		{"1e5", FLOAT, "1e5"},
+		{"2.5e-3", FLOAT, "2.5e-3"},
+		{"9.461e15", FLOAT, "9.461e15"},
+		{"1E10", FLOAT, "1E10"},
+		{"3.14E+2", FLOAT, "3.14E+2"},
+		{"6.022e-23", FLOAT, "6.022e-23"},
 	}
 
 	for i, test := range tests {

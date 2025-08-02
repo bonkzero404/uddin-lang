@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/xml"
 	"fmt"
@@ -714,24 +715,22 @@ func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Print prompt if provided
 	if len(args) == 1 {
 		prompt := toString(args[0], false)
-		// Write prompt directly to stdout and force flush
-		os.Stdout.WriteString(prompt)
-		syscall.Syscall(syscall.SYS_FSYNC, uintptr(os.Stdout.Fd()), 0, 0)
+		fmt.Print(prompt)
 	}
 	
-	// Read a line from stdin using persistent reader
-	line, err := interp.stdinReader.ReadString('\n')
-	if err != nil {
-		// Handle EOF or other errors
-		return Value("")
+	// Use bufio.Scanner to read the entire line including spaces
+	scanner := bufio.NewScanner(os.Stdin)
+	if scanner.Scan() {
+		return Value(scanner.Text())
 	}
 	
-	// Remove trailing newline
-	if len(line) > 0 && line[len(line)-1] == '\n' {
-		line = line[:len(line)-1]
+	// Handle scanner error or EOF
+	if err := scanner.Err(); err != nil {
+		panic(runtimeError(pos, "error reading input: %s", err))
 	}
 	
-	return Value(line)
+	// EOF case
+	return Value("")
 }
 
 // rangeFunc implements the range() built-in function

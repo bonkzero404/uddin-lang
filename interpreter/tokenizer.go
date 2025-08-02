@@ -49,6 +49,8 @@ const (
 	TIMESEQUAL  = 306
 	DIVIDEEQUAL = 307
 	MODULOEQUAL = 308
+	// Power operator (two-character token)
+	POWER       = 309
 
 	// Three-character tokens (sequential from 400)
 	ELLIPSIS = 400
@@ -140,6 +142,7 @@ var tokenNames = map[Token]string{
 	TIMESEQUAL:  "*=",
 	DIVIDEEQUAL: "/=",
 	MODULOEQUAL: "%=",
+	POWER:       "**",
 
 	ELLIPSIS: "...",
 
@@ -440,6 +443,9 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		if t.ch == '=' {
 			t.next()
 			token = TIMESEQUAL
+		} else if t.ch == '*' {
+			t.next()
+			token = POWER
 		} else {
 			token = TIMES
 		}
@@ -507,7 +513,31 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 			t.next()
 		}
 
-		// Determine if it's an integer or float based on presence of decimal point
+		// Check for scientific notation (e or E)
+		if t.ch == 'e' || t.ch == 'E' {
+			isFloat = true // Scientific notation always results in float
+			builder.WriteRune(t.ch)
+			t.next()
+
+			// Optional sign after e/E
+			if t.ch == '+' || t.ch == '-' {
+				builder.WriteRune(t.ch)
+				t.next()
+			}
+
+			// Must have at least one digit after e/E (and optional sign)
+			if !(t.ch >= '0' && t.ch <= '9') {
+				return pos, ILLEGAL, "expected digit after exponent"
+			}
+
+			// Collect exponent digits
+			for t.ch >= '0' && t.ch <= '9' {
+				builder.WriteRune(t.ch)
+				t.next()
+			}
+		}
+
+		// Determine if it's an integer or float based on presence of decimal point or scientific notation
 		if isFloat {
 			token = FLOAT
 		} else {
