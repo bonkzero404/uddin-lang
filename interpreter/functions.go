@@ -4358,14 +4358,26 @@ func udpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.Dial("udp", address)
 	if err != nil {
-		return Value(valueError(pos, "Failed to connect to %s: %v", address, err))
+		// Return connection object with success=false and error message
+		connObj := map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"socket":  Value(nil),
+		}
+		return Value(connObj)
 	}
 
-	// Return connection object
+	// Create socket object that contains the connection
+	socketObj := map[string]Value{
+		"_conn": conn,
+	}
+
+	// Return connection object with success=true
 	connObj := map[string]Value{
-		"type":    "udp_connection",
+		"success": true,
+		"socket":  socketObj, // Socket object for operations
 		"address": address,
-		"_conn":   conn, // Internal connection object
+		"_conn":   conn, // Internal connection object for backward compatibility
 	}
 	return Value(connObj)
 }
@@ -4390,14 +4402,26 @@ func udpListenFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		return Value(valueError(pos, "Failed to listen on UDP port %d: %v", port, err))
+		// Return connection object with success=false and error message
+		connObj := map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"socket":  Value(nil),
+		}
+		return Value(connObj)
 	}
 
-	// Return connection object
+	// Create socket object that contains the connection
+	socketObj := map[string]Value{
+		"_conn": conn,
+	}
+
+	// Return connection object with success=true
 	connObj := map[string]Value{
-		"type":    "udp_connection",
+		"success": true,
+		"socket":  socketObj, // Socket object for operations
 		"address": address,
-		"_conn":   conn, // Internal connection object
+		"_conn":   conn, // Internal connection object for backward compatibility
 	}
 	return Value(connObj)
 }
@@ -4424,14 +4448,25 @@ func udpReadFunc(interp *interpreter, pos Position, args []Value) Value {
 	var addr net.Addr
 	var err error
 
+	// Try to get connection from either "socket" or "_conn" property
+	var conn net.Conn
+	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
+		if c, ok := socketObj["_conn"].(net.Conn); ok {
+			conn = c
+		}
+	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+		conn = c
+	}
+	if conn == nil {
+		return Value(typeError(pos, "udp_read() requires a valid UDP connection"))
+	}
+
 	// Handle both UDP connection types
-	if udpConn, ok := connObj["_conn"].(*net.UDPConn); ok {
+	if udpConn, ok := conn.(*net.UDPConn); ok {
 		n, addr, err = udpConn.ReadFromUDP(buffer)
-	} else if conn, ok := connObj["_conn"].(net.Conn); ok {
+	} else {
 		n, err = conn.Read(buffer)
 		addr = conn.RemoteAddr()
-	} else {
-		return Value(typeError(pos, "udp_read() requires a valid UDP connection"))
 	}
 
 	if err != nil {
@@ -4466,6 +4501,19 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 	var n int
 	var err error
 
+	// Try to get connection from either "socket" or "_conn" property
+	var conn net.Conn
+	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
+		if c, ok := socketObj["_conn"].(net.Conn); ok {
+			conn = c
+		}
+	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+		conn = c
+	}
+	if conn == nil {
+		return Value(typeError(pos, "udp_write() requires a valid UDP connection"))
+	}
+
 	if len(args) == 3 {
 		// Write to specific address
 		addrStr, ok := args[2].(string)
@@ -4473,7 +4521,7 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 			return Value(typeError(pos, "udp_write() requires third argument to be a string (address)"))
 		}
 
-		udpConn, ok := connObj["_conn"].(*net.UDPConn)
+		udpConn, ok := conn.(*net.UDPConn)
 		if !ok {
 			return Value(typeError(pos, "udp_write() with address requires a UDP listener connection"))
 		}
@@ -4490,11 +4538,6 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	} else {
 		// Write to connected address
-		conn, ok := connObj["_conn"].(net.Conn)
-		if !ok {
-			return Value(typeError(pos, "udp_write() requires a valid UDP connection"))
-		}
-
 		n, err = conn.Write([]byte(data))
 	}
 
@@ -4517,8 +4560,16 @@ func udpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(typeError(pos, "udp_close() requires a connection object"))
 	}
 
-	conn, ok := connObj["_conn"].(net.Conn)
-	if !ok {
+	// Try to get connection from either "socket" or "_conn" property
+	var conn net.Conn
+	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
+		if c, ok := socketObj["_conn"].(net.Conn); ok {
+			conn = c
+		}
+	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+		conn = c
+	}
+	if conn == nil {
 		return Value(typeError(pos, "udp_close() requires a valid UDP connection"))
 	}
 
@@ -4533,8 +4584,8 @@ func udpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 // Network Utility Functions
 
 // netResolveFunc implements the net_resolve() built-in function
-// net_resolve(hostname) -> array of IP addresses
-// Example: ips = net_resolve("google.com")
+// net_resolve(hostname) -> {"success": bool, "ips": array, "error": string?}
+// Example: result = net_resolve("google.com")
 func netResolveFunc(interp *interpreter, pos Position, args []Value) Value {
 	if err := ensureNumArgs(pos, "net_resolve", args, 1); err != nil {
 		return Value(err)
@@ -4546,7 +4597,13 @@ func netResolveFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	ips, err := net.LookupIP(hostname)
 	if err != nil {
-		return Value(valueError(pos, "Failed to resolve hostname %s: %v", hostname, err))
+		// Return error object with success: false
+		result := map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"ips":     &[]Value{}, // Empty array
+		}
+		return Value(result)
 	}
 
 	// Convert IPs to string array
@@ -4555,7 +4612,12 @@ func netResolveFunc(interp *interpreter, pos Position, args []Value) Value {
 		ipStrings[i] = Value(ip.String())
 	}
 
-	return Value(&ipStrings)
+	// Return success object
+	result := map[string]Value{
+		"success": true,
+		"ips":     &ipStrings,
+	}
+	return Value(result)
 }
 
 // netPingFunc implements the net_ping() built-in function

@@ -8,10 +8,14 @@ print("\n--- Demo 1: Network Utilities ---")
 
 // Resolve hostname ke IP address
 print("Resolving google.com...")
-ips = net_resolve("google.com")
-print("IP addresses for google.com:")
-for (i in range(len(ips))):
-    print("  " + str(i+1) + ". " + ips[i])
+result = net_resolve("google.com")
+if (result.success) then:
+    print("IP addresses for google.com:")
+    for (i in range(len(result.ips))):
+        print("  " + str(i+1) + ". " + result.ips[i])
+    end
+else:
+    print("DNS resolution failed: " + result.error)
 end
 
 // Ping test
