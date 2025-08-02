@@ -59,14 +59,15 @@ type userFunction struct {
 //   - name: Function name for error message
 //   - args: Actual arguments passed
 //   - required: Required number of arguments
-func ensureNumArgs(pos Position, name string, args []Value, required int) {
+func ensureNumArgs(pos Position, name string, args []Value, required int) Value {
 	if len(args) != required {
 		plural := ""
 		if required != 1 {
 			plural = "s"
 		}
-		panic(typeError(pos, "%s() requires %d arg%s, got %d", name, required, plural, len(args)))
+		return Value(typeError(pos, "%s() requires %d arg%s, got %d", name, required, plural, len(args)))
 	}
+	return Value(nil)
 }
 
 // call implements the functionType interface for user-defined functions
@@ -117,9 +118,24 @@ func (f *userFunction) call(interp *interpreter, pos Position, args []Value) Val
 	// Track function call statistics
 	interp.stats.UserCalls++
 
-	// Execute the function body
-	interp.executeBlock(f.Body)
-	return Value(nil)
+	// Handle return statements
+	var returnValue Value = nil
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				if ret, ok := r.(returnResult); ok {
+					returnValue = ret.value
+				} else {
+					// Re-panic if it's not a return statement
+					panic(r)
+				}
+			}
+		}()
+		// Execute the function body
+		interp.executeBlock(f.Body)
+	}()
+
+	return returnValue
 }
 
 // name implements the functionType interface for user-defined functions
@@ -410,7 +426,7 @@ var builtins = map[string]builtinFunction{
 func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Check if at least one argument is provided
 	if len(args) < 1 {
-		panic(typeError(pos, "append() requires at least 1 arg, got %d", len(args)))
+		return Value(typeError(pos, "append() requires at least 1 arg, got %d", len(args)))
 	}
 
 	// Check if first argument is an array
@@ -436,7 +452,7 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// Error if first argument is not an array
-	panic(typeError(pos, "append() requires first argument to be list"))
+	return Value(typeError(pos, "append() requires first argument to be list"))
 }
 
 // stringsToList converts a Go string slice to a Value array for the interpreter
@@ -462,11 +478,13 @@ func stringsToList(strings []string) Value {
 // Returns the character as a string
 // Example: char(97) -> "a"
 func charFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "char", args, 1)
+	if err := ensureNumArgs(pos, "char", args, 1); err != Value(nil) {
+		return err
+	}
 	if code, ok := args[0].(int); ok {
 		return string(rune(code))
 	}
-	panic(typeError(pos, "char() requires an integer, not %s", typeName(args[0])))
+	return Value(typeError(pos, "char() requires an integer, not %s", typeName(args[0])))
 }
 
 // exitFunc implements the exit() built-in function
@@ -478,13 +496,13 @@ func charFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: exit(1)
 func exitFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) > 1 {
-		panic(typeError(pos, "exit() requires 0 or 1 args, got %d", len(args)))
+		return Value(typeError(pos, "exit() requires 0 or 1 args, got %d", len(args)))
 	}
 	code := 0
 	if len(args) > 0 {
 		arg, ok := args[0].(int)
 		if !ok {
-			panic(typeError(pos, "exit() requires an integer, not %s", typeName(args[0])))
+			return Value(typeError(pos, "exit() requires an integer, not %s", typeName(args[0])))
 		}
 		code = arg
 	}
@@ -501,13 +519,15 @@ func exitFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the index of the first occurrence, or -1 if not found
 // Example: find("hello", "ell") -> 1
 func findFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "find", args, 2)
+	if err := ensureNumArgs(pos, "find", args, 2); err != Value(nil) {
+		return err
+	}
 	switch haystack := args[0].(type) {
 	case string:
 		if needle, ok := args[1].(string); ok {
 			return Value(strings.Index(haystack, needle))
 		}
-		panic(typeError(pos, "find() on string requires second argument to be a string"))
+		return Value(typeError(pos, "find() on string requires second argument to be a string"))
 	case *[]Value:
 		needle := args[1]
 		for i, v := range *haystack {
@@ -517,7 +537,7 @@ func findFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 		return Value(-1)
 	default:
-		panic(typeError(pos, "find() requires first argument to be a string or array"))
+		return Value(typeError(pos, "find() requires first argument to be a string or array"))
 	}
 }
 
@@ -529,7 +549,9 @@ func findFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the integer value, or null if conversion fails
 // Example: int("42") -> 42, int(45.67) -> 45
 func intFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "int", args, 1)
+	if err := ensureNumArgs(pos, "int", args, 1); err != Value(nil) {
+		return err
+	}
 	switch arg := args[0].(type) {
 	case int:
 		return args[0] // Already an integer
@@ -554,7 +576,7 @@ func intFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 		return Value(nil) // Return null if conversion fails
 	default:
-		panic(typeError(pos, "int() requires an int, int64, float64, bool, or a string"))
+		return Value(typeError(pos, "int() requires an int, int64, float64, bool, or a string"))
 	}
 }
 
@@ -567,12 +589,14 @@ func intFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the float value with specified precision
 // Example: float(3.14159, 2) -> 3.14
 func floatFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "float", args, 2)
+	if err := ensureNumArgs(pos, "float", args, 2); err != Value(nil) {
+		return err
+	}
 
 	// Helper function to set decimal precision
-	setDigit := func(f any, digit int) float64 {
+	setDigit := func(f any, digit int) (float64, Value) {
 		if digit < 0 {
-			panic(valueError(pos, "float() digit must not be negative"))
+			return 0, Value(valueError(pos, "float() digit must not be negative"))
 		}
 
 		if f, ok := f.(float64); ok {
@@ -584,29 +608,37 @@ func floatFunc(interp *interpreter, pos Position, args []Value) Value {
 				f = f + 0.0
 			}
 
-			return f
+			return f, nil
 		}
 
-		panic(typeError(pos, "float() requires a float"))
+		return 0, Value(typeError(pos, "float() requires a float"))
 	}
 
 	switch arg := args[0].(type) {
 	case float64:
 		// Already a float
-		f := setDigit(args[0], args[1].(int))
+		f, err := setDigit(args[0], args[1].(int))
+		if err != Value(nil) {
+			return err
+		}
 		return Value(f)
 	case int:
 		// Convert int to float
-		f := setDigit(float64(arg), args[1].(int))
+		f, err := setDigit(float64(arg), args[1].(int))
+		if err != Value(nil) {
+			return err
+		}
 		return Value(f)
 	case string:
 		// Parse string to float
 		f, _ := strconv.ParseFloat(arg, 64)
-		fl := setDigit(f, args[1].(int))
-
+		fl, err := setDigit(f, args[1].(int))
+		if err != Value(nil) {
+			return err
+		}
 		return Value(fl)
 	default:
-		panic(typeError(pos, "float() requires an integer or a string"))
+		return Value(typeError(pos, "float() requires an integer or a string"))
 	}
 }
 
@@ -619,7 +651,9 @@ func floatFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the joined string
 // Example: join(["hello", "world"], ", ") -> "hello, world"
 func joinFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "join", args, 2)
+	if err := ensureNumArgs(pos, "join", args, 2); err != Value(nil) {
+		return err
+	}
 	// Check if first argument is an array
 	if list, ok := args[0].(*[]Value); ok {
 		// Check if second argument is a string
@@ -643,9 +677,9 @@ func joinFunc(interp *interpreter, pos Position, args []Value) Value {
 			}
 			return Value(builder.String())
 		}
-		panic(typeError(pos, "join() requires second argument to be a string"))
+		return Value(typeError(pos, "join() requires second argument to be a string"))
 	}
-	panic(typeError(pos, "join() requires first argument to be an array"))
+	return Value(typeError(pos, "join() requires first argument to be an array"))
 }
 
 // lenFunc implements the len() built-in function
@@ -656,7 +690,9 @@ func joinFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the length as an integer
 // Example: len("hello") -> 5
 func lenFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "len", args, 1)
+	if err := ensureNumArgs(pos, "len", args, 1); err != Value(nil) {
+		return err
+	}
 	var length int
 	switch arg := args[0].(type) {
 	case string:
@@ -672,7 +708,7 @@ func lenFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Number of key-value pairs in object
 		length = len(arg)
 	default:
-		panic(typeError(pos, "len() requires a string, array, or object"))
+		return Value(typeError(pos, "len() requires a string, array, or object"))
 	}
 	return Value(length)
 }
@@ -685,11 +721,13 @@ func lenFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the lowercase string
 // Example: lower("HELLO") -> "hello"
 func lowerFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "lower", args, 1)
+	if err := ensureNumArgs(pos, "lower", args, 1); err != Value(nil) {
+		return err
+	}
 	if s, ok := args[0].(string); ok {
 		return Value(strings.ToLower(s))
 	}
-	panic(typeError(pos, "lower() requires a string"))
+	return Value(typeError(pos, "lower() requires a string"))
 }
 
 // printFunc implements the print() built-in function
@@ -723,7 +761,7 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: name = input("Enter your name: ")
 func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) > 1 {
-		panic(typeError(pos, "input() takes at most 1 argument (%d given)", len(args)))
+		return Value(typeError(pos, "input() takes at most 1 argument (%d given)", len(args)))
 	}
 	
 	// Print prompt if provided
@@ -740,7 +778,7 @@ func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 	
 	// Handle scanner error or EOF
 	if err := scanner.Err(); err != nil {
-		panic(runtimeError(pos, "error reading input: %s", err))
+		return Value(runtimeError(pos, "error reading input: %s", err))
 	}
 	
 	// EOF case
@@ -765,7 +803,7 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Single argument: range(n) -> [0, 1, ..., n-1]
 		if n, ok := args[0].(int); ok {
 			if n < 0 {
-				panic(valueError(pos, "range() argument must not be negative"))
+				return Value(valueError(pos, "range() argument must not be negative"))
 			}
 			// Fast path for small ranges
 			if n == 0 {
@@ -779,14 +817,14 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 			}
 			return Value(&nums)
 		}
-		panic(typeError(pos, "range() requires an integer"))
+		return Value(typeError(pos, "range() requires an integer"))
 	} else if len(args) == 2 {
 		// Two arguments: range(start, stop) -> [start, start+1, ..., stop-1]
 		start, startOk := args[0].(int)
 		stop, stopOk := args[1].(int)
 
 		if !startOk || !stopOk {
-			panic(typeError(pos, "range() requires integer arguments"))
+			return Value(typeError(pos, "range() requires integer arguments"))
 		}
 
 		if start >= stop {
@@ -809,11 +847,11 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 		step, stepOk := args[2].(int)
 
 		if !startOk || !stopOk || !stepOk {
-			panic(typeError(pos, "range() requires integer arguments"))
+			return Value(typeError(pos, "range() requires integer arguments"))
 		}
 
 		if step == 0 {
-			panic(valueError(pos, "range() step argument must not be zero"))
+			return Value(valueError(pos, "range() step argument must not be zero"))
 		}
 
 		// Calculate the size of the result array
@@ -833,7 +871,7 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(&nums)
 	}
 
-	panic(valueError(pos, "range() requires 1, 2, or 3 arguments, got %d", len(args)))
+	return Value(valueError(pos, "range() requires 1, 2, or 3 arguments, got %d", len(args)))
 }
 
 // runeFunc implements the rune() built-in function
@@ -844,18 +882,20 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the Unicode code point as an integer
 // Example: rune("a") -> 97
 func runeFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "rune", args, 1)
+	if err := ensureNumArgs(pos, "rune", args, 1); err != Value(nil) {
+		return err
+	}
 	if s, ok := args[0].(string); ok {
 		// Convert string to rune array
 		runes := []rune(s)
 		// Check that string contains exactly one character
 		if len(runes) != 1 {
-			panic(valueError(pos, "rune() requires a 1-character string"))
+			return Value(valueError(pos, "rune() requires a 1-character string"))
 		}
 		// Return the Unicode code point
 		return Value(int(runes[0]))
 	}
-	panic(typeError(pos, "rune() requires a string"))
+	return Value(typeError(pos, "rune() requires a string"))
 }
 
 // sliceFunc implements the slice() built-in function
@@ -868,32 +908,34 @@ func runeFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns a new string or array containing the sliced portion
 // Example: slice("hello", 1, 3) -> "el"
 func sliceFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "slice", args, 3)
+	if err := ensureNumArgs(pos, "slice", args, 3); err != Value(nil) {
+		return err
+	}
 	// Check that start and end are integers
 	start, sok := args[1].(int)
 	end, eok := args[2].(int)
 	if !sok || !eok {
-		panic(typeError(pos, "slice() requires start and end to be integers"))
+		return Value(typeError(pos, "slice() requires start and end to be integers"))
 	}
 
 	switch s := args[0].(type) {
 	case string:
 		// Handle string slicing
 		if start < 0 || end > len(s) || start > end {
-			panic(valueError(pos, "slice() start or end out of bounds"))
+			return Value(valueError(pos, "slice() start or end out of bounds"))
 		}
 		return Value(s[start:end])
 	case *[]Value:
 		// Handle array slicing
 		if start < 0 || end > len(*s) || start > end {
-			panic(valueError(pos, "slice() start or end out of bounds"))
+			return Value(valueError(pos, "slice() start or end out of bounds"))
 		}
 		// Create a new array with the sliced elements
 		result := make([]Value, end-start)
 		copy(result, (*s)[start:end])
 		return Value(&result)
 	default:
-		panic(typeError(pos, "slice() requires first argument to be a str or array"))
+		return Value(typeError(pos, "slice() requires first argument to be a str or array"))
 	}
 }
 
@@ -909,13 +951,13 @@ func sliceFunc(interp *interpreter, pos Position, args []Value) Value {
 func sortFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Check argument count
 	if len(args) != 1 && len(args) != 2 {
-		panic(typeError(pos, "sort() requires 1 or 2 args, got %d", len(args)))
+		return Value(typeError(pos, "sort() requires 1 or 2 args, got %d", len(args)))
 	}
 
 	// Check that first argument is an array
 	list, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "sort() requires first argument to be a array"))
+		return Value(typeError(pos, "sort() requires first argument to be a array"))
 	}
 
 	// No need to sort arrays with 0 or 1 elements
@@ -932,7 +974,7 @@ func sortFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Sort with key function
 		keyFunc, ok := args[1].(functionType)
 		if !ok {
-			panic(typeError(pos, "sort() requires second argument to be a function"))
+			return Value(typeError(pos, "sort() requires second argument to be a function"))
 		}
 
 		// Decorate, sort, undecorate pattern
@@ -976,13 +1018,13 @@ func sortFunc(interp *interpreter, pos Position, args []Value) Value {
 func splitFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Check argument count
 	if len(args) != 1 && len(args) != 2 {
-		panic(typeError(pos, "split() requires 1 or 2 args, got %d", len(args)))
+		return Value(typeError(pos, "split() requires 1 or 2 args, got %d", len(args)))
 	}
 
 	// Check that first argument is a string
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "split() requires first argument to be a string"))
+		return Value(typeError(pos, "split() requires first argument to be a string"))
 	}
 
 	// Split the string
@@ -994,7 +1036,7 @@ func splitFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Split on the provided separator
 		parts = strings.Split(str, sep)
 	} else {
-		panic(typeError(pos, "split() requires separator to be a str or null"))
+		return Value(typeError(pos, "split() requires separator to be a str or null"))
 	}
 
 	// Convert string slice to Value array
@@ -1010,7 +1052,9 @@ func splitFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns true if the string matches the pattern, false otherwise
 // Example: is_regex_match("^-?\\d+\\.\\d+$", "3.14") -> true
 func isregexFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "regex_match", args, 2)
+	if err := ensureNumArgs(pos, "regex_match", args, 2); err != Value(nil) {
+		return err
+	}
 
 	// Check that first argument is a string (pattern)
 	if pattern, ok := args[0].(string); ok {
@@ -1025,9 +1069,9 @@ func isregexFunc(interp *interpreter, pos Position, args []Value) Value {
 			// Check if the string matches the pattern
 			return re.MatchString(str)
 		}
-		panic(typeError(pos, "regex() requires second argument to be a string"))
+		return Value(typeError(pos, "regex() requires second argument to be a string"))
 	}
-	panic(typeError(pos, "regex() requires first argument to be a string"))
+	return Value(typeError(pos, "regex() requires first argument to be a string"))
 }
 
 // datenowFunc implements the date_now() built-in function
@@ -1036,7 +1080,9 @@ func isregexFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the current date/time as a string
 // Example: date_now() -> "2020-01-02T15:04:05Z"
 func datenowFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "date_now", args, 0)
+	if err := ensureNumArgs(pos, "date_now", args, 0); err != Value(nil) {
+		return err
+	}
 	// Get current time and format as RFC3339
 	return Value(time.Now().Format(time.RFC3339))
 }
@@ -1050,7 +1096,9 @@ func datenowFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the formatted date string, or null if parsing fails
 // Example: date_format("2020-01-02T15:04:05Z", "YYYY-MM-DD hh:mm:ss") -> "2020-01-02 15:04:05"
 func dateformatFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "date_format", args, 2)
+	if err := ensureNumArgs(pos, "date_format", args, 2); err != Value(nil) {
+		return err
+	}
 	if t, ok := args[0].(string); ok {
 		if layout, ok := args[1].(string); ok {
 			// Define replacements for date format placeholders
@@ -1077,9 +1125,9 @@ func dateformatFunc(interp *interpreter, pos Position, args []Value) Value {
 			layout = replacer.Replace(layout)
 			return Value(parsed.Format(layout))
 		}
-		panic(typeError(pos, "date_format() requires second argument to be a string"))
+		return Value(typeError(pos, "date_format() requires second argument to be a string"))
 	}
-	panic(typeError(pos, "date_format() requires first argument to be a string"))
+	return Value(typeError(pos, "date_format() requires first argument to be a string"))
 }
 
 // contains(haystack: string, needle: string) -> bool
@@ -1087,13 +1135,15 @@ func dateformatFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: contains("hello", "ell") -> true
 // Example: contains([1, 2, 3], 2) -> true
 func containsFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "contains", args, 2)
+	if err := ensureNumArgs(pos, "contains", args, 2); err != Value(nil) {
+		return err
+	}
 	switch haystack := args[0].(type) {
 	case string:
 		if needle, ok := args[1].(string); ok {
 			return Value(strings.Contains(haystack, needle))
 		}
-		panic(typeError(pos, "contains() on str requires second argument to be a string"))
+		return Value(typeError(pos, "contains() on str requires second argument to be a string"))
 	case *[]Value:
 		needle := args[1]
 		for _, v := range *haystack {
@@ -1103,40 +1153,44 @@ func containsFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 		return Value(false)
 	default:
-		panic(typeError(pos, "contains() requires first argument to be a string or array"))
+		return Value(typeError(pos, "contains() requires first argument to be a string or array"))
 	}
 }
 
 // str_pad(s: str, pad_len: int, pad_str: string) -> string
 // Example: str_pad("hello", 10, " ") -> "hello     "
 func strpadFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "str_pad", args, 3)
+	if err := ensureNumArgs(pos, "str_pad", args, 3); err != Value(nil) {
+		return err
+	}
 	if s, ok := args[0].(string); ok {
 		if padLen, ok := args[1].(int); ok {
 			if padStr, ok := args[2].(string); ok {
 				return Value(s + strings.Repeat(padStr, padLen))
 			}
-			panic(typeError(pos, "str_pad() requires third argument to be a string"))
+			return Value(typeError(pos, "str_pad() requires third argument to be a string"))
 		}
-		panic(typeError(pos, "str_pad() requires second argument to be an integer"))
+		return Value(typeError(pos, "str_pad() requires second argument to be an integer"))
 	}
-	panic(typeError(pos, "str_pad() requires first argument to be a string"))
+	return Value(typeError(pos, "str_pad() requires first argument to be a string"))
 }
 
 // substr(s: str, start: int, end: int) -> string
 // Example: substr("hello", 1, 3) -> "ell"
 func substrFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "substr", args, 3)
+	if err := ensureNumArgs(pos, "substr", args, 3); err != Value(nil) {
+		return err
+	}
 	if s, ok := args[0].(string); ok {
 		if start, ok := args[1].(int); ok {
 			if end, ok := args[2].(int); ok {
 				return Value(s[start:end])
 			}
-			panic(typeError(pos, "substr() requires third argument to be an integer"))
+			return Value(typeError(pos, "substr() requires third argument to be an integer"))
 		}
-		panic(typeError(pos, "substr() requires second argument to be an integer"))
+		return Value(typeError(pos, "substr() requires second argument to be an integer"))
 	}
-	panic(typeError(pos, "substr() requires first argument to be a string"))
+	return Value(typeError(pos, "substr() requires first argument to be a string"))
 }
 
 // toString converts any interpreter Value to its string representation
@@ -1243,13 +1297,15 @@ func toString(value Value, quoteStr bool) string {
 		s = v.Error() // Error representation
 	default:
 		// Interpreter should never give us this
-		panic(fmt.Sprintf("str() got unexpected type %T", v))
+		return fmt.Sprintf("str() got unexpected type %T", v)
 	}
 	return s
 }
 
 func strFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "str", args, 1)
+	if err := ensureNumArgs(pos, "str", args, 1); err != nil {
+		return err
+	}
 	return Value(toString(args[0], false))
 }
 
@@ -1280,22 +1336,26 @@ func typeName(v Value) string {
 		t = "function" // Function value
 	default:
 		// Interpreter should never give us this
-		panic(fmt.Sprintf("type() got unexpected type %T", v))
+		return "unknown"
 	}
 	return t
 }
 
 func typeofFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "typeof", args, 1)
+	if err := ensureNumArgs(pos, "typeof", args, 1); err != nil {
+		return err
+	}
 	return Value(typeName(args[0]))
 }
 
 func upperFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "upper", args, 1)
+	if err := ensureNumArgs(pos, "upper", args, 1); err != nil {
+		return err
+	}
 	if s, ok := args[0].(string); ok {
 		return Value(strings.ToUpper(s))
 	}
-	panic(typeError(pos, "upper() requires a string"))
+	return Value(typeError(pos, "upper() requires a string"))
 }
 
 // importFunc implements the import() built-in function
@@ -1311,7 +1371,7 @@ func importFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Get the filename argument
 	filename, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "import() requires a string filename"))
+		return Value(typeError(pos, "import() requires a string filename"))
 	}
 
 	// If the filename doesn't have .din extension, add it
@@ -1386,26 +1446,26 @@ func importFunc(interp *interpreter, pos Position, args []Value) Value {
 // ========================================
 
 // Helper function to convert Value to float64
-func toFloat64(pos Position, v Value, funcName string) float64 {
+func toFloat64(pos Position, v Value, funcName string) (float64, Value) {
 	switch val := v.(type) {
 	case int:
-		return float64(val)
+		return float64(val), Value(nil)
 	case float64:
-		return val
+		return val, Value(nil)
 	default:
-		panic(typeError(pos, "%s() requires a number, got %s", funcName, typeName(v)))
+		return 0, Value(typeError(pos, "%s() requires a number, got %s", funcName, typeName(v)))
 	}
 }
 
 // Helper function to convert Value to int
-func toInt(pos Position, v Value, funcName string) int {
+func toInt(pos Position, v Value, funcName string) (int, Value) {
 	switch val := v.(type) {
 	case int:
-		return val
+		return val, Value(nil)
 	case float64:
-		return int(val)
+		return int(val), Value(nil)
 	default:
-		panic(typeError(pos, "%s() requires a number, got %s", funcName, typeName(v)))
+		return 0, Value(typeError(pos, "%s() requires a number, got %s", funcName, typeName(v)))
 	}
 }
 
@@ -1416,7 +1476,9 @@ func toInt(pos Position, v Value, funcName string) int {
 // absFunc implements the abs() built-in function
 // Returns the absolute value of a number
 func absFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "abs", args, 1)
+	if err := ensureNumArgs(pos, "abs", args, 1); err != nil {
+		return err
+	}
 	switch val := args[0].(type) {
 	case int:
 		if val < 0 {
@@ -1426,7 +1488,7 @@ func absFunc(interp *interpreter, pos Position, args []Value) Value {
 	case float64:
 		return Value(math.Abs(val))
 	default:
-		panic(typeError(pos, "abs() requires a number, got %s", typeName(args[0])))
+		return Value(typeError(pos, "abs() requires a number, got %s", typeName(args[0])))
 	}
 }
 
@@ -1434,18 +1496,18 @@ func absFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the maximum value from multiple arguments or from an array
 func maxFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 1 {
-		panic(typeError(pos, "max() requires at least 1 argument"))
+		return Value(typeError(pos, "max() requires at least 1 argument"))
 	}
 
 	// If first argument is an array, find max within the array
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) == 0 {
-			panic(valueError(pos, "max() cannot be applied to empty array"))
+			return Value(valueError(pos, "max() cannot be applied to empty array"))
 		}
 		maxVal := (*arr)[0]
 		for i := 1; i < len(*arr); i++ {
 			if evalLess(pos, maxVal, (*arr)[i]).(bool) {
-				maxVal = (*arr)[i]
+			maxVal = (*arr)[i]
 			}
 		}
 		return maxVal
@@ -1465,18 +1527,18 @@ func maxFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the minimum value from multiple arguments or from an array
 func minFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 1 {
-		panic(typeError(pos, "min() requires at least 1 argument"))
+		return Value(typeError(pos, "min() requires at least 1 argument"))
 	}
 
 	// If first argument is an array, find min within the array
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) == 0 {
-			panic(valueError(pos, "min() cannot be applied to empty array"))
+			return Value(valueError(pos, "min() cannot be applied to empty array"))
 		}
 		minVal := (*arr)[0]
 		for i := 1; i < len(*arr); i++ {
 			if evalLess(pos, (*arr)[i], minVal).(bool) {
-				minVal = (*arr)[i]
+			minVal = (*arr)[i]
 			}
 		}
 		return minVal
@@ -1495,9 +1557,17 @@ func minFunc(interp *interpreter, pos Position, args []Value) Value {
 // powFunc implements the pow() built-in function
 // Returns base raised to the power of exponent
 func powFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "pow", args, 2)
-	base := toFloat64(pos, args[0], "pow")
-	exp := toFloat64(pos, args[1], "pow")
+	if err := ensureNumArgs(pos, "pow", args, 2); err != nil {
+		return err
+	}
+	base, err1 := toFloat64(pos, args[0], "pow")
+	if err1 != nil {
+		return err1
+	}
+	exp, err2 := toFloat64(pos, args[1], "pow")
+	if err2 != nil {
+		return err2
+	}
 	result := math.Pow(base, exp)
 
 	// Return int if result is a whole number and both inputs were ints
@@ -1514,10 +1584,15 @@ func powFunc(interp *interpreter, pos Position, args []Value) Value {
 // sqrtFunc implements the sqrt() built-in function
 // Returns the square root of a number
 func sqrtFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "sqrt", args, 1)
-	val := toFloat64(pos, args[0], "sqrt")
+	if err := ensureNumArgs(pos, "sqrt", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "sqrt")
+	if err != nil {
+		return err
+	}
 	if val < 0 {
-		panic(valueError(pos, "sqrt() of negative number"))
+		return Value(valueError(pos, "sqrt() of negative number"))
 	}
 	return Value(math.Sqrt(val))
 }
@@ -1525,8 +1600,13 @@ func sqrtFunc(interp *interpreter, pos Position, args []Value) Value {
 // cbrtFunc implements the cbrt() built-in function
 // Returns the cube root of a number
 func cbrtFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "cbrt", args, 1)
-	val := toFloat64(pos, args[0], "cbrt")
+	if err := ensureNumArgs(pos, "cbrt", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "cbrt")
+	if err != nil {
+		return err
+	}
 	return Value(math.Cbrt(val))
 }
 
@@ -1538,41 +1618,65 @@ func cbrtFunc(interp *interpreter, pos Position, args []Value) Value {
 // Rounds to nearest integer or to specified decimal places
 func roundFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 1 {
-		val := toFloat64(pos, args[0], "round")
+		val, err := toFloat64(pos, args[0], "round")
+		if err != nil {
+			return err
+		}
 		return Value(int(math.Round(val)))
 	} else if len(args) == 2 {
-		val := toFloat64(pos, args[0], "round")
-		places := toInt(pos, args[1], "round")
+		val, err1 := toFloat64(pos, args[0], "round")
+		if err1 != nil {
+			return err1
+		}
+		places, err2 := toInt(pos, args[1], "round")
+		if err2 != nil {
+			return err2
+		}
 		if places < 0 {
-			panic(valueError(pos, "round() decimal places must not be negative"))
+			return Value(valueError(pos, "round() decimal places must not be negative"))
 		}
 		multiplier := math.Pow(10, float64(places))
 		return Value(math.Round(val*multiplier) / multiplier)
 	}
-	panic(typeError(pos, "round() requires 1 or 2 arguments, got %d", len(args)))
+	return Value(typeError(pos, "round() requires 1 or 2 arguments, got %d", len(args)))
 }
 
 // floorFunc implements the floor() built-in function
 // Returns the largest integer less than or equal to the number
 func floorFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "floor", args, 1)
-	val := toFloat64(pos, args[0], "floor")
+	if err := ensureNumArgs(pos, "floor", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "floor")
+	if err != nil {
+		return err
+	}
 	return Value(int(math.Floor(val)))
 }
 
 // ceilFunc implements the ceil() built-in function
 // Returns the smallest integer greater than or equal to the number
 func ceilFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "ceil", args, 1)
-	val := toFloat64(pos, args[0], "ceil")
+	if err := ensureNumArgs(pos, "ceil", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "ceil")
+	if err != nil {
+		return err
+	}
 	return Value(int(math.Ceil(val)))
 }
 
 // truncFunc implements the trunc() built-in function
 // Returns the integer part of a number (truncates decimal part)
 func truncFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "trunc", args, 1)
-	val := toFloat64(pos, args[0], "trunc")
+	if err := ensureNumArgs(pos, "trunc", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "trunc")
+	if err != nil {
+		return err
+	}
 	return Value(int(math.Trunc(val)))
 }
 
@@ -1582,57 +1686,95 @@ func truncFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // sinFunc implements the sin() built-in function
 func sinFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "sin", args, 1)
-	val := toFloat64(pos, args[0], "sin")
+	if err := ensureNumArgs(pos, "sin", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "sin")
+	if err != nil {
+		return err
+	}
 	return Value(math.Sin(val))
 }
 
 // cosFunc implements the cos() built-in function
 func cosFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "cos", args, 1)
-	val := toFloat64(pos, args[0], "cos")
+	if err := ensureNumArgs(pos, "cos", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "cos")
+	if err != nil {
+		return err
+	}
 	return Value(math.Cos(val))
 }
 
 // tanFunc implements the tan() built-in function
 func tanFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tan", args, 1)
-	val := toFloat64(pos, args[0], "tan")
+	if err := ensureNumArgs(pos, "tan", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "tan")
+	if err != nil {
+		return err
+	}
 	return Value(math.Tan(val))
 }
 
 // asinFunc implements the asin() built-in function
 func asinFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "asin", args, 1)
-	val := toFloat64(pos, args[0], "asin")
+	if err := ensureNumArgs(pos, "asin", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "asin")
+	if err != nil {
+		return err
+	}
 	if val < -1 || val > 1 {
-		panic(valueError(pos, "asin() input must be between -1 and 1"))
+		return Value(valueError(pos, "asin() input must be between -1 and 1"))
 	}
 	return Value(math.Asin(val))
 }
 
 // acosFunc implements the acos() built-in function
 func acosFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "acos", args, 1)
-	val := toFloat64(pos, args[0], "acos")
+	if err := ensureNumArgs(pos, "acos", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "acos")
+	if err != nil {
+		return err
+	}
 	if val < -1 || val > 1 {
-		panic(valueError(pos, "acos() input must be between -1 and 1"))
+		return Value(valueError(pos, "acos() input must be between -1 and 1"))
 	}
 	return Value(math.Acos(val))
 }
 
 // atanFunc implements the atan() built-in function
 func atanFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "atan", args, 1)
-	val := toFloat64(pos, args[0], "atan")
+	if err := ensureNumArgs(pos, "atan", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "atan")
+	if err != nil {
+		return err
+	}
 	return Value(math.Atan(val))
 }
 
 // atan2Func implements the atan2() built-in function
 func atan2Func(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "atan2", args, 2)
-	y := toFloat64(pos, args[0], "atan2")
-	x := toFloat64(pos, args[1], "atan2")
+	if err := ensureNumArgs(pos, "atan2", args, 2); err != nil {
+		return err
+	}
+	y, err1 := toFloat64(pos, args[0], "atan2")
+	if err1 != nil {
+		return err1
+	}
+	x, err2 := toFloat64(pos, args[1], "atan2")
+	if err2 != nil {
+		return err2
+	}
 	return Value(math.Atan2(y, x))
 }
 
@@ -1642,22 +1784,37 @@ func atan2Func(interp *interpreter, pos Position, args []Value) Value {
 
 // sinhFunc implements the sinh() built-in function
 func sinhFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "sinh", args, 1)
-	val := toFloat64(pos, args[0], "sinh")
+	if err := ensureNumArgs(pos, "sinh", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "sinh")
+	if err != nil {
+		return err
+	}
 	return Value(math.Sinh(val))
 }
 
 // coshFunc implements the cosh() built-in function
 func coshFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "cosh", args, 1)
-	val := toFloat64(pos, args[0], "cosh")
+	if err := ensureNumArgs(pos, "cosh", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "cosh")
+	if err != nil {
+		return err
+	}
 	return Value(math.Cosh(val))
 }
 
 // tanhFunc implements the tanh() built-in function
 func tanhFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tanh", args, 1)
-	val := toFloat64(pos, args[0], "tanh")
+	if err := ensureNumArgs(pos, "tanh", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "tanh")
+	if err != nil {
+		return err
+	}
 	return Value(math.Tanh(val))
 }
 
@@ -1667,59 +1824,92 @@ func tanhFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // logFunc implements the log() built-in function (natural logarithm)
 func logFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "log", args, 1)
-	val := toFloat64(pos, args[0], "log")
+	if err := ensureNumArgs(pos, "log", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "log")
+	if err != nil {
+		return err
+	}
 	if val <= 0 {
-		panic(valueError(pos, "log() of non-positive number"))
+		return Value(valueError(pos, "log() of non-positive number"))
 	}
 	return Value(math.Log(val))
 }
 
 // log10Func implements the log10() built-in function
 func log10Func(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "log10", args, 1)
-	val := toFloat64(pos, args[0], "log10")
+	if err := ensureNumArgs(pos, "log10", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "log10")
+	if err != nil {
+		return err
+	}
 	if val <= 0 {
-		panic(valueError(pos, "log10() of non-positive number"))
+		return Value(valueError(pos, "log10() of non-positive number"))
 	}
 	return Value(math.Log10(val))
 }
 
 // log2Func implements the log2() built-in function
 func log2Func(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "log2", args, 1)
-	val := toFloat64(pos, args[0], "log2")
+	if err := ensureNumArgs(pos, "log2", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "log2")
+	if err != nil {
+		return err
+	}
 	if val <= 0 {
-		panic(valueError(pos, "log2() of non-positive number"))
+		return Value(valueError(pos, "log2() of non-positive number"))
 	}
 	return Value(math.Log2(val))
 }
 
 // logbFunc implements the logb() built-in function (logarithm with custom base)
 func logbFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "logb", args, 2)
-	val := toFloat64(pos, args[0], "logb")
-	base := toFloat64(pos, args[1], "logb")
+	if err := ensureNumArgs(pos, "logb", args, 2); err != nil {
+		return err
+	}
+	val, err1 := toFloat64(pos, args[0], "logb")
+	if err1 != nil {
+		return err1
+	}
+	base, err2 := toFloat64(pos, args[1], "logb")
+	if err2 != nil {
+		return err2
+	}
 	if val <= 0 {
-		panic(valueError(pos, "logb() value must be positive"))
+		return Value(valueError(pos, "logb() value must be positive"))
 	}
 	if base <= 0 || base == 1 {
-		panic(valueError(pos, "logb() base must be positive and not equal to 1"))
+		return Value(valueError(pos, "logb() base must be positive and not equal to 1"))
 	}
 	return Value(math.Log(val) / math.Log(base))
 }
 
 // expFunc implements the exp() built-in function (e^x)
 func expFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "exp", args, 1)
-	val := toFloat64(pos, args[0], "exp")
+	if err := ensureNumArgs(pos, "exp", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "exp")
+	if err != nil {
+		return err
+	}
 	return Value(math.Exp(val))
 }
 
 // exp2Func implements the exp2() built-in function (2^x)
 func exp2Func(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "exp2", args, 1)
-	val := toFloat64(pos, args[0], "exp2")
+	if err := ensureNumArgs(pos, "exp2", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "exp2")
+	if err != nil {
+		return err
+	}
 	return Value(math.Exp2(val))
 }
 
@@ -1729,7 +1919,9 @@ func exp2Func(interp *interpreter, pos Position, args []Value) Value {
 
 // sumFunc implements the sum() built-in function
 func sumFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "sum", args, 1)
+	if err := ensureNumArgs(pos, "sum", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		var total float64
 		var hasFloat bool
@@ -1742,7 +1934,7 @@ func sumFunc(interp *interpreter, pos Position, args []Value) Value {
 				total += val
 				hasFloat = true
 			default:
-				panic(typeError(pos, "sum() array must contain only numbers"))
+				return Value(typeError(pos, "sum() array must contain only numbers"))
 			}
 		}
 
@@ -1751,15 +1943,17 @@ func sumFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 		return Value(int(total))
 	}
-	panic(typeError(pos, "sum() requires an array"))
+	return Value(typeError(pos, "sum() requires an array"))
 }
 
 // meanFunc implements the mean() built-in function
 func meanFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "mean", args, 1)
+	if err := ensureNumArgs(pos, "mean", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) == 0 {
-			panic(valueError(pos, "mean() of empty array"))
+			return Value(valueError(pos, "mean() of empty array"))
 		}
 
 		var total float64
@@ -1770,21 +1964,23 @@ func meanFunc(interp *interpreter, pos Position, args []Value) Value {
 			case float64:
 				total += val
 			default:
-				panic(typeError(pos, "mean() array must contain only numbers"))
+				return Value(typeError(pos, "mean() array must contain only numbers"))
 			}
 		}
 
 		return Value(total / float64(len(*arr)))
 	}
-	panic(typeError(pos, "mean() requires an array"))
+	return Value(typeError(pos, "mean() requires an array"))
 }
 
 // medianFunc implements the median() built-in function
 func medianFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "median", args, 1)
+	if err := ensureNumArgs(pos, "median", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) == 0 {
-			panic(valueError(pos, "median() of empty array"))
+			return Value(valueError(pos, "median() of empty array"))
 		}
 
 		// Convert to float slice and sort
@@ -1796,7 +1992,7 @@ func medianFunc(interp *interpreter, pos Position, args []Value) Value {
 			case float64:
 				nums[i] = val
 			default:
-				panic(typeError(pos, "median() array must contain only numbers"))
+				return Value(typeError(pos, "median() array must contain only numbers"))
 			}
 		}
 
@@ -1811,15 +2007,17 @@ func medianFunc(interp *interpreter, pos Position, args []Value) Value {
 			return Value(nums[n/2])
 		}
 	}
-	panic(typeError(pos, "median() requires an array"))
+	return Value(typeError(pos, "median() requires an array"))
 }
 
 // modeFunc implements the mode() built-in function
 func modeFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "mode", args, 1)
+	if err := ensureNumArgs(pos, "mode", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) == 0 {
-			panic(valueError(pos, "mode() of empty array"))
+			return Value(valueError(pos, "mode() of empty array"))
 		}
 
 		frequency := make(map[string]int)
@@ -1844,12 +2042,14 @@ func modeFunc(interp *interpreter, pos Position, args []Value) Value {
 
 		return valueMap[modeKey]
 	}
-	panic(typeError(pos, "mode() requires an array"))
+	return Value(typeError(pos, "mode() requires an array"))
 }
 
 // stdDevFunc implements the std_dev() built-in function
 func stdDevFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "std_dev", args, 1)
+	if err := ensureNumArgs(pos, "std_dev", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) <= 1 {
 			return Value(0.0)
@@ -1864,7 +2064,7 @@ func stdDevFunc(interp *interpreter, pos Position, args []Value) Value {
 			case float64:
 				total += val
 			default:
-				panic(typeError(pos, "std_dev() array must contain only numbers"))
+				return Value(typeError(pos, "std_dev() array must contain only numbers"))
 			}
 		}
 		mean := total / float64(len(*arr))
@@ -1872,7 +2072,10 @@ func stdDevFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Calculate variance
 		var sumSquaredDiff float64
 		for _, v := range *arr {
-			val := toFloat64(pos, v, "std_dev")
+			val, err := toFloat64(pos, v, "std_dev")
+			if err != nil {
+				return err
+			}
 			diff := val - mean
 			sumSquaredDiff += diff * diff
 		}
@@ -1880,12 +2083,14 @@ func stdDevFunc(interp *interpreter, pos Position, args []Value) Value {
 
 		return Value(math.Sqrt(variance))
 	}
-	panic(typeError(pos, "std_dev() requires an array"))
+	return Value(typeError(pos, "std_dev() requires an array"))
 }
 
 // varianceFunc implements the variance() built-in function
 func varianceFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "variance", args, 1)
+	if err := ensureNumArgs(pos, "variance", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) <= 1 {
 			return Value(0.0)
@@ -1900,7 +2105,7 @@ func varianceFunc(interp *interpreter, pos Position, args []Value) Value {
 			case float64:
 				total += val
 			default:
-				panic(typeError(pos, "variance() array must contain only numbers"))
+				return Value(typeError(pos, "variance() array must contain only numbers"))
 			}
 		}
 		mean := total / float64(len(*arr))
@@ -1908,14 +2113,17 @@ func varianceFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Calculate variance
 		var sumSquaredDiff float64
 		for _, v := range *arr {
-			val := toFloat64(pos, v, "variance")
+			val, err := toFloat64(pos, v, "variance")
+			if err != nil {
+				return err
+			}
 			diff := val - mean
 			sumSquaredDiff += diff * diff
 		}
 
 		return Value(sumSquaredDiff / float64(len(*arr)-1))
 	}
-	panic(typeError(pos, "variance() requires an array"))
+	return Value(typeError(pos, "variance() requires an array"))
 }
 
 // ========================================
@@ -1924,9 +2132,17 @@ func varianceFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // gcdFunc implements the gcd() built-in function
 func gcdFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "gcd", args, 2)
-	a := toInt(pos, args[0], "gcd")
-	b := toInt(pos, args[1], "gcd")
+	if err := ensureNumArgs(pos, "gcd", args, 2); err != nil {
+		return err
+	}
+	a, err := toInt(pos, args[0], "gcd")
+	if err != nil {
+		return err
+	}
+	b, err := toInt(pos, args[1], "gcd")
+	if err != nil {
+		return err
+	}
 
 	a = int(math.Abs(float64(a)))
 	b = int(math.Abs(float64(b)))
@@ -1939,9 +2155,17 @@ func gcdFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // lcmFunc implements the lcm() built-in function
 func lcmFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "lcm", args, 2)
-	a := toInt(pos, args[0], "lcm")
-	b := toInt(pos, args[1], "lcm")
+	if err := ensureNumArgs(pos, "lcm", args, 2); err != nil {
+		return err
+	}
+	a, err := toInt(pos, args[0], "lcm")
+	if err != nil {
+		return err
+	}
+	b, err := toInt(pos, args[1], "lcm")
+	if err != nil {
+		return err
+	}
 
 	if a == 0 || b == 0 {
 		return Value(0)
@@ -1957,14 +2181,19 @@ func lcmFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // factorialFunc implements the factorial() built-in function
 func factorialFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "factorial", args, 1)
-	n := toInt(pos, args[0], "factorial")
+	if err := ensureNumArgs(pos, "factorial", args, 1); err != nil {
+		return err
+	}
+	n, err := toInt(pos, args[0], "factorial")
+	if err != nil {
+		return err
+	}
 
 	if n < 0 {
-		panic(valueError(pos, "factorial() of negative number"))
+		return Value(valueError(pos, "factorial() of negative number"))
 	}
 	if n > 20 {
-		panic(valueError(pos, "factorial() argument too large (max 20)"))
+		return Value(valueError(pos, "factorial() argument too large (max 20)"))
 	}
 
 	result := 1
@@ -1976,14 +2205,19 @@ func factorialFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // fibonacciFunc implements the fibonacci() built-in function
 func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "fibonacci", args, 1)
-	n := toInt(pos, args[0], "fibonacci")
+	if err := ensureNumArgs(pos, "fibonacci", args, 1); err != nil {
+		return err
+	}
+	n, err := toInt(pos, args[0], "fibonacci")
+	if err != nil {
+		return err
+	}
 
 	if n < 0 {
-		panic(valueError(pos, "fibonacci() of negative number"))
+		return Value(valueError(pos, "fibonacci() of negative number"))
 	}
 	if n > 92 {
-		panic(valueError(pos, "fibonacci() argument too large (max 92)"))
+		return Value(valueError(pos, "fibonacci() argument too large (max 92)"))
 	}
 
 	// Check memoization cache
@@ -2011,7 +2245,10 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 // isPrimeFunc implements the is_prime() built-in function
 func isPrimeFunc(interp *interpreter, pos Position, args []Value) Value {
 	ensureNumArgs(pos, "is_prime", args, 1)
-	n := toInt(pos, args[0], "is_prime")
+	n, err := toInt(pos, args[0], "is_prime")
+	if err != nil {
+		return err
+	}
 
 	if n <= 1 {
 		return Value(false)
@@ -2034,7 +2271,10 @@ func isPrimeFunc(interp *interpreter, pos Position, args []Value) Value {
 // primeFactorsFunc implements the prime_factors() built-in function
 func primeFactorsFunc(interp *interpreter, pos Position, args []Value) Value {
 	ensureNumArgs(pos, "prime_factors", args, 1)
-	n := toInt(pos, args[0], "prime_factors")
+	n, err := toInt(pos, args[0], "prime_factors")
+	if err != nil {
+		return err
+	}
 
 	if n <= 1 {
 		factors := make([]Value, 0)
@@ -2079,12 +2319,20 @@ func randomFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // randomIntFunc implements the random_int() built-in function
 func randomIntFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "random_int", args, 2)
-	min := toInt(pos, args[0], "random_int")
-	max := toInt(pos, args[1], "random_int")
+	if err := ensureNumArgs(pos, "random_int", args, 2); err != nil {
+		return err
+	}
+	min, err := toInt(pos, args[0], "random_int")
+	if err != nil {
+		return err
+	}
+	max, err := toInt(pos, args[1], "random_int")
+	if err != nil {
+		return err
+	}
 
 	if min >= max {
-		panic(valueError(pos, "random_int() min must be less than max"))
+		return Value(valueError(pos, "random_int() min must be less than max"))
 	}
 
 	return Value(rng.Intn(max-min) + min)
@@ -2092,12 +2340,20 @@ func randomIntFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // randomFloatFunc implements the random_float() built-in function
 func randomFloatFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "random_float", args, 2)
-	min := toFloat64(pos, args[0], "random_float")
-	max := toFloat64(pos, args[1], "random_float")
+	if err := ensureNumArgs(pos, "random_float", args, 2); err != nil {
+		return err
+	}
+	min, err := toFloat64(pos, args[0], "random_float")
+	if err != nil {
+		return err
+	}
+	max, err := toFloat64(pos, args[1], "random_float")
+	if err != nil {
+		return err
+	}
 
 	if min >= max {
-		panic(valueError(pos, "random_float() min must be less than max"))
+		return Value(valueError(pos, "random_float() min must be less than max"))
 	}
 
 	return Value(rng.Float64()*(max-min) + min)
@@ -2105,21 +2361,25 @@ func randomFloatFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // randomChoiceFunc implements the random_choice() built-in function
 func randomChoiceFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "random_choice", args, 1)
+	if err := ensureNumArgs(pos, "random_choice", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		if len(*arr) == 0 {
-			panic(valueError(pos, "random_choice() of empty array"))
+			return Value(valueError(pos, "random_choice() of empty array"))
 		}
 
 		index := rng.Intn(len(*arr))
 		return (*arr)[index]
 	}
-	panic(typeError(pos, "random_choice() requires an array"))
+	return Value(typeError(pos, "random_choice() requires an array"))
 }
 
 // shuffleFunc implements the shuffle() built-in function
 func shuffleFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "shuffle", args, 1)
+	if err := ensureNumArgs(pos, "shuffle", args, 1); err != nil {
+		return err
+	}
 	if arr, ok := args[0].(*[]Value); ok {
 		// Fisher-Yates shuffle
 		for i := len(*arr) - 1; i > 0; i-- {
@@ -2128,13 +2388,18 @@ func shuffleFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 		return Value(nil)
 	}
-	panic(typeError(pos, "shuffle() requires an array"))
+	return Value(typeError(pos, "shuffle() requires an array"))
 }
 
 // seedRandomFunc implements the seed_random() built-in function
 func seedRandomFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "seed_random", args, 1)
-	seed := toInt(pos, args[0], "seed_random")
+	if err := ensureNumArgs(pos, "seed_random", args, 1); err != nil {
+		return err
+	}
+	seed, err := toInt(pos, args[0], "seed_random")
+	if err != nil {
+		return err
+	}
 	rng = rand.New(rand.NewSource(int64(seed)))
 	return Value(nil)
 }
@@ -2145,8 +2410,13 @@ func seedRandomFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // signFunc implements the sign() built-in function
 func signFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "sign", args, 1)
-	val := toFloat64(pos, args[0], "sign")
+	if err := ensureNumArgs(pos, "sign", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "sign")
+	if err != nil {
+		return err
+	}
 
 	if val > 0 {
 		return Value(1)
@@ -2158,13 +2428,24 @@ func signFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // clampFunc implements the clamp() built-in function
 func clampFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "clamp", args, 3)
-	val := toFloat64(pos, args[0], "clamp")
-	min := toFloat64(pos, args[1], "clamp")
-	max := toFloat64(pos, args[2], "clamp")
+	if err := ensureNumArgs(pos, "clamp", args, 3); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "clamp")
+	if err != nil {
+		return err
+	}
+	min, err := toFloat64(pos, args[1], "clamp")
+	if err != nil {
+		return err
+	}
+	max, err := toFloat64(pos, args[2], "clamp")
+	if err != nil {
+		return err
+	}
 
 	if min > max {
-		panic(valueError(pos, "clamp() min must be less than or equal to max"))
+		return Value(valueError(pos, "clamp() min must be less than or equal to max"))
 	}
 
 	if val < min {
@@ -2187,38 +2468,67 @@ func clampFunc(interp *interpreter, pos Position, args []Value) Value {
 // lerpFunc implements the lerp() built-in function (linear interpolation)
 func lerpFunc(interp *interpreter, pos Position, args []Value) Value {
 	ensureNumArgs(pos, "lerp", args, 3)
-	a := toFloat64(pos, args[0], "lerp")
-	b := toFloat64(pos, args[1], "lerp")
-	t := toFloat64(pos, args[2], "lerp")
+	a, err := toFloat64(pos, args[0], "lerp")
+	if err != nil {
+		return err
+	}
+	b, err := toFloat64(pos, args[1], "lerp")
+	if err != nil {
+		return err
+	}
+	t, err := toFloat64(pos, args[2], "lerp")
+	if err != nil {
+		return err
+	}
 
 	return Value(a + t*(b-a))
 }
 
 // degreesFunc implements the degrees() built-in function
 func degreesFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "degrees", args, 1)
-	radians := toFloat64(pos, args[0], "degrees")
+	if err := ensureNumArgs(pos, "degrees", args, 1); err != nil {
+		return err
+	}
+	radians, err := toFloat64(pos, args[0], "degrees")
+	if err != nil {
+		return err
+	}
 	return Value(radians * 180.0 / math.Pi)
 }
 
 // radiansFunc implements the radians() built-in function
 func radiansFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "radians", args, 1)
-	degrees := toFloat64(pos, args[0], "radians")
+	if err := ensureNumArgs(pos, "radians", args, 1); err != nil {
+		return err
+	}
+	degrees, err := toFloat64(pos, args[0], "radians")
+	if err != nil {
+		return err
+	}
 	return Value(degrees * math.Pi / 180.0)
 }
 
 // isNanFunc implements the is_nan() built-in function
 func isNanFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "is_nan", args, 1)
-	val := toFloat64(pos, args[0], "is_nan")
+	if err := ensureNumArgs(pos, "is_nan", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "is_nan")
+	if err != nil {
+		return err
+	}
 	return Value(math.IsNaN(val))
 }
 
 // isInfiniteFunc implements the is_infinite() built-in function
 func isInfiniteFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "is_infinite", args, 1)
-	val := toFloat64(pos, args[0], "is_infinite")
+	if err := ensureNumArgs(pos, "is_infinite", args, 1); err != nil {
+		return err
+	}
+	val, err := toFloat64(pos, args[0], "is_infinite")
+	if err != nil {
+		return err
+	}
 	return Value(math.IsInf(val, 0))
 }
 
@@ -2230,18 +2540,20 @@ func isInfiniteFunc(interp *interpreter, pos Position, args []Value) Value {
 // replace(str, old, new) -> string
 // Example: replace("hello world", "world", "universe") -> "hello universe"
 func replaceFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "replace", args, 3)
+	if err := ensureNumArgs(pos, "replace", args, 3); err != nil {
+		return err
+	}
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "replace() requires first argument to be a string"))
+		return Value(typeError(pos, "replace() requires first argument to be a string"))
 	}
 	old, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "replace() requires second argument to be a string"))
+		return Value(typeError(pos, "replace() requires second argument to be a string"))
 	}
 	new, ok := args[2].(string)
 	if !ok {
-		panic(typeError(pos, "replace() requires third argument to be a string"))
+		return Value(typeError(pos, "replace() requires third argument to be a string"))
 	}
 	return Value(strings.ReplaceAll(str, old, new))
 }
@@ -2250,10 +2562,12 @@ func replaceFunc(interp *interpreter, pos Position, args []Value) Value {
 // trim(str) -> string
 // Example: trim("  hello world  ") -> "hello world"
 func trimFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "trim", args, 1)
+	if err := ensureNumArgs(pos, "trim", args, 1); err != nil {
+		return err
+	}
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "trim() requires a string argument"))
+		return Value(typeError(pos, "trim() requires a string argument"))
 	}
 	return Value(strings.TrimSpace(str))
 }
@@ -2262,14 +2576,16 @@ func trimFunc(interp *interpreter, pos Position, args []Value) Value {
 // starts_with(str, prefix) -> bool
 // Example: starts_with("hello world", "hello") -> true
 func startsWithFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "starts_with", args, 2)
+	if err := ensureNumArgs(pos, "starts_with", args, 2); err != nil {
+		return err
+	}
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "starts_with() requires first argument to be a string"))
+		return Value(typeError(pos, "starts_with() requires first argument to be a string"))
 	}
 	prefix, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "starts_with() requires second argument to be a string"))
+		return Value(typeError(pos, "starts_with() requires second argument to be a string"))
 	}
 	return Value(strings.HasPrefix(str, prefix))
 }
@@ -2278,14 +2594,16 @@ func startsWithFunc(interp *interpreter, pos Position, args []Value) Value {
 // ends_with(str, suffix) -> bool
 // Example: ends_with("hello world", "world") -> true
 func endsWithFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "ends_with", args, 2)
+	if err := ensureNumArgs(pos, "ends_with", args, 2); err != nil {
+		return err
+	}
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "ends_with() requires first argument to be a string"))
+		return Value(typeError(pos, "ends_with() requires first argument to be a string"))
 	}
 	suffix, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "ends_with() requires second argument to be a string"))
+		return Value(typeError(pos, "ends_with() requires second argument to be a string"))
 	}
 	return Value(strings.HasSuffix(str, suffix))
 }
@@ -2294,17 +2612,19 @@ func endsWithFunc(interp *interpreter, pos Position, args []Value) Value {
 // repeat(str, count) -> string
 // Example: repeat("hello", 3) -> "hellohellohello"
 func repeatFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "repeat", args, 2)
+	if err := ensureNumArgs(pos, "repeat", args, 2); err != nil {
+		return Value(err)
+	}
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "repeat() requires first argument to be a string"))
+		return Value(typeError(pos, "repeat() requires first argument to be a string"))
 	}
 	count, ok := args[1].(int)
 	if !ok {
-		panic(typeError(pos, "repeat() requires second argument to be an integer"))
+		return Value(typeError(pos, "repeat() requires second argument to be an integer"))
 	}
 	if count < 0 {
-		panic(valueError(pos, "repeat() count cannot be negative"))
+		return Value(valueError(pos, "repeat() count cannot be negative"))
 	}
 	return Value(strings.Repeat(str, count))
 }
@@ -2313,10 +2633,12 @@ func repeatFunc(interp *interpreter, pos Position, args []Value) Value {
 // reverse_str(str) -> string
 // Example: reverse_str("hello") -> "olleh"
 func reverseStrFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "reverse_str", args, 1)
+	if err := ensureNumArgs(pos, "reverse_str", args, 1); err != nil {
+		return Value(err)
+	}
 	str, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "reverse_str() requires a string argument"))
+		return Value(typeError(pos, "reverse_str() requires a string argument"))
 	}
 	runes := []rune(str)
 	for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
@@ -2333,14 +2655,16 @@ func reverseStrFunc(interp *interpreter, pos Position, args []Value) Value {
 // map(array, function) -> array
 // Example: map([1, 2, 3], lambda x: x * 2) -> [2, 4, 6]
 func mapFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "map", args, 2)
+	if err := ensureNumArgs(pos, "map", args, 2); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "map() requires first argument to be an array"))
+		return Value(typeError(pos, "map() requires first argument to be an array"))
 	}
 	fn, ok := args[1].(functionType)
 	if !ok {
-		panic(typeError(pos, "map() requires second argument to be a function"))
+		return Value(typeError(pos, "map() requires second argument to be a function"))
 	}
 
 	result := make([]Value, len(*arr))
@@ -2354,14 +2678,16 @@ func mapFunc(interp *interpreter, pos Position, args []Value) Value {
 // filter(array, function) -> array
 // Example: filter([1, 2, 3, 4], lambda x: x % 2 == 0) -> [2, 4]
 func filterFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "filter", args, 2)
+	if err := ensureNumArgs(pos, "filter", args, 2); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "filter() requires first argument to be an array"))
+		return Value(typeError(pos, "filter() requires first argument to be an array"))
 	}
 	fn, ok := args[1].(functionType)
 	if !ok {
-		panic(typeError(pos, "filter() requires second argument to be a function"))
+		return Value(typeError(pos, "filter() requires second argument to be a function"))
 	}
 
 	result := make([]Value, 0)
@@ -2378,15 +2704,15 @@ func filterFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: reduce([1, 2, 3, 4], lambda acc, x: acc + x, 0) -> 10
 func reduceFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) != 3 {
-		panic(typeError(pos, "reduce() requires 3 arguments, got %d", len(args)))
+		return Value(typeError(pos, "reduce() requires 3 arguments, got %d", len(args)))
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "reduce() requires first argument to be an array"))
+		return Value(typeError(pos, "reduce() requires first argument to be an array"))
 	}
 	fn, ok := args[1].(functionType)
 	if !ok {
-		panic(typeError(pos, "reduce() requires second argument to be a function"))
+		return Value(typeError(pos, "reduce() requires second argument to be a function"))
 	}
 
 	accumulator := args[2]
@@ -2400,10 +2726,12 @@ func reduceFunc(interp *interpreter, pos Position, args []Value) Value {
 // reverse(array) -> null (modifies array in place)
 // Example: reverse([1, 2, 3]) -> [3, 2, 1]
 func reverseFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "reverse", args, 1)
+	if err := ensureNumArgs(pos, "reverse", args, 1); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "reverse() requires an array argument"))
+		return Value(typeError(pos, "reverse() requires an array argument"))
 	}
 
 	for i, j := 0, len(*arr)-1; i < j; i, j = i+1, j-1 {
@@ -2417,11 +2745,11 @@ func reverseFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: push([1, 2], 3) -> [1, 2, 3]
 func pushFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 {
-		panic(typeError(pos, "push() requires at least 2 arguments, got %d", len(args)))
+		return Value(typeError(pos, "push() requires at least 2 arguments, got %d", len(args)))
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "push() requires first argument to be an array"))
+		return Value(typeError(pos, "push() requires first argument to be an array"))
 	}
 
 	// Optimize memory allocation by pre-calculating capacity
@@ -2443,10 +2771,12 @@ func pushFunc(interp *interpreter, pos Position, args []Value) Value {
 // pop(array) -> any (removes and returns last element)
 // Example: pop([1, 2, 3]) -> 3, array becomes [1, 2]
 func popFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "pop", args, 1)
+	if err := ensureNumArgs(pos, "pop", args, 1); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "pop() requires an array argument"))
+		return Value(typeError(pos, "pop() requires an array argument"))
 	}
 
 	if len(*arr) == 0 {
@@ -2462,10 +2792,12 @@ func popFunc(interp *interpreter, pos Position, args []Value) Value {
 // shift(array) -> any (removes and returns first element)
 // Example: shift([1, 2, 3]) -> 1, array becomes [2, 3]
 func shiftFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "shift", args, 1)
+	if err := ensureNumArgs(pos, "shift", args, 1); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "shift() requires an array argument"))
+		return Value(typeError(pos, "shift() requires an array argument"))
 	}
 
 	if len(*arr) == 0 {
@@ -2482,11 +2814,11 @@ func shiftFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: unshift([2, 3], 1) -> [1, 2, 3]
 func unshiftFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 {
-		panic(typeError(pos, "unshift() requires at least 2 arguments, got %d", len(args)))
+		return Value(typeError(pos, "unshift() requires at least 2 arguments, got %d", len(args)))
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "unshift() requires first argument to be an array"))
+		return Value(typeError(pos, "unshift() requires first argument to be an array"))
 	}
 
 	newArr := make([]Value, 0, len(*arr)+len(args)-1)
@@ -2500,10 +2832,12 @@ func unshiftFunc(interp *interpreter, pos Position, args []Value) Value {
 // index_of(array, element) -> int
 // Example: index_of([1, 2, 3, 2], 2) -> 1
 func indexOfFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "index_of", args, 2)
+	if err := ensureNumArgs(pos, "index_of", args, 2); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "index_of() requires first argument to be an array"))
+		return Value(typeError(pos, "index_of() requires first argument to be an array"))
 	}
 
 	for i, v := range *arr {
@@ -2518,10 +2852,12 @@ func indexOfFunc(interp *interpreter, pos Position, args []Value) Value {
 // last_index_of(array, element) -> int
 // Example: last_index_of([1, 2, 3, 2], 2) -> 3
 func lastIndexOfFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "last_index_of", args, 2)
+	if err := ensureNumArgs(pos, "last_index_of", args, 2); err != nil {
+		return Value(err)
+	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
-		panic(typeError(pos, "last_index_of() requires first argument to be an array"))
+		return Value(typeError(pos, "last_index_of() requires first argument to be an array"))
 	}
 
 	for i := len(*arr) - 1; i >= 0; i-- {
@@ -2585,10 +2921,12 @@ func setNewFunc(interp *interpreter, pos Position, args []Value) Value {
 // set_add(set, element) -> null
 // Example: set_add(s, "hello")
 func setAddFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "set_add", args, 2)
+	if err := ensureNumArgs(pos, "set_add", args, 2); err != nil {
+		return Value(err)
+	}
 	set, ok := args[0].(*Set)
 	if !ok {
-		panic(typeError(pos, "set_add() requires first argument to be a set"))
+		return Value(typeError(pos, "set_add() requires first argument to be a set"))
 	}
 
 	key := valueToKey(args[1])
@@ -2603,10 +2941,12 @@ func setAddFunc(interp *interpreter, pos Position, args []Value) Value {
 // set_remove(set, element) -> bool
 // Example: set_remove(s, "hello") -> true if removed, false if not found
 func setRemoveFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "set_remove", args, 2)
+	if err := ensureNumArgs(pos, "set_remove", args, 2); err != nil {
+		return Value(err)
+	}
 	set, ok := args[0].(*Set)
 	if !ok {
-		panic(typeError(pos, "set_remove() requires first argument to be a set"))
+		return Value(typeError(pos, "set_remove() requires first argument to be a set"))
 	}
 
 	key := valueToKey(args[1])
@@ -2628,10 +2968,12 @@ func setRemoveFunc(interp *interpreter, pos Position, args []Value) Value {
 // set_has(set, element) -> bool
 // Example: set_has(s, "hello") -> true if exists
 func setHasFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "set_has", args, 2)
+	if err := ensureNumArgs(pos, "set_has", args, 2); err != nil {
+		return Value(err)
+	}
 	set, ok := args[0].(*Set)
 	if !ok {
-		panic(typeError(pos, "set_has() requires first argument to be a set"))
+		return Value(typeError(pos, "set_has() requires first argument to be a set"))
 	}
 
 	key := valueToKey(args[1])
@@ -2643,10 +2985,12 @@ func setHasFunc(interp *interpreter, pos Position, args []Value) Value {
 // set_size(set) -> int
 // Example: set_size(s) -> 3
 func setSizeFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "set_size", args, 1)
+	if err := ensureNumArgs(pos, "set_size", args, 1); err != nil {
+		return Value(err)
+	}
 	set, ok := args[0].(*Set)
 	if !ok {
-		panic(typeError(pos, "set_size() requires a set argument"))
+		return Value(typeError(pos, "set_size() requires a set argument"))
 	}
 
 	return Value(len(set.data))
@@ -2656,10 +3000,12 @@ func setSizeFunc(interp *interpreter, pos Position, args []Value) Value {
 // set_to_array(set) -> array
 // Example: set_to_array(s) -> ["hello", "world"]
 func setToArrayFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "set_to_array", args, 1)
+	if err := ensureNumArgs(pos, "set_to_array", args, 1); err != nil {
+		return Value(err)
+	}
 	set, ok := args[0].(*Set)
 	if !ok {
-		panic(typeError(pos, "set_to_array() requires a set argument"))
+		return Value(typeError(pos, "set_to_array() requires a set argument"))
 	}
 
 	result := make([]Value, len(set.keys))
@@ -2671,7 +3017,9 @@ func setToArrayFunc(interp *interpreter, pos Position, args []Value) Value {
 // stack_new() -> stack
 // Example: s = stack_new()
 func stackNewFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "stack_new", args, 0)
+	if err := ensureNumArgs(pos, "stack_new", args, 0); err != nil {
+		return Value(err)
+	}
 	return Value(&Stack{
 		data: make([]Value, 0),
 	})
@@ -2681,10 +3029,12 @@ func stackNewFunc(interp *interpreter, pos Position, args []Value) Value {
 // stack_push(stack, element) -> null
 // Example: stack_push(s, "hello")
 func stackPushFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "stack_push", args, 2)
+	if err := ensureNumArgs(pos, "stack_push", args, 2); err != nil {
+		return Value(err)
+	}
 	stack, ok := args[0].(*Stack)
 	if !ok {
-		panic(typeError(pos, "stack_push() requires first argument to be a stack"))
+		return Value(typeError(pos, "stack_push() requires first argument to be a stack"))
 	}
 
 	stack.data = append(stack.data, args[1])
@@ -2695,10 +3045,12 @@ func stackPushFunc(interp *interpreter, pos Position, args []Value) Value {
 // stack_pop(stack) -> any
 // Example: stack_pop(s) -> "hello"
 func stackPopFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "stack_pop", args, 1)
+	if err := ensureNumArgs(pos, "stack_pop", args, 1); err != nil {
+		return Value(err)
+	}
 	stack, ok := args[0].(*Stack)
 	if !ok {
-		panic(typeError(pos, "stack_pop() requires a stack argument"))
+		return Value(typeError(pos, "stack_pop() requires a stack argument"))
 	}
 
 	if len(stack.data) == 0 {
@@ -2714,10 +3066,12 @@ func stackPopFunc(interp *interpreter, pos Position, args []Value) Value {
 // stack_peek(stack) -> any
 // Example: stack_peek(s) -> "hello" (without removing)
 func stackPeekFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "stack_peek", args, 1)
+	if err := ensureNumArgs(pos, "stack_peek", args, 1); err != nil {
+		return Value(err)
+	}
 	stack, ok := args[0].(*Stack)
 	if !ok {
-		panic(typeError(pos, "stack_peek() requires a stack argument"))
+		return Value(typeError(pos, "stack_peek() requires a stack argument"))
 	}
 
 	if len(stack.data) == 0 {
@@ -2731,10 +3085,12 @@ func stackPeekFunc(interp *interpreter, pos Position, args []Value) Value {
 // stack_size(stack) -> int
 // Example: stack_size(s) -> 3
 func stackSizeFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "stack_size", args, 1)
+	if err := ensureNumArgs(pos, "stack_size", args, 1); err != nil {
+		return Value(err)
+	}
 	stack, ok := args[0].(*Stack)
 	if !ok {
-		panic(typeError(pos, "stack_size() requires a stack argument"))
+		return Value(typeError(pos, "stack_size() requires a stack argument"))
 	}
 
 	return Value(len(stack.data))
@@ -2744,10 +3100,12 @@ func stackSizeFunc(interp *interpreter, pos Position, args []Value) Value {
 // stack_empty(stack) -> bool
 // Example: stack_empty(s) -> true/false
 func stackEmptyFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "stack_empty", args, 1)
+	if err := ensureNumArgs(pos, "stack_empty", args, 1); err != nil {
+		return Value(err)
+	}
 	stack, ok := args[0].(*Stack)
 	if !ok {
-		panic(typeError(pos, "stack_empty() requires a stack argument"))
+		return Value(typeError(pos, "stack_empty() requires a stack argument"))
 	}
 
 	return Value(len(stack.data) == 0)
@@ -2757,7 +3115,9 @@ func stackEmptyFunc(interp *interpreter, pos Position, args []Value) Value {
 // queue_new() -> queue
 // Example: q = queue_new()
 func queueNewFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "queue_new", args, 0)
+	if err := ensureNumArgs(pos, "queue_new", args, 0); err != nil {
+		return Value(err)
+	}
 	return Value(&Queue{
 		data: make([]Value, 0),
 	})
@@ -2767,10 +3127,12 @@ func queueNewFunc(interp *interpreter, pos Position, args []Value) Value {
 // queue_enqueue(queue, element) -> null
 // Example: queue_enqueue(q, "hello")
 func queueEnqueueFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "queue_enqueue", args, 2)
+	if err := ensureNumArgs(pos, "queue_enqueue", args, 2); err != nil {
+		return Value(err)
+	}
 	queue, ok := args[0].(*Queue)
 	if !ok {
-		panic(typeError(pos, "queue_enqueue() requires first argument to be a queue"))
+		return Value(typeError(pos, "queue_enqueue() requires first argument to be a queue"))
 	}
 
 	queue.data = append(queue.data, args[1])
@@ -2781,10 +3143,12 @@ func queueEnqueueFunc(interp *interpreter, pos Position, args []Value) Value {
 // queue_dequeue(queue) -> any
 // Example: queue_dequeue(q) -> "hello"
 func queueDequeueFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "queue_dequeue", args, 1)
+	if err := ensureNumArgs(pos, "queue_dequeue", args, 1); err != nil {
+		return Value(err)
+	}
 	queue, ok := args[0].(*Queue)
 	if !ok {
-		panic(typeError(pos, "queue_dequeue() requires a queue argument"))
+		return Value(typeError(pos, "queue_dequeue() requires a queue argument"))
 	}
 
 	if len(queue.data) == 0 {
@@ -2800,10 +3164,12 @@ func queueDequeueFunc(interp *interpreter, pos Position, args []Value) Value {
 // queue_front(queue) -> any
 // Example: queue_front(q) -> "hello" (without removing)
 func queueFrontFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "queue_front", args, 1)
+	if err := ensureNumArgs(pos, "queue_front", args, 1); err != nil {
+		return Value(err)
+	}
 	queue, ok := args[0].(*Queue)
 	if !ok {
-		panic(typeError(pos, "queue_front() requires a queue argument"))
+		return Value(typeError(pos, "queue_front() requires a queue argument"))
 	}
 
 	if len(queue.data) == 0 {
@@ -2817,10 +3183,12 @@ func queueFrontFunc(interp *interpreter, pos Position, args []Value) Value {
 // queue_size(queue) -> int
 // Example: queue_size(q) -> 3
 func queueSizeFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "queue_size", args, 1)
+	if err := ensureNumArgs(pos, "queue_size", args, 1); err != nil {
+		return Value(err)
+	}
 	queue, ok := args[0].(*Queue)
 	if !ok {
-		panic(typeError(pos, "queue_size() requires a queue argument"))
+		return Value(typeError(pos, "queue_size() requires a queue argument"))
 	}
 
 	return Value(len(queue.data))
@@ -2830,10 +3198,12 @@ func queueSizeFunc(interp *interpreter, pos Position, args []Value) Value {
 // queue_empty(queue) -> bool
 // Example: queue_empty(q) -> true/false
 func queueEmptyFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "queue_empty", args, 1)
+	if err := ensureNumArgs(pos, "queue_empty", args, 1); err != nil {
+		return Value(err)
+	}
 	queue, ok := args[0].(*Queue)
 	if !ok {
-		panic(typeError(pos, "queue_empty() requires a queue argument"))
+		return Value(typeError(pos, "queue_empty() requires a queue argument"))
 	}
 
 	return Value(len(queue.data) == 0)
@@ -2845,10 +3215,12 @@ func queueEmptyFunc(interp *interpreter, pos Position, args []Value) Value {
 // http_get(url) -> object
 // Example: response = http_get("https://api.example.com/data")
 func httpGetFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "http_get", args, 1)
+	if err := ensureNumArgs(pos, "http_get", args, 1); err != nil {
+		return Value(err)
+	}
 	url, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "http_get() requires a string URL"))
+		return Value(typeError(pos, "http_get() requires a string URL"))
 	}
 
 	return httpRequest(pos, "GET", url, nil, nil)
@@ -2859,18 +3231,18 @@ func httpGetFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: response = http_post("https://api.example.com/data", {"name": "John"})
 func httpPostFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 3 {
-		panic(typeError(pos, "http_post() requires 2 or 3 args, got %d", len(args)))
+		return Value(typeError(pos, "http_post() requires 2 or 3 args, got %d", len(args)))
 	}
 	url, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "http_post() requires first argument to be a string URL"))
+		return Value(typeError(pos, "http_post() requires first argument to be a string URL"))
 	}
 
 	var headers map[string]Value
 	if len(args) == 3 {
 		headersMap, ok := args[2].(map[string]Value)
 		if !ok {
-			panic(typeError(pos, "http_post() requires third argument to be an object (headers)"))
+			return Value(typeError(pos, "http_post() requires third argument to be an object (headers)"))
 		}
 		headers = headersMap
 	}
@@ -2883,18 +3255,18 @@ func httpPostFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: response = http_put("https://api.example.com/data/1", {"name": "Jane"})
 func httpPutFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 3 {
-		panic(typeError(pos, "http_put() requires 2 or 3 args, got %d", len(args)))
+		return Value(typeError(pos, "http_put() requires 2 or 3 args, got %d", len(args)))
 	}
 	url, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "http_put() requires first argument to be a string URL"))
+		return Value(typeError(pos, "http_put() requires first argument to be a string URL"))
 	}
 
 	var headers map[string]Value
 	if len(args) == 3 {
 		headersMap, ok := args[2].(map[string]Value)
 		if !ok {
-			panic(typeError(pos, "http_put() requires third argument to be an object (headers)"))
+			return Value(typeError(pos, "http_put() requires third argument to be an object (headers)"))
 		}
 		headers = headersMap
 	}
@@ -2906,10 +3278,12 @@ func httpPutFunc(interp *interpreter, pos Position, args []Value) Value {
 // http_delete(url) -> object
 // Example: response = http_delete("https://api.example.com/data/1")
 func httpDeleteFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "http_delete", args, 1)
+	if err := ensureNumArgs(pos, "http_delete", args, 1); err != nil {
+		return Value(err)
+	}
 	url, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "http_delete() requires a string URL"))
+		return Value(typeError(pos, "http_delete() requires a string URL"))
 	}
 
 	return httpRequest(pos, "DELETE", url, nil, nil)
@@ -2920,17 +3294,17 @@ func httpDeleteFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: response = http_request("PATCH", "https://api.example.com/data/1", {"status": "active"}, {"Authorization": "Bearer token"})
 func httpRequestFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 4 {
-		panic(typeError(pos, "http_request() requires 2 to 4 args, got %d", len(args)))
+		return Value(typeError(pos, "http_request() requires 2 to 4 args, got %d", len(args)))
 	}
 
 	method, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "http_request() requires first argument to be a string (method)"))
+		return Value(typeError(pos, "http_request() requires first argument to be a string (method)"))
 	}
 
 	url, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "http_request() requires second argument to be a string (URL)"))
+		return Value(typeError(pos, "http_request() requires second argument to be a string (URL)"))
 	}
 
 	var data Value
@@ -2943,7 +3317,7 @@ func httpRequestFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 4 {
 		headersMap, ok := args[3].(map[string]Value)
 		if !ok {
-			panic(typeError(pos, "http_request() requires fourth argument to be an object (headers)"))
+			return Value(typeError(pos, "http_request() requires fourth argument to be an object (headers)"))
 		}
 		headers = headersMap
 	}
@@ -2964,7 +3338,7 @@ func httpRequest(pos Position, method, url string, data Value, headers map[strin
 			// Convert to JSON
 			jsonData, err := valueToJSON(data)
 			if err != nil {
-				panic(valueError(pos, "Failed to convert data to JSON: %v", err))
+				return Value(valueError(pos, "Failed to convert data to JSON: %v", err))
 			}
 			body = bytes.NewReader(jsonData)
 		default:
@@ -2976,7 +3350,7 @@ func httpRequest(pos Position, method, url string, data Value, headers map[strin
 	// Create HTTP request
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
-		panic(valueError(pos, "Failed to create HTTP request: %v", err))
+		return Value(valueError(pos, "Failed to create HTTP request: %v", err))
 	}
 
 	// Set default Content-Type for POST/PUT requests with JSON data
@@ -2999,14 +3373,14 @@ func httpRequest(pos Position, method, url string, data Value, headers map[strin
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(valueError(pos, "HTTP request failed: %v", err))
+		return Value(valueError(pos, "HTTP request failed: %v", err))
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		panic(valueError(pos, "Failed to read response body: %v", err))
+		return Value(valueError(pos, "Failed to read response body: %v", err))
 	}
 
 	// Parse response body as JSON if possible
@@ -3123,16 +3497,18 @@ func jsonToValue(data any) Value {
 // Returns the parsed value (object, array, string, int, float, bool, or null)
 // Example: json_parse('{"name": "John", "age": 30}') -> {name: "John", age: 30}
 func jsonParseFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "json_parse", args, 1)
+	if err := ensureNumArgs(pos, "json_parse", args, 1); err != nil {
+		return Value(err)
+	}
 
 	jsonStr, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "json_parse() requires a string argument, not %s", typeName(args[0])))
+		return Value(typeError(pos, "json_parse() requires a string argument, not %s", typeName(args[0])))
 	}
 
 	var jsonData any
 	if err := json.Unmarshal([]byte(jsonStr), &jsonData); err != nil {
-		panic(valueError(pos, "Invalid JSON: %v", err))
+		return Value(valueError(pos, "Invalid JSON: %v", err))
 	}
 
 	return jsonToValue(jsonData)
@@ -3146,11 +3522,13 @@ func jsonParseFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the JSON string representation
 // Example: json_stringify({name: "John", age: 30}) -> '{"age":30,"name":"John"}'
 func jsonStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "json_stringify", args, 1)
+	if err := ensureNumArgs(pos, "json_stringify", args, 1); err != nil {
+		return Value(err)
+	}
 
 	jsonBytes, err := valueToJSON(args[0])
 	if err != nil {
-		panic(valueError(pos, "Failed to convert to JSON: %v", err))
+		return Value(valueError(pos, "Failed to convert to JSON: %v", err))
 	}
 
 	return Value(string(jsonBytes))
@@ -3164,11 +3542,13 @@ func jsonStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the parsed value as a map with XML structure
 // Example: xml_parse('<root><name>John</name><age>30</age></root>') -> {root: {name: "John", age: "30"}}
 func xmlParseFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "xml_parse", args, 1)
+	if err := ensureNumArgs(pos, "xml_parse", args, 1); err != nil {
+		return Value(err)
+	}
 
 	xmlStr, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "xml_parse() requires a string argument, not %s", typeName(args[0])))
+		return Value(typeError(pos, "xml_parse() requires a string argument, not %s", typeName(args[0])))
 	}
 
 	// Parse XML into a generic interface
@@ -3180,7 +3560,7 @@ func xmlParseFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Parse the XML into a map structure
 	result, err := parseXMLElement(decoder)
 	if err != nil {
-		panic(valueError(pos, "Invalid XML: %v", err))
+		return Value(valueError(pos, "Invalid XML: %v", err))
 	}
 
 	return xmlToValue(result)
@@ -3194,11 +3574,13 @@ func xmlParseFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the XML string representation
 // Example: xml_stringify({root: {name: "John", age: "30"}}) -> '<root><name>John</name><age>30</age></root>'
 func xmlStringifyFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "xml_stringify", args, 1)
+	if err := ensureNumArgs(pos, "xml_stringify", args, 1); err != nil {
+		return Value(err)
+	}
 
 	xmlBytes, err := valueToXML(args[0])
 	if err != nil {
-		panic(valueError(pos, "Failed to convert to XML: %v", err))
+		return Value(valueError(pos, "Failed to convert to XML: %v", err))
 	}
 
 	return Value(string(xmlBytes))
@@ -3433,12 +3815,12 @@ var httpRoutes = make(map[string]map[string]functionType) // serverID -> route -
 // Example: server = http_server_start(8080, "main")
 func httpServerStartFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 1 || len(args) > 2 {
-		panic(typeError(pos, "http_server_start() requires 1 or 2 args, got %d", len(args)))
+		return Value(typeError(pos, "http_server_start() requires 1 or 2 args, got %d", len(args)))
 	}
 
 	port, ok := args[0].(int)
 	if !ok {
-		panic(typeError(pos, "http_server_start() requires first argument to be an integer (port)"))
+		return Value(typeError(pos, "http_server_start() requires first argument to be an integer (port)"))
 	}
 
 	serverID := "default"
@@ -3446,13 +3828,13 @@ func httpServerStartFunc(interp *interpreter, pos Position, args []Value) Value 
 		if id, ok := args[1].(string); ok {
 			serverID = id
 		} else {
-			panic(typeError(pos, "http_server_start() requires second argument to be a string (server_id)"))
+			return Value(typeError(pos, "http_server_start() requires second argument to be a string (server_id)"))
 		}
 	}
 
 	// Check if server already exists
 	if _, exists := httpServers[serverID]; exists {
-		panic(valueError(pos, "HTTP server with ID '%s' already exists", serverID))
+		return Value(valueError(pos, "HTTP server with ID '%s' already exists", serverID))
 	}
 
 	// Initialize routes for this server
@@ -3527,7 +3909,7 @@ func httpServerStartFunc(interp *interpreter, pos Position, args []Value) Value 
 // Example: http_server_stop("main")
 func httpServerStopFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) > 1 {
-		panic(typeError(pos, "http_server_stop() requires 0 or 1 args, got %d", len(args)))
+		return Value(typeError(pos, "http_server_stop() requires 0 or 1 args, got %d", len(args)))
 	}
 
 	serverID := "default"
@@ -3535,7 +3917,7 @@ func httpServerStopFunc(interp *interpreter, pos Position, args []Value) Value {
 		if id, ok := args[0].(string); ok {
 			serverID = id
 		} else {
-			panic(typeError(pos, "http_server_stop() requires argument to be a string (server_id)"))
+			return Value(typeError(pos, "http_server_stop() requires argument to be a string (server_id)"))
 		}
 	}
 
@@ -3545,7 +3927,7 @@ func httpServerStopFunc(interp *interpreter, pos Position, args []Value) Value {
 		delete(httpServers, serverID)
 		delete(httpRoutes, serverID)
 	} else {
-		panic(valueError(pos, "HTTP server with ID '%s' not found", serverID))
+		return Value(valueError(pos, "HTTP server with ID '%s' not found", serverID))
 	}
 
 	return Value(nil)
@@ -3556,22 +3938,22 @@ func httpServerStopFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: http_server_route("GET", "/api/users", my_handler, "main")
 func httpServerRouteFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 3 || len(args) > 4 {
-		panic(typeError(pos, "http_server_route() requires 3 or 4 args, got %d", len(args)))
+		return Value(typeError(pos, "http_server_route() requires 3 or 4 args, got %d", len(args)))
 	}
 
 	method, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "http_server_route() requires first argument to be a string (method)"))
+		return Value(typeError(pos, "http_server_route() requires first argument to be a string (method)"))
 	}
 
 	path, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "http_server_route() requires second argument to be a string (path)"))
+		return Value(typeError(pos, "http_server_route() requires second argument to be a string (path)"))
 	}
 
 	handler, ok := args[2].(functionType)
 	if !ok {
-		panic(typeError(pos, "http_server_route() requires third argument to be a function (handler)"))
+		return Value(typeError(pos, "http_server_route() requires third argument to be a function (handler)"))
 	}
 
 	serverID := "default"
@@ -3579,13 +3961,13 @@ func httpServerRouteFunc(interp *interpreter, pos Position, args []Value) Value 
 		if id, ok := args[3].(string); ok {
 			serverID = id
 		} else {
-			panic(typeError(pos, "http_server_route() requires fourth argument to be a string (server_id)"))
+			return Value(typeError(pos, "http_server_route() requires fourth argument to be a string (server_id)"))
 		}
 	}
 
 	// Check if server exists
 	if _, exists := httpServers[serverID]; !exists {
-		panic(valueError(pos, "HTTP server with ID '%s' not found. Start server first.", serverID))
+		return Value(valueError(pos, "HTTP server with ID '%s' not found. Start server first.", serverID))
 	}
 
 	// Register route
@@ -3596,21 +3978,22 @@ func httpServerRouteFunc(interp *interpreter, pos Position, args []Value) Value 
 }
 
 // httpResponseFunc implements the http_response() built-in function
-// http_response(response_obj, status?, headers?, body?) -> null
-// Example: http_response(res, 200, {"Content-Type": "application/json"}, '{"message": "Hello"}')
+// http_response(response_obj, status?, headers?, body?) -> response_info_object
+// Returns: {"status": status_code, "body": response_body, "sent": true}
+// Example: result = http_response(res, 200, {"Content-Type": "application/json"}, '{"message": "Hello"}')
 func httpResponseFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 1 || len(args) > 4 {
-		panic(typeError(pos, "http_response() requires 1 to 4 args, got %d", len(args)))
+		return Value(typeError(pos, "http_response() requires 1 to 4 args, got %d", len(args)))
 	}
 
 	resObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "http_response() requires first argument to be a response object"))
+		return Value(typeError(pos, "http_response() requires first argument to be a response object"))
 	}
 
 	w, ok := resObj["_writer"].(http.ResponseWriter)
 	if !ok {
-		panic(typeError(pos, "http_response() requires a valid response object"))
+		return Value(typeError(pos, "http_response() requires a valid response object"))
 	}
 
 	// Set status code
@@ -3619,7 +4002,7 @@ func httpResponseFunc(interp *interpreter, pos Position, args []Value) Value {
 		if s, ok := args[1].(int); ok {
 			status = s
 		} else {
-			panic(typeError(pos, "http_response() requires second argument to be an integer (status)"))
+			return Value(typeError(pos, "http_response() requires second argument to be an integer (status)"))
 		}
 	}
 
@@ -3632,7 +4015,7 @@ func httpResponseFunc(interp *interpreter, pos Position, args []Value) Value {
 				}
 			}
 		} else {
-			panic(typeError(pos, "http_response() requires third argument to be an object (headers)"))
+			return Value(typeError(pos, "http_response() requires third argument to be an object (headers)"))
 		}
 	}
 
@@ -3646,7 +4029,7 @@ func httpResponseFunc(interp *interpreter, pos Position, args []Value) Value {
 			// Convert to JSON
 			jsonData, err := valueToJSON(args[3])
 			if err != nil {
-				panic(valueError(pos, "Failed to convert body to JSON: %v", err))
+				return Value(valueError(pos, "Failed to convert body to JSON: %v", err))
 			}
 			body = string(jsonData)
 			if w.Header().Get("Content-Type") == "" {
@@ -3661,7 +4044,13 @@ func httpResponseFunc(interp *interpreter, pos Position, args []Value) Value {
 	w.WriteHeader(status)
 	w.Write([]byte(body))
 
-	return Value(nil)
+	// Return response info object
+	responseInfo := map[string]Value{
+		"status": status,
+		"body":   body,
+		"sent":   true,
+	}
+	return Value(responseInfo)
 }
 
 // Helper functions for HTTP server
@@ -3691,27 +4080,41 @@ func readRequestBody(r *http.Request) Value {
 // tcp_connect(host, port) -> connection_object
 // Example: conn = tcp_connect("localhost", 8080)
 func tcpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tcp_connect", args, 2)
+	if err := ensureNumArgs(pos, "tcp_connect", args, 2); err != nil {
+		return Value(err)
+	}
 	host, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "tcp_connect() requires first argument to be a string (host)"))
+		return Value(typeError(pos, "tcp_connect() requires first argument to be a string (host)"))
 	}
 	port, ok := args[1].(int)
 	if !ok {
-		panic(typeError(pos, "tcp_connect() requires second argument to be an integer (port)"))
+		return Value(typeError(pos, "tcp_connect() requires second argument to be an integer (port)"))
 	}
 
 	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.Dial("tcp", address)
 	if err != nil {
-		panic(valueError(pos, "Failed to connect to %s: %v", address, err))
+		// Return connection object with success=false and error message
+		connObj := map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"socket":  Value(nil),
+		}
+		return Value(connObj)
 	}
 
-	// Return connection object
+	// Create socket object that contains the connection
+	socketObj := map[string]Value{
+		"_conn": conn,
+	}
+	
+	// Return connection object with success=true
 	connObj := map[string]Value{
-		"type":    "tcp_connection",
+		"success": true,
+		"socket":  socketObj, // Socket object for operations
 		"address": address,
-		"_conn":   conn, // Internal connection object
+		"_conn":   conn, // Internal connection object for backward compatibility
 	}
 	return Value(connObj)
 }
@@ -3720,23 +4123,37 @@ func tcpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 // tcp_listen(port) -> listener_object
 // Example: listener = tcp_listen(8080)
 func tcpListenFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tcp_listen", args, 1)
+	if err := ensureNumArgs(pos, "tcp_listen", args, 1); err != nil {
+		return Value(err)
+	}
 	port, ok := args[0].(int)
 	if !ok {
-		panic(typeError(pos, "tcp_listen() requires an integer (port)"))
+		return Value(typeError(pos, "tcp_listen() requires an integer (port)"))
 	}
 
 	address := fmt.Sprintf(":%d", port)
 	listener, err := net.Listen("tcp", address)
 	if err != nil {
-		panic(valueError(pos, "Failed to listen on port %d: %v", port, err))
+		// Return listener object with success=false and error message
+		listenerObj := map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"socket":  Value(nil),
+		}
+		return Value(listenerObj)
 	}
 
-	// Return listener object
+	// Create socket object that contains the listener
+	socketObj := map[string]Value{
+		"_listener": listener,
+	}
+
+	// Return listener object with success=true
 	listenerObj := map[string]Value{
-		"type":      "tcp_listener",
+		"success":   true,
+		"socket":    socketObj, // Socket object for operations
 		"address":   address,
-		"_listener": listener, // Internal listener object
+		"_listener": listener, // Internal listener object for backward compatibility
 	}
 	return Value(listenerObj)
 }
@@ -3745,27 +4162,49 @@ func tcpListenFunc(interp *interpreter, pos Position, args []Value) Value {
 // tcp_accept(listener) -> connection_object
 // Example: conn = tcp_accept(listener)
 func tcpAcceptFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tcp_accept", args, 1)
+	if err := ensureNumArgs(pos, "tcp_accept", args, 1); err != nil {
+		return Value(err)
+	}
 	listenerObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "tcp_accept() requires a listener object"))
+		return Value(typeError(pos, "tcp_accept() requires a listener object"))
 	}
 
-	listener, ok := listenerObj["_listener"].(net.Listener)
-	if !ok {
-		panic(typeError(pos, "tcp_accept() requires a valid TCP listener"))
+	// Try to get listener from either "socket" or "_listener" property
+	var listener net.Listener
+	if socketObj, ok := listenerObj["socket"].(map[string]Value); ok {
+		if l, ok := socketObj["_listener"].(net.Listener); ok {
+			listener = l
+		}
+	} else if l, ok := listenerObj["_listener"].(net.Listener); ok {
+		listener = l
+	}
+	if listener == nil {
+		return Value(typeError(pos, "tcp_accept() requires a valid TCP listener"))
 	}
 
 	conn, err := listener.Accept()
 	if err != nil {
-		panic(valueError(pos, "Failed to accept connection: %v", err))
+		// Return connection object with success=false and error message
+		connObj := map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"socket":  Value(nil),
+		}
+		return Value(connObj)
 	}
 
-	// Return connection object
+	// Create socket object that contains the connection
+	socketObj := map[string]Value{
+		"_conn": conn,
+	}
+
+	// Return connection object with success=true
 	connObj := map[string]Value{
-		"type":    "tcp_connection",
+		"success": true,
+		"socket":  socketObj, // Socket object for operations
 		"address": conn.RemoteAddr().String(),
-		"_conn":   conn, // Internal connection object
+		"_conn":   conn, // Internal connection object for backward compatibility
 	}
 	return Value(connObj)
 }
@@ -3774,26 +4213,36 @@ func tcpAcceptFunc(interp *interpreter, pos Position, args []Value) Value {
 // tcp_read(connection, size) -> string
 // Example: data = tcp_read(conn, 1024)
 func tcpReadFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tcp_read", args, 2)
+	if err := ensureNumArgs(pos, "tcp_read", args, 2); err != nil {
+		return Value(err)
+	}
 	connObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "tcp_read() requires a connection object"))
+		return Value(typeError(pos, "tcp_read() requires a connection object"))
 	}
 
-	conn, ok := connObj["_conn"].(net.Conn)
-	if !ok {
-		panic(typeError(pos, "tcp_read() requires a valid TCP connection"))
+	// Try to get connection from either "socket" or "_conn" property
+	var conn net.Conn
+	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
+		if c, ok := socketObj["_conn"].(net.Conn); ok {
+			conn = c
+		}
+	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+		conn = c
+	}
+	if conn == nil {
+		return Value(typeError(pos, "tcp_read() requires a valid TCP connection"))
 	}
 
 	size, ok := args[1].(int)
 	if !ok {
-		panic(typeError(pos, "tcp_read() requires second argument to be an integer (size)"))
+		return Value(typeError(pos, "tcp_read() requires second argument to be an integer (size)"))
 	}
 
 	buffer := make([]byte, size)
 	n, err := conn.Read(buffer)
 	if err != nil {
-		panic(valueError(pos, "Failed to read from connection: %v", err))
+		return Value(valueError(pos, "Failed to read from connection: %v", err))
 	}
 
 	return Value(string(buffer[:n]))
@@ -3803,25 +4252,35 @@ func tcpReadFunc(interp *interpreter, pos Position, args []Value) Value {
 // tcp_write(connection, data) -> bytes_written
 // Example: written = tcp_write(conn, "Hello, World!")
 func tcpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tcp_write", args, 2)
+	if err := ensureNumArgs(pos, "tcp_write", args, 2); err != nil {
+		return Value(err)
+	}
 	connObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "tcp_write() requires a connection object"))
+		return Value(typeError(pos, "tcp_write() requires a connection object"))
 	}
 
-	conn, ok := connObj["_conn"].(net.Conn)
-	if !ok {
-		panic(typeError(pos, "tcp_write() requires a valid TCP connection"))
+	// Try to get connection from either "socket" or "_conn" property
+	var conn net.Conn
+	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
+		if c, ok := socketObj["_conn"].(net.Conn); ok {
+			conn = c
+		}
+	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+		conn = c
+	}
+	if conn == nil {
+		return Value(typeError(pos, "tcp_write() requires a valid TCP connection"))
 	}
 
 	data, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "tcp_write() requires second argument to be a string (data)"))
+		return Value(typeError(pos, "tcp_write() requires second argument to be a string (data)"))
 	}
 
 	n, err := conn.Write([]byte(data))
 	if err != nil {
-		panic(valueError(pos, "Failed to write to connection: %v", err))
+		return Value(valueError(pos, "Failed to write to connection: %v", err))
 	}
 
 	return Value(n)
@@ -3831,31 +4290,51 @@ func tcpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 // tcp_close(connection_or_listener) -> null
 // Example: tcp_close(conn)
 func tcpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "tcp_close", args, 1)
+	if err := ensureNumArgs(pos, "tcp_close", args, 1); err != nil {
+		return Value(err)
+	}
 	obj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "tcp_close() requires a connection or listener object"))
+		return Value(typeError(pos, "tcp_close() requires a connection or listener object"))
 	}
 
-	// Try to close as connection first
+	// Try to close as connection first - check both "socket" and "_conn"
+	if socketObj, ok := obj["socket"].(map[string]Value); ok {
+		if conn, ok := socketObj["_conn"].(net.Conn); ok {
+			err := conn.Close()
+			if err != nil {
+				return Value(valueError(pos, "Failed to close connection: %v", err))
+			}
+			return Value(nil)
+		}
+	}
 	if conn, ok := obj["_conn"].(net.Conn); ok {
 		err := conn.Close()
 		if err != nil {
-			panic(valueError(pos, "Failed to close connection: %v", err))
+			return Value(valueError(pos, "Failed to close connection: %v", err))
 		}
 		return Value(nil)
 	}
 
-	// Try to close as listener
+	// Try to close as listener - check both "socket" and "_listener"
+	if socketObj, ok := obj["socket"].(map[string]Value); ok {
+		if listener, ok := socketObj["_listener"].(net.Listener); ok {
+			err := listener.Close()
+			if err != nil {
+				return Value(valueError(pos, "Failed to close listener: %v", err))
+			}
+			return Value(nil)
+		}
+	}
 	if listener, ok := obj["_listener"].(net.Listener); ok {
 		err := listener.Close()
 		if err != nil {
-			panic(valueError(pos, "Failed to close listener: %v", err))
+			return Value(valueError(pos, "Failed to close listener: %v", err))
 		}
 		return Value(nil)
 	}
 
-	panic(typeError(pos, "tcp_close() requires a valid TCP connection or listener"))
+	return Value(typeError(pos, "tcp_close() requires a valid TCP connection or listener"))
 }
 
 // UDP Connection Functions
@@ -3864,20 +4343,22 @@ func tcpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 // udp_connect(host, port) -> connection_object
 // Example: conn = udp_connect("localhost", 8080)
 func udpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "udp_connect", args, 2)
+	if err := ensureNumArgs(pos, "udp_connect", args, 2); err != nil {
+		return Value(err)
+	}
 	host, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "udp_connect() requires first argument to be a string (host)"))
+		return Value(typeError(pos, "udp_connect() requires first argument to be a string (host)"))
 	}
 	port, ok := args[1].(int)
 	if !ok {
-		panic(typeError(pos, "udp_connect() requires second argument to be an integer (port)"))
+		return Value(typeError(pos, "udp_connect() requires second argument to be an integer (port)"))
 	}
 
 	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.Dial("udp", address)
 	if err != nil {
-		panic(valueError(pos, "Failed to connect to %s: %v", address, err))
+		return Value(valueError(pos, "Failed to connect to %s: %v", address, err))
 	}
 
 	// Return connection object
@@ -3893,21 +4374,23 @@ func udpConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 // udp_listen(port) -> connection_object
 // Example: conn = udp_listen(8080)
 func udpListenFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "udp_listen", args, 1)
+	if err := ensureNumArgs(pos, "udp_listen", args, 1); err != nil {
+		return Value(err)
+	}
 	port, ok := args[0].(int)
 	if !ok {
-		panic(typeError(pos, "udp_listen() requires an integer (port)"))
+		return Value(typeError(pos, "udp_listen() requires an integer (port)"))
 	}
 
 	address := fmt.Sprintf(":%d", port)
 	addr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		panic(valueError(pos, "Failed to resolve UDP address %s: %v", address, err))
+		return Value(valueError(pos, "Failed to resolve UDP address %s: %v", address, err))
 	}
 
 	conn, err := net.ListenUDP("udp", addr)
 	if err != nil {
-		panic(valueError(pos, "Failed to listen on UDP port %d: %v", port, err))
+		return Value(valueError(pos, "Failed to listen on UDP port %d: %v", port, err))
 	}
 
 	// Return connection object
@@ -3923,15 +4406,17 @@ func udpListenFunc(interp *interpreter, pos Position, args []Value) Value {
 // udp_read(connection, size) -> {"data": string, "address": string}
 // Example: result = udp_read(conn, 1024)
 func udpReadFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "udp_read", args, 2)
+	if err := ensureNumArgs(pos, "udp_read", args, 2); err != nil {
+		return Value(err)
+	}
 	connObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "udp_read() requires a connection object"))
+		return Value(typeError(pos, "udp_read() requires a connection object"))
 	}
 
 	size, ok := args[1].(int)
 	if !ok {
-		panic(typeError(pos, "udp_read() requires second argument to be an integer (size)"))
+		return Value(typeError(pos, "udp_read() requires second argument to be an integer (size)"))
 	}
 
 	buffer := make([]byte, size)
@@ -3946,11 +4431,11 @@ func udpReadFunc(interp *interpreter, pos Position, args []Value) Value {
 		n, err = conn.Read(buffer)
 		addr = conn.RemoteAddr()
 	} else {
-		panic(typeError(pos, "udp_read() requires a valid UDP connection"))
+		return Value(typeError(pos, "udp_read() requires a valid UDP connection"))
 	}
 
 	if err != nil {
-		panic(valueError(pos, "Failed to read from UDP connection: %v", err))
+		return Value(valueError(pos, "Failed to read from UDP connection: %v", err))
 	}
 
 	result := map[string]Value{
@@ -3965,17 +4450,17 @@ func udpReadFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: written = udp_write(conn, "Hello, World!", "192.168.1.100:8080")
 func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 3 {
-		panic(typeError(pos, "udp_write() requires 2 or 3 args, got %d", len(args)))
+		return Value(typeError(pos, "udp_write() requires 2 or 3 args, got %d", len(args)))
 	}
 
 	connObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "udp_write() requires a connection object"))
+		return Value(typeError(pos, "udp_write() requires a connection object"))
 	}
 
 	data, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "udp_write() requires second argument to be a string (data)"))
+		return Value(typeError(pos, "udp_write() requires second argument to be a string (data)"))
 	}
 
 	var n int
@@ -3985,36 +4470,36 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Write to specific address
 		addrStr, ok := args[2].(string)
 		if !ok {
-			panic(typeError(pos, "udp_write() requires third argument to be a string (address)"))
+			return Value(typeError(pos, "udp_write() requires third argument to be a string (address)"))
 		}
 
 		udpConn, ok := connObj["_conn"].(*net.UDPConn)
 		if !ok {
-			panic(typeError(pos, "udp_write() with address requires a UDP listener connection"))
+			return Value(typeError(pos, "udp_write() with address requires a UDP listener connection"))
 		}
 
 		var addr *net.UDPAddr
 		addr, err = net.ResolveUDPAddr("udp", addrStr)
 		if err != nil {
-			panic(valueError(pos, "Failed to resolve UDP address %s: %v", addrStr, err))
+			return Value(valueError(pos, "Failed to resolve UDP address %s: %v", addrStr, err))
 		}
 
 		n, err = udpConn.WriteToUDP([]byte(data), addr)
 		if err != nil {
-			panic(valueError(pos, "Failed to write to UDP address %s: %v", addrStr, err))
+			return Value(valueError(pos, "Failed to write to UDP address %s: %v", addrStr, err))
 		}
 	} else {
 		// Write to connected address
 		conn, ok := connObj["_conn"].(net.Conn)
 		if !ok {
-			panic(typeError(pos, "udp_write() requires a valid UDP connection"))
+			return Value(typeError(pos, "udp_write() requires a valid UDP connection"))
 		}
 
 		n, err = conn.Write([]byte(data))
 	}
 
 	if err != nil {
-		panic(valueError(pos, "Failed to write to UDP connection: %v", err))
+		return Value(valueError(pos, "Failed to write to UDP connection: %v", err))
 	}
 
 	return Value(n)
@@ -4024,20 +4509,22 @@ func udpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 // udp_close(connection) -> null
 // Example: udp_close(conn)
 func udpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "udp_close", args, 1)
+	if err := ensureNumArgs(pos, "udp_close", args, 1); err != nil {
+		return Value(err)
+	}
 	connObj, ok := args[0].(map[string]Value)
 	if !ok {
-		panic(typeError(pos, "udp_close() requires a connection object"))
+		return Value(typeError(pos, "udp_close() requires a connection object"))
 	}
 
 	conn, ok := connObj["_conn"].(net.Conn)
 	if !ok {
-		panic(typeError(pos, "udp_close() requires a valid UDP connection"))
+		return Value(typeError(pos, "udp_close() requires a valid UDP connection"))
 	}
 
 	err := conn.Close()
 	if err != nil {
-		panic(valueError(pos, "Failed to close UDP connection: %v", err))
+		return Value(valueError(pos, "Failed to close UDP connection: %v", err))
 	}
 
 	return Value(nil)
@@ -4049,15 +4536,17 @@ func udpCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 // net_resolve(hostname) -> array of IP addresses
 // Example: ips = net_resolve("google.com")
 func netResolveFunc(interp *interpreter, pos Position, args []Value) Value {
-	ensureNumArgs(pos, "net_resolve", args, 1)
+	if err := ensureNumArgs(pos, "net_resolve", args, 1); err != nil {
+		return Value(err)
+	}
 	hostname, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "net_resolve() requires a string (hostname)"))
+		return Value(typeError(pos, "net_resolve() requires a string (hostname)"))
 	}
 
 	ips, err := net.LookupIP(hostname)
 	if err != nil {
-		panic(valueError(pos, "Failed to resolve hostname %s: %v", hostname, err))
+		return Value(valueError(pos, "Failed to resolve hostname %s: %v", hostname, err))
 	}
 
 	// Convert IPs to string array
@@ -4074,17 +4563,17 @@ func netResolveFunc(interp *interpreter, pos Position, args []Value) Value {
 // Example: result = net_ping("google.com", 80, 5000)
 func netPingFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 || len(args) > 3 {
-		panic(typeError(pos, "net_ping() requires 2 or 3 args, got %d", len(args)))
+		return Value(typeError(pos, "net_ping() requires 2 or 3 args, got %d", len(args)))
 	}
 
 	host, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "net_ping() requires first argument to be a string (host)"))
+		return Value(typeError(pos, "net_ping() requires first argument to be a string (host)"))
 	}
 
 	port, ok := args[1].(int)
 	if !ok {
-		panic(typeError(pos, "net_ping() requires second argument to be an integer (port)"))
+		return Value(typeError(pos, "net_ping() requires second argument to be an integer (port)"))
 	}
 
 	timeoutMs := 5000 // Default 5 seconds
@@ -4092,7 +4581,7 @@ func netPingFunc(interp *interpreter, pos Position, args []Value) Value {
 		if timeout, ok := args[2].(int); ok {
 			timeoutMs = timeout
 		} else {
-			panic(typeError(pos, "net_ping() requires third argument to be an integer (timeout_ms)"))
+			return Value(typeError(pos, "net_ping() requires third argument to be an integer (timeout_ms)"))
 		}
 	}
 
@@ -4745,17 +5234,17 @@ func dateCompareFunc(interp *interpreter, pos Position, args []Value) Value {
 // Usage: fact_assert("customer", "john", {"age": 30, "status": "premium"})
 func factAssertFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) < 2 {
-		panic(typeError(pos, "fact_assert() requires at least 2 arguments (category, key, [value])"))
+		return Value(typeError(pos, "fact_assert() requires at least 2 arguments (category, key, [value])"))
 	}
 
 	category, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "fact_assert() requires first argument to be a category string"))
+		return Value(typeError(pos, "fact_assert() requires first argument to be a category string"))
 	}
 
 	key, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "fact_assert() requires second argument to be a key string"))
+		return Value(typeError(pos, "fact_assert() requires second argument to be a key string"))
 	}
 
 	factMutex.Lock()
@@ -4902,7 +5391,7 @@ func factCountFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	category, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "fact_count() requires first argument to be a category string"))
+		return Value(typeError(pos, "fact_count() requires first argument to be a category string"))
 	}
 
 	// Count facts in category
@@ -5436,7 +5925,7 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Clear events of specific type
 	eventType, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "event_clear() requires first argument to be an event type string"))
+		return Value(typeError(pos, "event_clear() requires first argument to be an event type string"))
 	}
 
 	var filteredEvents []map[string]any
@@ -5468,7 +5957,7 @@ func eventCountFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Count events of specific type
 	eventType, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "event_count() requires first argument to be an event type string"))
+		return Value(typeError(pos, "event_count() requires first argument to be an event type string"))
 	}
 
 	count := 0

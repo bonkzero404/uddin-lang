@@ -1,0 +1,98 @@
+// Demo: HTTP Response Return Value
+// This example shows how to use the return value from http_response() function
+
+server_id = "demo-server"
+port = 8081
+
+// Start server
+http_server_start(port, server_id)
+
+// Handler that uses http_response return value
+fun demoHandler(request, response):
+    // Send response and capture the return value
+    result = http_response(response, 200, {"Content-Type": "application/json"}, json_stringify({
+        "message": "Hello from Uddin-Lang!",
+        "timestamp": date_now(),
+        "method": request["method"]
+    }))
+    
+    // Log the response info
+    print("Response sent:")
+    print("  Status: " + str(result.status))
+    print("  Body length: " + str(len(result.body)))
+    print("  Sent: " + str(result.sent))
+    
+    // You can now use the result for logging, metrics, etc.
+    if (result.sent and result.status == 200) then:
+        print("✓ Successfully sent response")
+    else:
+        print("✗ Failed to send response")
+    end
+end
+
+// Handler that demonstrates error handling with return value
+fun errorHandler(request, response):
+    try:
+        // Simulate some processing
+        data = {"error": "Something went wrong", "code": 500}
+        
+        // Send error response and capture result
+        result = http_response(response, 500, {"Content-Type": "application/json"}, json_stringify(data))
+        
+        // Log error response details
+        print("Error response sent:")
+        print("  Status: " + str(result.status))
+        print("  Error sent: " + str(result.sent))
+        
+        // You could save this to error logs, send to monitoring system, etc.
+        return result  // Return the response info for further processing
+        
+    catch (error):
+        print("Failed to send error response: " + str(error))
+        return null
+    end
+end
+
+// Handler that shows conditional responses
+fun conditionalHandler(request, response):
+    user_agent = request["headers"]["User-Agent"]
+    
+    if ("curl" in user_agent) then:
+        // Response for curl clients
+        result = http_response(response, 200, {"Content-Type": "text/plain"}, "Hello curl user!")
+    else:
+        // Response for other clients
+        result = http_response(response, 200, {"Content-Type": "application/json"}, json_stringify({
+            "message": "Hello web browser!",
+            "user_agent": user_agent
+        }))
+    end
+    
+    // Log different response types
+    print("Sent response for " + user_agent + ":")
+    print("  Status: " + str(result.status))
+    print("  Content-Type: " + ("curl" in user_agent ? "text/plain" : "application/json"))
+    
+    return result
+end
+
+// Register routes
+http_server_route("GET", "/demo", demoHandler, server_id)
+http_server_route("GET", "/error", errorHandler, server_id)
+http_server_route("GET", "/conditional", conditionalHandler, server_id)
+
+print("Demo Server running at http://localhost:" + str(port))
+print("Endpoints:")
+print("  GET  /demo        - Basic demo with response return value")
+print("  GET  /error       - Error handling demo")
+print("  GET  /conditional - Conditional response demo")
+print("")
+print("Test with:")
+print("  curl http://localhost:" + str(port) + "/demo")
+print("  curl http://localhost:" + str(port) + "/error")
+print("  curl http://localhost:" + str(port) + "/conditional")
+
+while (true):
+    // Server is running in background
+    // Use Ctrl+C to stop the server
+end
