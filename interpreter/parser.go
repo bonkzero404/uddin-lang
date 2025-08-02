@@ -246,10 +246,18 @@ func (p *parser) tryCatch() Statement {
 	return &TryCatch{pos, tryBlock, errVar, catchBlock}
 }
 
-// return = RETURN expression
+// return = RETURN [expression]
 func (p *parser) return_() Statement {
 	pos := p.pos
 	p.expect(RETURN)
+	
+	// Check if there's an expression after RETURN
+	// If the next token is a statement terminator or end of block, return null
+	if p.tok == EOF || p.tok == RBRACE || p.tok == END || p.tok == ELSE || p.tok == CATCH {
+		// Return null if no expression is provided
+		return &Return{pos, &Literal{pos, nil}}
+	}
+	
 	result := p.expression()
 	return &Return{pos, result}
 }
