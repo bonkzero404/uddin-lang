@@ -1,0 +1,35 @@
+fun safeFileOperation(filename):
+    try:
+        // Attempt to read file
+        content = read_file(filename)
+
+        // Attempt to parse as JSON
+        data = json_parse(content)
+
+        // Attempt to access property
+        // name = data.name
+
+        return {"success": true, "data": data}
+
+    catch (error):
+        error_message = str(error)
+
+        if (contains(error_message, "file not found")) then:
+            return {"success": false, "error": "File does not exist", "type": "file_error"}
+        else if (contains(error_message, "json_parse() requires a string argument")) then:
+            return {"success": false, "error": "Invalid JSON format", "type": "parse_error"}
+        else if (contains(error_message, "can only subscript string, ")) then:
+            return {"success": false, "error": "Missing required property", "type": "data_error"}
+        else:
+            return {"success": false, "error": error_message, "type": "unknown_error"}
+        end
+    end
+end
+
+// Usage
+result = safeFileOperation("config.json")
+if (result.success) then:
+    print("Data loaded successfully: " + str(result.data))
+else:
+    print("Error (" + result.type + "): " + result.error)
+end

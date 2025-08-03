@@ -83,3 +83,6 @@ secrets.*
 # Test artifacts
 testdata/output/
 test_output/
+
+docs/
+.github/
