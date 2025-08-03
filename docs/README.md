@@ -1,236 +1,225 @@
-# Uddin Programming Language Documentation
+# UDDIN-LANG Documentation
 
-This directory contains the complete documentation for Uddin Programming Language, built with Jekyll and designed to be deployed on GitHub Pages.
+This directory contains the complete documentation for UDDIN-LANG (Unified Dynamic Decision Interpreter Notation), built with Docusaurus 2 for a modern, fast, and responsive documentation experience.
+
+## 🚀 About UDDIN-LANG
+
+UDDIN-LANG is a specialized Flexible Rule Logic Platform that resembles a programming language, offering high expressiveness, full flow control, and runtime programmable capabilities for complex business decision support systems.
 
 ## 📁 Documentation Structure
 
 ```
 docs/
-├── index.md                    # Main documentation homepage
-├── tutorial/                   # Step-by-step tutorials
-│   ├── index.md               # Tutorial overview
-│   └── 01-basics/             # Basic concepts
-│       ├── 01-introduction.md # Getting started
-│       └── 02-basic-syntax.md # Language syntax
-├── reference/                  # Language reference
-│   └── index.md               # Complete language reference
-├── builtin-functions/          # Built-in functions documentation
-│   └── index.md               # All built-in functions
-├── examples/                   # Code examples
-│   └── index.md               # Example programs
-├── advanced/                   # Advanced topics
-│   └── index.md               # Performance, patterns, best practices
-├── _config.yml                 # Jekyll configuration
-├── Gemfile                     # Ruby dependencies
-└── README.md                   # This file
+├── src/                        # Docusaurus source files
+│   ├── components/            # React components
+│   ├── css/                   # Custom styles
+│   └── pages/                 # Custom pages
+├── docs/                      # Documentation content
+│   ├── intro.md              # Getting started
+│   ├── examples/             # Code examples
+│   └── reference/            # Language reference
+├── static/                    # Static assets
+├── docusaurus.config.js      # Docusaurus configuration
+├── package.json              # Node.js dependencies
+└── README.md                 # This file
 ```
 
-## 🚀 Quick Start
+## � Quick Start
 
 ### Prerequisites
 
-- Ruby 3.1 or higher
-- Bundler gem
-- Git
+-   Node.js 16.14 or higher
+-   npm or yarn package manager
 
 ### Local Development
 
 1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/bonkzero404/uddin-lang.git
-   cd uddin-lang/docs
-   ```
+
+    ```bash
+    git clone https://github.com/bonkzero404/uddin-lang.git
+    cd uddin-lang/docs
+    ```
 
 2. **Install dependencies:**
-   ```bash
-   bundle install
-   ```
 
-3. **Serve locally:**
-   ```bash
-   bundle exec jekyll serve
-   ```
+    ```bash
+    npm install
+    # or
+    yarn install
+    ```
+
+3. **Start development server:**
+
+    ```bash
+    npm start
+    # or
+    yarn start
+    ```
 
 4. **Open in browser:**
-   ```
-   http://localhost:4000/uddin-lang/
-   ```
+    ```
+    http://localhost:3000
+    ```
 
 ### Building for Production
 
 ```bash
-bundle exec jekyll build
+npm run build
+# or
+yarn build
 ```
 
-The built site will be in the `_site` directory.
+The built site will be in the `build/` directory.
 
 ## 🌐 Deployment
 
-### Automatic Deployment (Recommended)
+The documentation can be deployed to various platforms:
 
-The documentation is automatically deployed to GitHub Pages using GitHub Actions when:
+### GitHub Pages
 
-- Changes are pushed to the `main` or `master` branch
-- Changes are made to files in the `docs/` directory
-- The workflow is manually triggered
-
-**Deployment URL:** `https://bonkzero404.github.io/uddin-lang/`
+```bash
+npm run deploy
+# or
+yarn deploy
+```
 
 ### Manual Deployment
 
-If you need to deploy manually:
-
-1. **Build the site:**
-   ```bash
-   bundle exec jekyll build
-   ```
-
-2. **Deploy to GitHub Pages:**
-   - Push the `docs/` directory to your repository
-   - Enable GitHub Pages in repository settings
-   - Set source to "GitHub Actions"
+```bash
+npm run build
+# Then deploy the build/ directory to your hosting platform
+```
 
 ## 📝 Contributing to Documentation
 
 ### Adding New Content
 
-1. **Tutorial Pages:**
-   - Add new `.md` files in `tutorial/` subdirectories
-   - Follow the existing naming convention
-   - Include front matter with title and layout
+1. **Documentation Pages:**
 
-2. **Examples:**
-   - Add code examples to `examples/index.md`
-   - Include complete, runnable code
-   - Provide clear explanations
+    - Add new `.md` or `.mdx` files in the `docs/` directory
+    - Use front matter to configure metadata
 
-3. **Reference Documentation:**
-   - Update `reference/index.md` for language features
-   - Update `builtin-functions/index.md` for new functions
+2. **Blog Posts:**
+
+    - Add posts to `blog/` directory (if enabled)
+    - Follow the naming convention: `YYYY-MM-DD-title.md`
+
+3. **Custom Pages:**
+    - Create React components in `src/pages/`
+    - Use `.js`, `.jsx`, or `.mdx` extensions
 
 ### Writing Guidelines
 
 1. **Markdown Format:**
-   ```markdown
-   ---
-   layout: default
-   title: Page Title
-   ---
-   
-   # Page Title
-   
-   Content here...
-   ```
+
+    ```markdown
+    ---
+    id: page-id
+    title: Page Title
+    sidebar_position: 1
+    ---
+
+    # Page Title
+
+    Content here...
+    ```
 
 2. **Code Blocks:**
-   ```markdown
-   ```uddin
-   // Uddin code example
-   func hello() {
-       print("Hello, World!")
-   }
-   ```
-   ```
+
+    ````markdown
+    ```uddin
+    // UDDIN-LANG code example
+    fun detectFraud(transaction):
+        if (transaction.amount > 10000) then:
+            return "HIGH_RISK"
+        end
+    end
+    ```
+    ````
+
+    ```
+
+    ```
 
 3. **Internal Links:**
-   ```markdown
-   [Link Text](../other-page/)
-   [Tutorial](../tutorial/)
-   ```
-
-4. **External Links:**
-   ```markdown
-   [GitHub Repository](https://github.com/tmc/uddin-lang)
-   ```
+    ```markdown
+    [Link Text](./other-page)
+    [Tutorial](../tutorial/intro)
+    ```
 
 ### Content Standards
 
-- **Clear and Concise:** Write for developers of all skill levels
-- **Complete Examples:** Provide working code that users can run
-- **Consistent Style:** Follow the established documentation style
-- **Up-to-date:** Ensure examples work with the current version
+-   **Clear and Concise:** Write for developers and business analysts
+-   **Complete Examples:** Provide working UDDIN-LANG code
+-   **Consistent Style:** Follow established documentation patterns
+-   **Up-to-date:** Ensure examples work with current version
 
 ## 🔧 Configuration
 
-### Jekyll Configuration (`_config.yml`)
+### Docusaurus Configuration
 
-Key settings:
+Key settings in `docusaurus.config.js`:
 
-- **Site Information:** Title, description, URL
-- **Navigation:** Header pages and menu structure
-- **Plugins:** Jekyll plugins for enhanced functionality
-- **Syntax Highlighting:** Rouge with GitHub theme
-- **Collections:** Organized content grouping
+-   **Site metadata:** Title, description, favicon
+-   **Navigation:** Navbar and footer configuration
+-   **Themes:** Classic theme with customizations
+-   **Plugins:** Additional functionality
+-   **Deployment:** GitHub Pages configuration
 
-### GitHub Actions Workflow
+### Customization
 
-The deployment workflow (`.github/workflows/deploy-docs.yml`):
+1. **Styling:** Modify `src/css/custom.css`
+2. **Components:** Create React components in `src/components/`
+3. **Layout:** Override theme components using swizzling
+4. **Configuration:** Update `docusaurus.config.js`
 
-- **Triggers:** Push to main/master, manual dispatch
-- **Build:** Uses Ruby 3.1 and Jekyll
-- **Deploy:** Automatic deployment to GitHub Pages
-- **Permissions:** Configured for Pages deployment
+## 🎨 Theme Features
 
-## 🎨 Customization
-
-### Theme Customization
-
-The documentation uses the Minima theme. To customize:
-
-1. **Override layouts:** Create files in `_layouts/`
-2. **Custom CSS:** Add styles in `_sass/`
-3. **Custom includes:** Add reusable components in `_includes/`
-
-### Adding New Sections
-
-1. **Create directory:** `mkdir new-section`
-2. **Add index file:** `touch new-section/index.md`
-3. **Update navigation:** Add to `_config.yml` header_pages
-4. **Link from homepage:** Update `index.md`
+-   **Dark/Light Mode:** Built-in theme switching
+-   **Search:** Integrated search functionality
+-   **Mobile Responsive:** Works on all devices
+-   **Fast Performance:** Optimized for speed
+-   **SEO Friendly:** Built-in SEO optimizations
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
-1. **Bundle install fails:**
-   ```bash
-   gem install bundler
-   bundle install
-   ```
+1. **Install fails:**
 
-2. **Jekyll serve fails:**
-   ```bash
-   bundle update
-   bundle exec jekyll serve --trace
-   ```
+    ```bash
+    rm -rf node_modules package-lock.json
+    npm install
+    ```
 
-3. **GitHub Pages build fails:**
-   - Check the Actions tab for error details
-   - Ensure all files are properly formatted
-   - Verify Gemfile dependencies
+2. **Build fails:**
 
-4. **Links not working:**
-   - Use relative paths: `../other-page/`
-   - Ensure proper directory structure
-   - Check for typos in filenames
+    ```bash
+    npm run clear
+    npm run build
+    ```
 
-### Local Development Tips
+3. **Port already in use:**
+    ```bash
+    npm start -- --port 3001
+    ```
 
-- **Live reload:** Jekyll automatically rebuilds on file changes
-- **Draft posts:** Use `--drafts` flag to include draft content
-- **Incremental builds:** Use `--incremental` for faster rebuilds
-- **Verbose output:** Use `--verbose` for detailed build information
+### Development Tips
+
+-   **Hot reload:** Changes are reflected immediately
+-   **ESLint:** Run `npm run lint` to check code quality
+-   **Clear cache:** Use `npm run clear` if experiencing issues
 
 ## 📚 Resources
 
-- **Jekyll Documentation:** [https://jekyllrb.com/docs/](https://jekyllrb.com/docs/)
-- **GitHub Pages:** [https://pages.github.com/](https://pages.github.com/)
-- **Markdown Guide:** [https://www.markdownguide.org/](https://www.markdownguide.org/)
-- **Kramdown Syntax:** [https://kramdown.gettalong.org/syntax.html](https://kramdown.gettalong.org/syntax.html)
+-   **Docusaurus Documentation:** [https://docusaurus.io/docs](https://docusaurus.io/docs)
+-   **Markdown Guide:** [https://www.markdownguide.org/](https://www.markdownguide.org/)
+-   **React Documentation:** [https://reactjs.org/docs](https://reactjs.org/docs)
+-   **UDDIN-LANG Repository:** [https://github.com/bonkzero404/uddin-lang](https://github.com/bonkzero404/uddin-lang)
 
 ## 📄 License
 
-This documentation is part of the Uddin Programming Language project and is licensed under the same terms as the main project.
+This documentation is part of the UDDIN-LANG project and is licensed under the MIT License.
 
 ---
 

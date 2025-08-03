@@ -66,7 +66,8 @@ coverage.html
 .env.production.local
 
 # Documentation build
-/docs/_build/
+/docs/build/
+/docs/.docusaurus/
 
 # Cache directories
 .cache/
@@ -85,4 +86,3 @@ testdata/output/
 test_output/
 
 docs/node_modules/
-docs/build/
