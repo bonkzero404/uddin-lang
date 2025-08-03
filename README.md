@@ -510,12 +510,42 @@ print(typeof(empty_value)) // "null"
 | ------------ | --------------------------- | ----------------------------------------- | ----------------------- |
 | **null**     | Represents absence of value | `null`                                    | Equality comparison     |
 | **bool**     | Boolean values              | `true`, `false`                           | Logical operations      |
-| **int**      | Integer numbers             | `42`, `-17`                               | Arithmetic operations   |
-| **float**    | Floating-point numbers      | `3.14`, `-2.5`                            | Arithmetic operations   |
+| **int**      | Integer numbers             | `42`, `-17`, `1_000_000`                  | Arithmetic operations   |
+| **float**    | Floating-point numbers      | `3.14`, `-2.5`, `1_234.56_78`            | Arithmetic operations   |
 | **string**   | Text sequences              | `"Hello"`, `'World'`, `` `Multi\nline` `` | Concatenation, indexing |
 | **array**    | Ordered collections         | `[1, 2, 3]`                               | Indexing, iteration     |
 | **object**   | Key-value pairs             | `{name: "John"}`                          | Property access         |
 | **function** | Callable code blocks        | `fun() -> "result"`                       | Function calls          |
+
+#### Digit Separators
+
+Uddin-Lang supports underscore (`_`) as digit separators to improve readability of large numbers:
+
+```go
+// Integer literals with digit separators
+big_number = 1_000_000        // One million
+phone = 555_123_4567          // Phone number format
+hex_color = 0xFF_AA_BB        // Hexadecimal with separators
+
+// Floating-point literals
+pi_precise = 3.141_592_653_589_793
+money = 1_234.56_78           // Currency format
+
+// Scientific notation
+avogadro = 6.022_140_76e23    // Avogadro's number
+planck = 6.626_070_15e-34     // Planck constant
+
+print(big_number)             // Output: 1000000
+print(pi_precise)             // Output: 3.141592653589793
+```
+
+**Rules for digit separators:**
+- Can only be used between digits
+- Cannot appear at the beginning or end of a number
+- Cannot appear consecutively (`1__000` is invalid)
+- Cannot appear immediately before or after decimal point
+- Can be used in both integer and fractional parts
+- Can be used in scientific notation exponents
 
 ### 🔧 Operators
 
@@ -1308,7 +1338,7 @@ fun is_balanced(text):
         char = substr(text, i, 1)
         if char == "(":
             stack_push(paren_stack, char)
-        elif char == ")":
+        else if char == ")":
             if stack_is_empty(paren_stack):
                 return false
             end
