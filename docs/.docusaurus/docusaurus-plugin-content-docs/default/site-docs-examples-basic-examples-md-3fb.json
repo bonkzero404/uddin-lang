@@ -1,8 +1,8 @@
 {
   "unversionedId": "examples/basic-examples",
   "id": "examples/basic-examples",
-  "title": "Basic Examples",
-  "description": "Here are some basic examples to get you started with Uddin-Lang.",
+  "title": "basic-examples",
+  "description": "",
   "source": "@site/docs/examples/basic-examples.md",
   "sourceDirName": "examples",
   "slug": "/examples/basic-examples",
@@ -11,8 +11,5 @@
   "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/examples/basic-examples.md",
   "tags": [],
   "version": "current",
-  "sidebarPosition": 2,
-  "frontMatter": {
-    "sidebar_position": 2
-  }
+  "frontMatter": {}
 }

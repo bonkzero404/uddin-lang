@@ -1,124 +1,171 @@
 {
-  "/uddin-lang/docs-a53": {
-    "__comp": "1be78505",
+  "/uddin-lang/__docusaurus/debug-e33": {
+    "__comp": "__comp---theme-debug-config-23-a-2ff",
     "__context": {
-      "plugin": "c7a000b9"
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
+    }
+  },
+  "/uddin-lang/__docusaurus/debug/config-7bf": {
+    "__comp": "__comp---theme-debug-config-23-a-2ff",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
+    }
+  },
+  "/uddin-lang/__docusaurus/debug/content-1b8": {
+    "__comp": "__comp---theme-debug-contentba-8-ce7",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
     },
-    "versionMetadata": "935f2afb"
+    "allContent": "allContent---uddin-lang-docusaurus-debug-content-246-4fb"
+  },
+  "/uddin-lang/__docusaurus/debug/globalData-788": {
+    "__comp": "__comp---theme-debug-global-dataede-0fa",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
+    }
+  },
+  "/uddin-lang/__docusaurus/debug/metadata-c35": {
+    "__comp": "__comp---theme-debug-site-metadata-68-e-3d4",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
+    }
+  },
+  "/uddin-lang/__docusaurus/debug/registry-a8f": {
+    "__comp": "__comp---theme-debug-registry-679-501",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
+    }
+  },
+  "/uddin-lang/__docusaurus/debug/routes-f0f": {
+    "__comp": "__comp---theme-debug-routes-946-699",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docusaurus-debug-94-d-809"
+    }
+  },
+  "/uddin-lang/docs-56c": {
+    "__comp": "__comp---theme-doc-page-1-be-9be",
+    "__context": {
+      "plugin": "plugin---uddin-lang-docsc-7-a-2d0"
+    },
+    "versionMetadata": "versionMetadata---uddin-lang-docs-935-115"
   },
   "/uddin-lang/docs/contributing/syntax-highlighting-d6c": {
-    "__comp": "17896441",
-    "content": "a474bacf"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-contributing-syntax-highlightinga-47-7c6"
   },
   "/uddin-lang/docs/examples/-0cf": {
-    "__comp": "17896441",
-    "content": "bf614533"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-examples-bf-6-40c"
+  },
+  "/uddin-lang/docs/examples/basic-examples-023": {
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-examples-basic-examples-3-fb-11b"
   },
   "/uddin-lang/docs/getting-started/installation-efe": {
-    "__comp": "17896441",
-    "content": "54f44165"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-getting-started-installation-54-f-4be"
   },
   "/uddin-lang/docs/getting-started/quick-start-93f": {
-    "__comp": "17896441",
-    "content": "588bd741"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-getting-started-quick-start-588-153"
   },
   "/uddin-lang/docs/getting-started/your-first-program-537": {
-    "__comp": "17896441",
-    "content": "52b559fe"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-getting-started-your-first-program-52-b-e31"
   },
   "/uddin-lang/docs/intro-37f": {
-    "__comp": "17896441",
-    "content": "0e384e19"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-intro-0-e-3-765"
   },
   "/uddin-lang/docs/reference/-ebf": {
-    "__comp": "17896441",
-    "content": "1a3c9b31"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-reference-1-a-3-805"
   },
   "/uddin-lang/docs/reference/builtin-functions-d20": {
-    "__comp": "17896441",
-    "content": "5d995b60"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-reference-builtin-functions-5-d-9-9af"
   },
   "/uddin-lang/docs/reference/syntax-35c": {
-    "__comp": "17896441",
-    "content": "ba4e2648"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-reference-syntaxba-4-49e"
   },
   "/uddin-lang/docs/tutorial/advanced/best-practices-b7d": {
-    "__comp": "17896441",
-    "content": "f6f7e9a9"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-best-practicesf-6-f-fb2"
   },
   "/uddin-lang/docs/tutorial/advanced/built-in-functions-5ad": {
-    "__comp": "17896441",
-    "content": "9482c383"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-built-in-functions-948-d85"
   },
   "/uddin-lang/docs/tutorial/advanced/development-tools-99b": {
-    "__comp": "17896441",
-    "content": "db6633cd"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-development-toolsdb-6-acc"
   },
   "/uddin-lang/docs/tutorial/advanced/error-handling-and-debugging-09b": {
-    "__comp": "17896441",
-    "content": "1561e6df"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-error-handling-and-debugging-156-0ed"
   },
   "/uddin-lang/docs/tutorial/advanced/math-functions-bb4": {
-    "__comp": "17896441",
-    "content": "2e75f473"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-math-functions-2-e-7-fb0"
   },
   "/uddin-lang/docs/tutorial/advanced/networking-fb6": {
-    "__comp": "17896441",
-    "content": "38bcd756"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-networking-38-b-97f"
   },
   "/uddin-lang/docs/tutorial/advanced/regex-and-datetime-8c8": {
-    "__comp": "17896441",
-    "content": "53f72f67"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-regex-and-datetime-53-f-15b"
   },
   "/uddin-lang/docs/tutorial/advanced/xml-and-knowledge-systems-858": {
-    "__comp": "17896441",
-    "content": "87d7b132"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-advanced-xml-and-knowledge-systems-87-d-3c2"
   },
   "/uddin-lang/docs/tutorial/basics/arrays-and-objects-d29": {
-    "__comp": "17896441",
-    "content": "0ea51c82"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-arrays-and-objects-0-ea-907"
   },
   "/uddin-lang/docs/tutorial/basics/basic-syntax-5ff": {
-    "__comp": "17896441",
-    "content": "cffa81bd"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-basic-syntaxcff-4ae"
   },
   "/uddin-lang/docs/tutorial/basics/best-practices-408": {
-    "__comp": "17896441",
-    "content": "e74e638d"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-best-practicese-74-ef7"
   },
   "/uddin-lang/docs/tutorial/basics/control-flow-8d4": {
-    "__comp": "17896441",
-    "content": "d6e38c58"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-control-flowd-6-e-b31"
   },
   "/uddin-lang/docs/tutorial/basics/error-handling-af6": {
-    "__comp": "17896441",
-    "content": "824d7230"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-error-handling-824-8f6"
   },
   "/uddin-lang/docs/tutorial/basics/functions-532": {
-    "__comp": "17896441",
-    "content": "03f745c3"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-functions-03-f-676"
   },
   "/uddin-lang/docs/tutorial/basics/introduction-d94": {
-    "__comp": "17896441",
-    "content": "c47fb891"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-introductionc-47-c86"
   },
   "/uddin-lang/docs/tutorial/basics/modules-ff1": {
-    "__comp": "17896441",
-    "content": "7d08b7df"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-modules-7-d-0-cf0"
   },
   "/uddin-lang/docs/tutorial/basics/operators-9c4": {
-    "__comp": "17896441",
-    "content": "db5e942e"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-operatorsdb-5-b78"
   },
   "/uddin-lang/docs/tutorial/basics/variables-and-data-types-847": {
-    "__comp": "17896441",
-    "content": "a613978f"
+    "__comp": "__comp---theme-doc-item-178-a40",
+    "content": "content---uddin-lang-docs-tutorial-basics-variables-and-data-typesa-61-faa"
   },
   "/uddin-lang/-1a8": {
-    "__comp": "c4f5d8e4",
+    "__comp": "__comp---site-src-pages-index-jsc-4-f-f99",
     "__context": {
-      "plugin": "a9bb5ca5"
+      "plugin": "plugin---uddin-lang-a-9-b-7a1"
     },
-    "config": "5e9f5e1a"
+    "config": "config---uddin-lang-5-e-9-f1e"
   }
 }

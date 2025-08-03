@@ -88,49 +88,8 @@ const config = {
                 ],
             },
             footer: {
-                style: 'dark',
-                links: [
-                    {
-                        title: 'Docs',
-                        items: [
-                            {
-                                label: 'Tutorial',
-                                to: '/docs/intro',
-                            },
-                            {
-                                label: 'Language Reference',
-                                to: '/docs/reference',
-                            },
-                            {
-                                label: 'Examples',
-                                to: '/docs/examples',
-                            },
-                        ],
-                    },
-                    {
-                        title: 'Community',
-                        items: [
-                            {
-                                label: 'GitHub Discussions',
-                                href: 'https://github.com/bonkzero404/uddin-lang/discussions',
-                            },
-                            {
-                                label: 'Issues',
-                                href: 'https://github.com/bonkzero404/uddin-lang/issues',
-                            },
-                        ],
-                    },
-                    {
-                        title: 'More',
-                        items: [
-                            {
-                                label: 'GitHub',
-                                href: 'https://github.com/bonkzero404/uddin-lang',
-                            },
-                        ],
-                    },
-                ],
-                copyright: `Copyright © ${new Date().getFullYear()} Uddin Programming Language. Built with Docusaurus.`,
+                style: 'light',
+                copyright: `© ${new Date().getFullYear()} UDDIN-LANG. Built with ❤️ • Licensed under <a href="https://github.com/bonkzero404/uddin-lang/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a>`,
             },
             prism: {
                 theme: lightCodeTheme,

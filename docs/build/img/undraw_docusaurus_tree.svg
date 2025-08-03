@@ -1,9 +1,0 @@
-<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="200" fill="#f0f0f0"/>
-  <rect x="95" y="120" width="10" height="60" fill="#8b4513"/>
-  <circle cx="100" cy="80" r="40" fill="#228b22"/>
-  <circle cx="80" cy="70" r="25" fill="#32cd32"/>
-  <circle cx="120" cy="70" r="25" fill="#32cd32"/>
-  <circle cx="100" cy="50" r="20" fill="#90ee90"/>
-  <text x="100" y="190" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">Focus</text>
-</svg>

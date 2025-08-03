@@ -1,7 +1,7 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <!-- Clean rounded square background -->
   <rect width="60" height="60" rx="15" fill="#e84393"/>
-  
+
   <!-- Custom U shape using lines and circles - better proportioned -->
   <g stroke="#ffffff" stroke-width="5" fill="none" stroke-linecap="round">
     <!-- Left vertical line -->
@@ -11,11 +11,11 @@
     <!-- Bottom curved connection -->
     <path d="M 20 35 Q 30 45 40 35"/>
   </g>
-  
+
   <!-- Circles at the top ends of U -->
   <circle cx="20" cy="18" r="4" fill="#ffffff"/>
   <circle cx="40" cy="18" r="4" fill="#ffffff"/>
-  
+
   <!-- Yellow center circle - better positioned -->
   <circle cx="30" cy="32" r="5" fill="#ffd700"/>
 </svg>

@@ -15,6 +15,10 @@
               "path": "/uddin-lang/docs/contributing/syntax-highlighting"
             },
             {
+              "id": "examples/basic-examples",
+              "path": "/uddin-lang/docs/examples/basic-examples"
+            },
+            {
               "id": "examples/examples",
               "path": "/uddin-lang/docs/examples/"
             },

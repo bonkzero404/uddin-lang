@@ -70,49 +70,9 @@ export default {
       "hideOnScroll": false
     },
     "footer": {
-      "style": "dark",
-      "links": [
-        {
-          "title": "Docs",
-          "items": [
-            {
-              "label": "Tutorial",
-              "to": "/docs/intro"
-            },
-            {
-              "label": "Language Reference",
-              "to": "/docs/reference"
-            },
-            {
-              "label": "Examples",
-              "to": "/docs/examples"
-            }
-          ]
-        },
-        {
-          "title": "Community",
-          "items": [
-            {
-              "label": "GitHub Discussions",
-              "href": "https://github.com/bonkzero404/uddin-lang/discussions"
-            },
-            {
-              "label": "Issues",
-              "href": "https://github.com/bonkzero404/uddin-lang/issues"
-            }
-          ]
-        },
-        {
-          "title": "More",
-          "items": [
-            {
-              "label": "GitHub",
-              "href": "https://github.com/bonkzero404/uddin-lang"
-            }
-          ]
-        }
-      ],
-      "copyright": "Copyright © 2025 Uddin Programming Language. Built with Docusaurus."
+      "style": "light",
+      "copyright": "© 2025 UDDIN-LANG. Built with ❤️ • Licensed under <a href=\"https://github.com/bonkzero404/uddin-lang/blob/main/LICENSE\" target=\"_blank\" rel=\"noopener noreferrer\">MIT</a>",
+      "links": []
     },
     "prism": {
       "theme": {

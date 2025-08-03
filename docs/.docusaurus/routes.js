@@ -3,8 +3,43 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 
 export default [
   {
+    path: '/uddin-lang/__docusaurus/debug',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug', 'e33'),
+    exact: true
+  },
+  {
+    path: '/uddin-lang/__docusaurus/debug/config',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug/config', '7bf'),
+    exact: true
+  },
+  {
+    path: '/uddin-lang/__docusaurus/debug/content',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug/content', '1b8'),
+    exact: true
+  },
+  {
+    path: '/uddin-lang/__docusaurus/debug/globalData',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug/globalData', '788'),
+    exact: true
+  },
+  {
+    path: '/uddin-lang/__docusaurus/debug/metadata',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug/metadata', 'c35'),
+    exact: true
+  },
+  {
+    path: '/uddin-lang/__docusaurus/debug/registry',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug/registry', 'a8f'),
+    exact: true
+  },
+  {
+    path: '/uddin-lang/__docusaurus/debug/routes',
+    component: ComponentCreator('/uddin-lang/__docusaurus/debug/routes', 'f0f'),
+    exact: true
+  },
+  {
     path: '/uddin-lang/docs',
-    component: ComponentCreator('/uddin-lang/docs', 'a53'),
+    component: ComponentCreator('/uddin-lang/docs', '56c'),
     routes: [
       {
         path: '/uddin-lang/docs/contributing/syntax-highlighting',
@@ -14,6 +49,11 @@ export default [
       {
         path: '/uddin-lang/docs/examples/',
         component: ComponentCreator('/uddin-lang/docs/examples/', '0cf'),
+        exact: true
+      },
+      {
+        path: '/uddin-lang/docs/examples/basic-examples',
+        component: ComponentCreator('/uddin-lang/docs/examples/basic-examples', '023'),
         exact: true
       },
       {

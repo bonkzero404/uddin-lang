@@ -1,7 +1,0 @@
-<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="200" fill="#f0f0f0"/>
-  <polygon points="20,180 100,60 180,180" fill="#4a90e2"/>
-  <polygon points="60,180 120,100 180,180" fill="#357abd"/>
-  <circle cx="160" cy="40" r="15" fill="#ffd700"/>
-  <text x="100" y="190" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">Easy to Use</text>
-</svg>
