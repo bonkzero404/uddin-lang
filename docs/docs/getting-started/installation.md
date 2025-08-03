@@ -10,9 +10,9 @@ Get Uddin Programming Language up and running on your system.
 
 Before installing Uddin-Lang, make sure you have:
 
-- **Go 1.19 or later** (for building from source)
-- **Git** (for cloning the repository)
-- **Terminal/Command Prompt** access
+-   **Go 1.23 or later** (for building from source)
+-   **Git** (for cloning the repository)
+-   **Terminal/Command Prompt** access
 
 ## Installation Methods
 
@@ -58,6 +58,7 @@ go run main.go --version
 ```
 
 You should see output similar to:
+
 ```
 Uddin-Lang v1.0
 ```
@@ -91,10 +92,10 @@ While Uddin-Lang doesn't have dedicated IDE plugins yet, you can use any text ed
 
 #### Recommended Editors
 
-- **VS Code** - Use "Plain Text" or "Go" syntax highlighting
-- **Vim/Neovim** - Use basic syntax highlighting
-- **Sublime Text** - Use "Plain Text" mode
-- **Atom** - Use "Plain Text" mode
+-   **VS Code** - Use "Plain Text" or "Go" syntax highlighting
+-   **Vim/Neovim** - Use basic syntax highlighting
+-   **Sublime Text** - Use "Plain Text" mode
+-   **Atom** - Use "Plain Text" mode
 
 #### File Extension
 
@@ -118,7 +119,7 @@ Create a simple test file to verify everything works:
 fun main():
     print("🎉 Uddin-Lang is working!")
     print("Installation successful!")
-    
+
     // Test basic functionality
     name = "Developer"
     print("Hello, " + name + "!")
@@ -176,6 +177,7 @@ Test the development tools:
 **Problem**: `./uddinlang: permission denied`
 
 **Solution**: Make the file executable:
+
 ```bash
 chmod +x uddinlang
 ```
@@ -185,6 +187,7 @@ chmod +x uddinlang
 **Problem**: Build fails with dependency errors
 
 **Solution**: Ensure you have Go 1.19+ and run:
+
 ```bash
 go mod tidy
 go build -o uddinlang main.go
