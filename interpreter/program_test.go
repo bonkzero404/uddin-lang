@@ -131,18 +131,9 @@ func TestRunProgram(t *testing.T) {
 		t.Errorf("Expected success for valid program, got: %s", output)
 	}
 
-	// Output should contain execution statistics
-	if !strings.Contains(output, "Time Program Execution:") {
-		t.Error("Output should contain execution time")
-	}
-	if !strings.Contains(output, "Elapsed Operation:") {
-		t.Error("Output should contain operation count")
-	}
-	if !strings.Contains(output, "Builtin Calls:") {
-		t.Error("Output should contain builtin calls count")
-	}
-	if !strings.Contains(output, "User Calls:") {
-		t.Error("Output should contain user calls count")
+	// Output should contain the print result
+	if !strings.Contains(output, "Hello") {
+		t.Error("Output should contain the print result")
 	}
 
 	// Test invalid program

@@ -833,22 +833,22 @@ func (interp *interpreter) assignSubscript(pos Position, container, subscript, v
 	case *[]Value:
 		if s, ok := subscript.(int); ok {
 			if s < 0 || s >= len(*c) {
-				return valueError(pos, "subscript %d out of range", s)
+				panic(valueError(pos, "subscript %d out of range", s))
 			}
 			(*c)[s] = value
 			return nil
 		} else {
-			return typeError(pos, "array subscript must be an integer")
+			panic(typeError(pos, "array subscript must be an integer"))
 		}
 	case map[string]Value:
 		if s, ok := subscript.(string); ok {
 			c[s] = value
 			return nil
 		} else {
-			return typeError(pos, "object subscript must be a string")
+			panic(typeError(pos, "object subscript must be a string"))
 		}
 	default:
-		return typeError(pos, "can only assign to subscript of array or object")
+		panic(typeError(pos, "can only assign to subscript of array or object"))
 	}
 }
 
@@ -868,10 +868,10 @@ func (interp *interpreter) evaluateAssignmentValue(operator Token, target any, v
 		if v, ok := interp.lookup(t); ok {
 			currentValue = v
 		} else {
-			return Value(nameError(value.Position(), "name %q not found", t))
+			panic(nameError(value.Position(), "name %q not found", t))
 		}
 	default:
-		return Value(fmt.Errorf("unsupported assignment target type"))
+		panic(fmt.Errorf("unsupported assignment target type"))
 	}
 
 	// Perform the compound operation
@@ -916,7 +916,7 @@ func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, cont
 	case MODULOEQUAL:
 		return evalModulo(value.Position(), currentValue, rightValue)
 	default:
-		return Value(fmt.Errorf("unknown assignment operator %v", operator))
+		panic(fmt.Errorf("unknown assignment operator %v", operator))
 	}
 }
 
@@ -1207,7 +1207,7 @@ func Execute(prog *Program, config *Config) (stats *Stats, err error) {
 			if currentPos.Line == 0 {
 				currentPos = Position{Line: 1, Column: 1}
 			}
-			
+
 			switch e := r.(type) {
 			case BreakException:
 				err = runtimeError(e.pos, "break statement not within a loop")

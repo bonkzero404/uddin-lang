@@ -149,8 +149,7 @@ func RunProgram(inputSource string) (bool, string) {
 	}
 
 	// Execute the program and capture output
-	startTime := time.Now()
-	stats, err := Execute(prog, config)
+	_, err = Execute(prog, config)
 
 	// Handle execution errors
 	if err != nil {
@@ -170,15 +169,8 @@ func RunProgram(inputSource string) (bool, string) {
 		return false, console
 	}
 
-	// Calculate execution time
-	elapsedTime := time.Since(startTime)
-
 	// Add execution statistics to the output
 	console += resultProgram
-	console += fmt.Sprintf("\nTime Program Execution: %v\n", elapsedTime)
-	console += fmt.Sprintf("Elapsed Operation: %d Ops (%d/s)\n", stats.Ops, int64(float64(stats.Ops)/elapsedTime.Seconds()))
-	console += fmt.Sprintf("Builtin Calls: %d (%d/s)\n", stats.BuiltinCalls, int64(float64(stats.BuiltinCalls)/elapsedTime.Seconds()))
-	console += fmt.Sprintf("User Calls: %d (%d/s)\n", stats.UserCalls, int64(float64(stats.UserCalls)/elapsedTime.Seconds()))
 
 	return true, console
 }
