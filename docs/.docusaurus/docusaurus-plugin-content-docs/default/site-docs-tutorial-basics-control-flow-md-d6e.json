@@ -1,0 +1,27 @@
+{
+  "unversionedId": "tutorial/basics/control-flow",
+  "id": "tutorial/basics/control-flow",
+  "title": "Control Flow",
+  "description": "Control flow statements allow you to control the execution path of your program based on conditions and loops.",
+  "source": "@site/docs/tutorial/basics/control-flow.md",
+  "sourceDirName": "tutorial/basics",
+  "slug": "/tutorial/basics/control-flow",
+  "permalink": "/uddin-lang/docs/tutorial/basics/control-flow",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/tutorial/basics/control-flow.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 5,
+  "frontMatter": {
+    "sidebar_position": 5
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Operators",
+    "permalink": "/uddin-lang/docs/tutorial/basics/operators"
+  },
+  "next": {
+    "title": "Functions",
+    "permalink": "/uddin-lang/docs/tutorial/basics/functions"
+  }
+}

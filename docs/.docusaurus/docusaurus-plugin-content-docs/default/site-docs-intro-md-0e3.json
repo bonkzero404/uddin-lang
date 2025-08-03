@@ -1,0 +1,23 @@
+{
+  "unversionedId": "intro",
+  "id": "intro",
+  "title": "Introduction to UDDIN-LANG",
+  "description": "Welcome to UDDIN-LANG (Unified Dynamic Decision Interpreter Notation) - an open-source rule engine that brings the full expressiveness of programming languages to business decision logic.",
+  "source": "@site/docs/intro.md",
+  "sourceDirName": ".",
+  "slug": "/intro",
+  "permalink": "/uddin-lang/docs/intro",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/intro.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "next": {
+    "title": "Installation",
+    "permalink": "/uddin-lang/docs/getting-started/installation"
+  }
+}

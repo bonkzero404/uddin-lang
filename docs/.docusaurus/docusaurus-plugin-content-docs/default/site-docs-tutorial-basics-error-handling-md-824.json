@@ -1,0 +1,18 @@
+{
+  "unversionedId": "tutorial/basics/error-handling",
+  "id": "tutorial/basics/error-handling",
+  "title": "Error Handling",
+  "description": "Learn how to handle errors gracefully in Uddin-Lang.",
+  "source": "@site/docs/tutorial/basics/error-handling.md",
+  "sourceDirName": "tutorial/basics",
+  "slug": "/tutorial/basics/error-handling",
+  "permalink": "/uddin-lang/docs/tutorial/basics/error-handling",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/tutorial/basics/error-handling.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 6,
+  "frontMatter": {
+    "sidebar_position": 6
+  }
+}

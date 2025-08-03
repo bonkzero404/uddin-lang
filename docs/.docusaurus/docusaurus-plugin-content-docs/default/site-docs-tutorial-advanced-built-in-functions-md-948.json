@@ -1,0 +1,27 @@
+{
+  "unversionedId": "tutorial/advanced/built-in-functions",
+  "id": "tutorial/advanced/built-in-functions",
+  "title": "Built-in Functions",
+  "description": "Uddin-Lang provides over 100 built-in functions that can be used directly without importing additional libraries. These functions cover various categories from string manipulation and mathematical operations to networking and data processing, making Uddin-Lang a powerful language for rapid development.",
+  "source": "@site/docs/tutorial/advanced/built-in-functions.md",
+  "sourceDirName": "tutorial/advanced",
+  "slug": "/tutorial/advanced/built-in-functions",
+  "permalink": "/uddin-lang/docs/tutorial/advanced/built-in-functions",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/tutorial/advanced/built-in-functions.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Modules and Import System",
+    "permalink": "/uddin-lang/docs/tutorial/basics/modules"
+  },
+  "next": {
+    "title": "Mathematical Functions",
+    "permalink": "/uddin-lang/docs/tutorial/advanced/math-functions"
+  }
+}

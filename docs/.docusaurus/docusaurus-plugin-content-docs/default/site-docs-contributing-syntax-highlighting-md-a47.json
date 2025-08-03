@@ -1,0 +1,15 @@
+{
+  "unversionedId": "contributing/syntax-highlighting",
+  "id": "contributing/syntax-highlighting",
+  "title": "Syntax Highlighting untuk Uddin-Lang",
+  "description": "Dokumentasi ini telah dikonfigurasi untuk mendukung syntax highlighting untuk kode Uddin-Lang dalam blok kode markdown.",
+  "source": "@site/docs/contributing/syntax-highlighting.md",
+  "sourceDirName": "contributing",
+  "slug": "/contributing/syntax-highlighting",
+  "permalink": "/uddin-lang/docs/contributing/syntax-highlighting",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/contributing/syntax-highlighting.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {}
+}

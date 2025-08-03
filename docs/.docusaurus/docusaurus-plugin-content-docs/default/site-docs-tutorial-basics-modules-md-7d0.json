@@ -1,0 +1,27 @@
+{
+  "unversionedId": "tutorial/basics/modules",
+  "id": "tutorial/basics/modules",
+  "title": "Modules and Import System",
+  "description": "Uddin-Lang provides a powerful module system that allows you to organize code into reusable libraries and import functionality from other files.",
+  "source": "@site/docs/tutorial/basics/modules.md",
+  "sourceDirName": "tutorial/basics",
+  "slug": "/tutorial/basics/modules",
+  "permalink": "/uddin-lang/docs/tutorial/basics/modules",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/tutorial/basics/modules.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 8,
+  "frontMatter": {
+    "sidebar_position": 8
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Arrays and Objects",
+    "permalink": "/uddin-lang/docs/tutorial/basics/arrays-and-objects"
+  },
+  "next": {
+    "title": "Built-in Functions",
+    "permalink": "/uddin-lang/docs/tutorial/advanced/built-in-functions"
+  }
+}

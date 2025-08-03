@@ -1,0 +1,24 @@
+{
+  "unversionedId": "reference/index",
+  "id": "reference/index",
+  "title": "Language Reference",
+  "description": "Welcome to the Uddin Programming Language reference documentation. This section provides comprehensive information about the language syntax, built-in functions, and core features.",
+  "source": "@site/docs/reference/index.md",
+  "sourceDirName": "reference",
+  "slug": "/reference/",
+  "permalink": "/uddin-lang/docs/reference/",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/reference/index.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "index",
+    "title": "Language Reference",
+    "sidebar_label": "Reference"
+  },
+  "sidebar": "referenceSidebar",
+  "next": {
+    "title": "Language Reference",
+    "permalink": "/uddin-lang/docs/reference/syntax"
+  }
+}

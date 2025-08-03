@@ -1,0 +1,27 @@
+{
+  "unversionedId": "reference/syntax",
+  "id": "reference/syntax",
+  "title": "Language Reference",
+  "description": "Complete syntax reference for Uddin-Lang programming language.",
+  "source": "@site/docs/reference/syntax.md",
+  "sourceDirName": "reference",
+  "slug": "/reference/syntax",
+  "permalink": "/uddin-lang/docs/reference/syntax",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/reference/syntax.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 2,
+  "frontMatter": {
+    "sidebar_position": 2
+  },
+  "sidebar": "referenceSidebar",
+  "previous": {
+    "title": "Reference",
+    "permalink": "/uddin-lang/docs/reference/"
+  },
+  "next": {
+    "title": "Built-in Functions",
+    "permalink": "/uddin-lang/docs/reference/builtin-functions"
+  }
+}

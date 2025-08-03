@@ -1,35 +1,111 @@
-fun safeFileOperation(filename):
-    try:
-        // Attempt to read file
-        content = read_file(filename)
+// ✓ Good: Use appropriate data structures for the task
+fun create_fast_user_lookup(users):
+    // Use object/map for O(1) lookups instead of array O(n) search
+    user_index = {}
+    email_index = {}
 
-        // Attempt to parse as JSON
-        data = json_parse(content)
-
-        // Attempt to access property
-        // name = data.name
-
-        return {"success": true, "data": data}
-
-    catch (error):
-        error_message = str(error)
-
-        if (contains(error_message, "file not found")) then:
-            return {"success": false, "error": "File does not exist", "type": "file_error"}
-        else if (contains(error_message, "json_parse() requires a string argument")) then:
-            return {"success": false, "error": "Invalid JSON format", "type": "parse_error"}
-        else if (contains(error_message, "can only subscript string, ")) then:
-            return {"success": false, "error": "Missing required property", "type": "data_error"}
-        else:
-            return {"success": false, "error": error_message, "type": "unknown_error"}
-        end
+    for (user in users):
+        user_index[str(user.id)] = user
+        email_index[lower(user.email)] = user
     end
+
+    return {
+        "by_id": user_index,
+        "by_email": email_index
+    }
 end
 
-// Usage
-result = safeFileOperation("config.json")
-if (result.success) then:
-    print("Data loaded successfully: " + str(result.data))
-else:
-    print("Error (" + result.type + "): " + result.error)
+fun find_user_optimized(user_lookup, id = null, email = null):
+    if (id) then:
+        return user_lookup.by_id[str(id)] or null
+    else if (email) then:
+        return user_lookup.by_email[lower(email)] or null
+    end
+    return null
+end
+
+// ✓ Good: Efficient set operations using Uddin-Lang's built-in Set
+fun find_common_interests(user1_interests, user2_interests):
+    // Convert to sets for efficient intersection
+    set1 = set_new()
+    set2 = set_new()
+
+    for (interest in user1_interests):
+        set_add(set1, interest)
+    end
+
+    for (interest in user2_interests):
+        set_add(set2, interest)
+    end
+
+    // Find intersection
+    common = []
+    for (interest in user1_interests):
+        if (set_has(set2, interest)) then:
+            append(common, interest)
+        end
+    end
+
+    return common
+end
+
+// ✓ Good: Batch processing for better performance
+fun process_user_batch(user_ids, batch_size = 100):
+    results = []
+    total_batches = ceil(len(user_ids) / batch_size)
+
+    for (batch_num in range(total_batches)):
+        start_idx = batch_num * batch_size
+        end_idx = min(start_idx + batch_size, len(user_ids))
+
+        batch_ids = slice(user_ids, start_idx, end_idx)
+
+        // Process batch instead of individual items
+        batch_users = database_find_multiple("users", batch_ids)
+
+        for (user in batch_users):
+            processed_user = process_single_user(user)
+            append(results, processed_user)
+        end
+
+        // Optional: Progress reporting for long operations
+        if (total_batches > 5) then:
+            progress = round((batch_num + 1) / total_batches * 100, 1)
+            print("Processing batch " + str(batch_num + 1) + "/" + str(total_batches) +
+                  " (" + str(progress) + "%)")
+        end
+    end
+
+    return results
+end
+
+// ✗ Avoid: Inefficient nested loops (O(n²) complexity)
+fun find_duplicates_slow(items):
+    duplicates = []
+
+    for (i in range(len(items))):
+        for (j in range(i + 1, len(items))):  // O(n²) time complexity
+            if (items[i] == items[j]) then:
+                append(duplicates, items[i])
+            end
+        end
+    end
+
+    return duplicates
+end
+
+// ✓ Good: Use sets for O(n) duplicate detection
+fun find_duplicates_fast(items):
+    seen = set_new()
+    duplicates = set_new()
+
+    for (item in items):
+        if (set_has(seen, item)) then:
+            set_add(duplicates, item)
+        else:
+            set_add(seen, item)
+        end
+    end
+
+    return set_to_array(duplicates)
 end

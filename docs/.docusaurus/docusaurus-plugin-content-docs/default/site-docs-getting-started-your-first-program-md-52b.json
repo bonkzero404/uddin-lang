@@ -1,0 +1,27 @@
+{
+  "unversionedId": "getting-started/your-first-program",
+  "id": "getting-started/your-first-program",
+  "title": "Your First Program",
+  "description": "Let's build a complete Uddin-Lang application from scratch! We'll create a simple task manager that demonstrates core language features.",
+  "source": "@site/docs/getting-started/your-first-program.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/your-first-program",
+  "permalink": "/uddin-lang/docs/getting-started/your-first-program",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/getting-started/your-first-program.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 3,
+  "frontMatter": {
+    "sidebar_position": 3
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Quick Start",
+    "permalink": "/uddin-lang/docs/getting-started/quick-start"
+  },
+  "next": {
+    "title": "Tutorial Introduction",
+    "permalink": "/uddin-lang/docs/tutorial/basics/introduction"
+  }
+}

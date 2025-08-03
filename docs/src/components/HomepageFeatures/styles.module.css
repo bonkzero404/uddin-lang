@@ -1,0 +1,54 @@
+.features {
+    display: flex;
+    align-items: center;
+    padding: 4rem 0;
+    width: 100%;
+    background-color: var(--ifm-background-surface-color);
+}
+
+.featureSvg {
+    height: 200px;
+    width: 200px;
+}
+
+.featureIcon {
+    font-size: 3.5rem;
+    margin-bottom: 1.5rem;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(
+        135deg,
+        var(--ifm-color-primary-lightest) 0%,
+        var(--ifm-color-primary-lighter) 100%
+    );
+    border-radius: 50%;
+    width: 120px;
+    margin: 0 auto 1.5rem auto;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.featureIcon:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Improve feature box styling */
+.features .col {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+}
+
+.features h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--ifm-color-primary);
+}
+
+.features p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--ifm-color-emphasis-700);
+}

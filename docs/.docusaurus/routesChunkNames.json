@@ -1,0 +1,124 @@
+{
+  "/uddin-lang/docs-a53": {
+    "__comp": "1be78505",
+    "__context": {
+      "plugin": "c7a000b9"
+    },
+    "versionMetadata": "935f2afb"
+  },
+  "/uddin-lang/docs/contributing/syntax-highlighting-d6c": {
+    "__comp": "17896441",
+    "content": "a474bacf"
+  },
+  "/uddin-lang/docs/examples/-0cf": {
+    "__comp": "17896441",
+    "content": "bf614533"
+  },
+  "/uddin-lang/docs/getting-started/installation-efe": {
+    "__comp": "17896441",
+    "content": "54f44165"
+  },
+  "/uddin-lang/docs/getting-started/quick-start-93f": {
+    "__comp": "17896441",
+    "content": "588bd741"
+  },
+  "/uddin-lang/docs/getting-started/your-first-program-537": {
+    "__comp": "17896441",
+    "content": "52b559fe"
+  },
+  "/uddin-lang/docs/intro-37f": {
+    "__comp": "17896441",
+    "content": "0e384e19"
+  },
+  "/uddin-lang/docs/reference/-ebf": {
+    "__comp": "17896441",
+    "content": "1a3c9b31"
+  },
+  "/uddin-lang/docs/reference/builtin-functions-d20": {
+    "__comp": "17896441",
+    "content": "5d995b60"
+  },
+  "/uddin-lang/docs/reference/syntax-35c": {
+    "__comp": "17896441",
+    "content": "ba4e2648"
+  },
+  "/uddin-lang/docs/tutorial/advanced/best-practices-b7d": {
+    "__comp": "17896441",
+    "content": "f6f7e9a9"
+  },
+  "/uddin-lang/docs/tutorial/advanced/built-in-functions-5ad": {
+    "__comp": "17896441",
+    "content": "9482c383"
+  },
+  "/uddin-lang/docs/tutorial/advanced/development-tools-99b": {
+    "__comp": "17896441",
+    "content": "db6633cd"
+  },
+  "/uddin-lang/docs/tutorial/advanced/error-handling-and-debugging-09b": {
+    "__comp": "17896441",
+    "content": "1561e6df"
+  },
+  "/uddin-lang/docs/tutorial/advanced/math-functions-bb4": {
+    "__comp": "17896441",
+    "content": "2e75f473"
+  },
+  "/uddin-lang/docs/tutorial/advanced/networking-fb6": {
+    "__comp": "17896441",
+    "content": "38bcd756"
+  },
+  "/uddin-lang/docs/tutorial/advanced/regex-and-datetime-8c8": {
+    "__comp": "17896441",
+    "content": "53f72f67"
+  },
+  "/uddin-lang/docs/tutorial/advanced/xml-and-knowledge-systems-858": {
+    "__comp": "17896441",
+    "content": "87d7b132"
+  },
+  "/uddin-lang/docs/tutorial/basics/arrays-and-objects-d29": {
+    "__comp": "17896441",
+    "content": "0ea51c82"
+  },
+  "/uddin-lang/docs/tutorial/basics/basic-syntax-5ff": {
+    "__comp": "17896441",
+    "content": "cffa81bd"
+  },
+  "/uddin-lang/docs/tutorial/basics/best-practices-408": {
+    "__comp": "17896441",
+    "content": "e74e638d"
+  },
+  "/uddin-lang/docs/tutorial/basics/control-flow-8d4": {
+    "__comp": "17896441",
+    "content": "d6e38c58"
+  },
+  "/uddin-lang/docs/tutorial/basics/error-handling-af6": {
+    "__comp": "17896441",
+    "content": "824d7230"
+  },
+  "/uddin-lang/docs/tutorial/basics/functions-532": {
+    "__comp": "17896441",
+    "content": "03f745c3"
+  },
+  "/uddin-lang/docs/tutorial/basics/introduction-d94": {
+    "__comp": "17896441",
+    "content": "c47fb891"
+  },
+  "/uddin-lang/docs/tutorial/basics/modules-ff1": {
+    "__comp": "17896441",
+    "content": "7d08b7df"
+  },
+  "/uddin-lang/docs/tutorial/basics/operators-9c4": {
+    "__comp": "17896441",
+    "content": "db5e942e"
+  },
+  "/uddin-lang/docs/tutorial/basics/variables-and-data-types-847": {
+    "__comp": "17896441",
+    "content": "a613978f"
+  },
+  "/uddin-lang/-1a8": {
+    "__comp": "c4f5d8e4",
+    "__context": {
+      "plugin": "a9bb5ca5"
+    },
+    "config": "5e9f5e1a"
+  }
+}

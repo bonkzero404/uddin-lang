@@ -1,0 +1,144 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* Import Uddin-Lang syntax highlighting styles */
+@import './prism-uddin.css';
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #2e8555;
+  --ifm-color-primary-dark: #29784c;
+  --ifm-color-primary-darker: #277148;
+  --ifm-color-primary-darkest: #205d3b;
+  --ifm-color-primary-light: #33925d;
+  --ifm-color-primary-lighter: #359962;
+  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme='dark'] {
+  --ifm-color-primary: #25c2a0;
+  --ifm-color-primary-dark: #21af90;
+  --ifm-color-primary-darker: #1fa588;
+  --ifm-color-primary-darkest: #1a8870;
+  --ifm-color-primary-light: #29d5b0;
+  --ifm-color-primary-lighter: #32d8b4;
+  --ifm-color-primary-lightest: #4fddbf;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+/* Custom styles for Uddin-Lang documentation */
+.hero__title {
+  font-size: 3rem;
+}
+
+.hero__subtitle {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+/* Code block styling */
+.prism-code {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Sidebar styling */
+.theme-doc-sidebar-item-link {
+  font-weight: 500;
+}
+
+/* Custom button styling */
+.button--primary {
+  background-color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+}
+
+.button--primary:hover {
+  background-color: var(--ifm-color-primary-dark);
+  border-color: var(--ifm-color-primary-dark);
+}
+
+/* Table styling */
+.table {
+  margin-bottom: 1rem;
+}
+
+.table th {
+  background-color: var(--ifm-color-emphasis-200);
+  font-weight: 600;
+}
+
+/* Alert styling */
+.alert {
+  margin-bottom: 1rem;
+}
+
+/* Custom classes for documentation */
+.feature {
+  text-align: center;
+  padding: 2rem;
+}
+
+.feature__icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.feature__title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.feature__description {
+  font-size: 1rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+/* Responsive design */
+@media screen and (max-width: 768px) {
+  .hero__title {
+    font-size: 2rem;
+  }
+  
+  .hero__subtitle {
+    font-size: 1.2rem;
+  }
+}
+
+/* Syntax highlighting for Uddin-Lang */
+.token.keyword {
+  color: #d73a49;
+  font-weight: bold;
+}
+
+.token.function {
+  color: #6f42c1;
+}
+
+.token.string {
+  color: #032f62;
+}
+
+.token.number {
+  color: #005cc5;
+}
+
+.token.comment {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.token.operator {
+  color: #d73a49;
+}
+
+.token.punctuation {
+  color: #24292e;
+}

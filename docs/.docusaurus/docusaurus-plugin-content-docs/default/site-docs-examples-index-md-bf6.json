@@ -1,0 +1,19 @@
+{
+  "unversionedId": "examples/examples",
+  "id": "examples/examples",
+  "title": "Code Examples from Repository",
+  "description": "This page contains all the practical examples from the main repository's examples/ folder. Each example demonstrates specific features and capabilities of the Uddin programming language.",
+  "source": "@site/docs/examples/index.md",
+  "sourceDirName": "examples",
+  "slug": "/examples/",
+  "permalink": "/uddin-lang/docs/examples/",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/examples/index.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "id": "examples",
+    "title": "Code Examples from Repository",
+    "sidebar_label": "Examples"
+  }
+}

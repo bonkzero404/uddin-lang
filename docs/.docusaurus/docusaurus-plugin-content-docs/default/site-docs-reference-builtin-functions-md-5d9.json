@@ -1,0 +1,23 @@
+{
+  "unversionedId": "reference/builtin-functions",
+  "id": "reference/builtin-functions",
+  "title": "Built-in Functions",
+  "description": "Uddin-Lang provides a comprehensive set of built-in functions to help you build powerful applications efficiently.",
+  "source": "@site/docs/reference/builtin-functions.md",
+  "sourceDirName": "reference",
+  "slug": "/reference/builtin-functions",
+  "permalink": "/uddin-lang/docs/reference/builtin-functions",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/reference/builtin-functions.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 1,
+  "frontMatter": {
+    "sidebar_position": 1
+  },
+  "sidebar": "referenceSidebar",
+  "previous": {
+    "title": "Language Reference",
+    "permalink": "/uddin-lang/docs/reference/syntax"
+  }
+}

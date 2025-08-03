@@ -84,5 +84,4 @@ secrets.*
 testdata/output/
 test_output/
 
-docs/
-.github/
+docs/node_modules/

@@ -1,0 +1,27 @@
+{
+  "unversionedId": "tutorial/basics/arrays-and-objects",
+  "id": "tutorial/basics/arrays-and-objects",
+  "title": "Arrays and Objects",
+  "description": "Arrays and objects are essential data structures in Uddin-Lang that allow you to store and organize multiple values efficiently.",
+  "source": "@site/docs/tutorial/basics/arrays-and-objects.md",
+  "sourceDirName": "tutorial/basics",
+  "slug": "/tutorial/basics/arrays-and-objects",
+  "permalink": "/uddin-lang/docs/tutorial/basics/arrays-and-objects",
+  "draft": false,
+  "editUrl": "https://github.com/bonkzero404/uddin-lang/tree/main/docs/docs/tutorial/basics/arrays-and-objects.md",
+  "tags": [],
+  "version": "current",
+  "sidebarPosition": 7,
+  "frontMatter": {
+    "sidebar_position": 7
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Functions",
+    "permalink": "/uddin-lang/docs/tutorial/basics/functions"
+  },
+  "next": {
+    "title": "Modules and Import System",
+    "permalink": "/uddin-lang/docs/tutorial/basics/modules"
+  }
+}

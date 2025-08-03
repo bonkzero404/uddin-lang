@@ -1,0 +1,8 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <rect width="200" height="200" fill="#f0f0f0"/>
+  <circle cx="100" cy="100" r="80" fill="none" stroke="#61dafb" stroke-width="2"/>
+  <ellipse cx="100" cy="100" rx="80" ry="30" fill="none" stroke="#61dafb" stroke-width="2" transform="rotate(60 100 100)"/>
+  <ellipse cx="100" cy="100" rx="80" ry="30" fill="none" stroke="#61dafb" stroke-width="2" transform="rotate(-60 100 100)"/>
+  <circle cx="100" cy="100" r="8" fill="#61dafb"/>
+  <text x="100" y="190" text-anchor="middle" font-family="Arial" font-size="12" fill="#333">Modern</text>
+</svg>
