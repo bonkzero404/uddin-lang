@@ -18,26 +18,33 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(
-        135deg,
-        var(--ifm-color-primary-lightest) 0%,
-        var(--ifm-color-primary-lighter) 100%
-    );
-    border-radius: 50%;
+    background: var(--ifm-color-primary-lightest);
+    border: 3px solid var(--ifm-color-primary);
+    border-radius: 20px;
     width: 120px;
     margin: 0 auto 1.5rem auto;
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .featureIcon:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+    background: var(--ifm-color-primary);
+    color: white;
 }
 
 /* Improve feature box styling */
 .features .col {
     margin-bottom: 2rem;
-    padding: 1.5rem;
+    padding: 2rem;
+    border-radius: 12px;
+    background: var(--ifm-background-color);
+    border: 2px solid var(--ifm-color-emphasis-200);
+    transition: all 0.3s ease;
+}
+
+.features .col:hover {
+    border-color: var(--ifm-color-primary);
+    transform: translateY(-2px);
 }
 
 .features h3 {

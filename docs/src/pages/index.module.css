@@ -8,11 +8,7 @@
     text-align: center;
     position: relative;
     overflow: hidden;
-    background: linear-gradient(
-        135deg,
-        var(--ifm-color-primary) 0%,
-        var(--ifm-color-primary-dark) 100%
-    );
+    background: var(--ifm-color-primary);
 }
 
 .heroBanner .hero__title {
