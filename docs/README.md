@@ -73,9 +73,19 @@ The built site will be in the `build/` directory.
 
 ## 🌐 Deployment
 
-The documentation can be deployed to various platforms:
+### Automatic Deployment (Recommended)
 
-### GitHub Pages
+The documentation is automatically deployed to GitHub Pages using GitHub Actions when:
+
+-   Changes are pushed to the `main` branch
+-   Changes are made to files in the `docs/` directory
+-   The workflow is manually triggered from the Actions tab
+
+**Live Documentation:** `https://bonkzero404.github.io/uddin-lang/`
+
+### Manual Deployment
+
+For manual deployment to GitHub Pages:
 
 ```bash
 npm run deploy
@@ -83,7 +93,9 @@ npm run deploy
 yarn deploy
 ```
 
-### Manual Deployment
+### Other Platforms
+
+For deployment to other hosting platforms:
 
 ```bash
 npm run build
