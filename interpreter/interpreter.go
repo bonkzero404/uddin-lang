@@ -35,6 +35,8 @@ type interpreter struct {
 	// stats tracks execution statistics
 	stats      Stats
 	inUnitTest bool
+	// currentPos tracks the current position being executed for better error reporting
+	currentPos Position
 	// Optimization caches
 	memoCache         map[string]Value
 	stringBuilderPool sync.Pool
@@ -219,7 +221,7 @@ func evalIn(pos Position, l, r Value) Value {
 		if l, ok := l.(string); ok {
 			return Value(strings.Contains(r, l))
 		}
-		return Value(typeError(pos, "in string requires string on left side"))
+		panic(typeError(pos, "in string requires string on left side"))
 
 	case *[]Value:
 		// Array containment: check if l equals any element in r
@@ -236,11 +238,11 @@ func evalIn(pos Position, l, r Value) Value {
 			_, present := r[l]
 			return Value(present)
 		}
-		return Value(typeError(pos, "in object requires string on left side"))
+		panic(typeError(pos, "in object requires string on left side"))
 	}
 
 	// The 'in' operator only works with strings, arrays, or objects on the right side
-	return Value(typeError(pos, "in requires string, array, or object on right side"))
+	panic(typeError(pos, "in requires string, array, or object on right side"))
 }
 
 // evalLess evaluates the less-than comparison operator (<).
@@ -300,7 +302,7 @@ func evalLess(pos Position, l, r Value) Value {
 	}
 
 	// Only certain types can be compared with <
-	return Value(typeError(pos, "comparison requires two integers or two strings (or arrays of integers or strings)"))
+	panic(typeError(pos, "comparison requires two integers or two strings (or arrays of integers or strings)"))
 }
 
 // Optimized evalPlus with reduced type assertions and memory optimization
@@ -342,8 +344,8 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 				result = SmartAppend(result, *larr...)
 				result = SmartAppend(result, *rarr...)
 				final := make([]Value, len(result))
-			copy(final, result)
-			globalComplexPool.PutArray(&result)
+				copy(final, result)
+				globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -360,7 +362,7 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 			return Value(result)
 		}
 	}
-	return Value(typeError(pos, "+ requires two integers, strings, arrays, or objects"))
+	panic(typeError(pos, "+ requires two integers, strings, arrays, or objects"))
 }
 
 func evalMinus(pos Position, l, r Value) Value {
@@ -378,7 +380,7 @@ func evalMinus(pos Position, l, r Value) Value {
 		}
 	}
 
-	return Value(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
+	panic(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
 }
 
 // Optimized evalTimes with reduced type assertions
@@ -396,7 +398,7 @@ func evalTimes(pos Position, l, r Value) Value {
 		}
 		if rs, ok := r.(string); ok {
 			if li < 0 {
-				return Value(valueError(pos, "can't multiply string by a negative number"))
+				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
 			// Use optimized string repetition for large strings
 			if len(rs)*li > 1000 {
@@ -413,7 +415,7 @@ func evalTimes(pos Position, l, r Value) Value {
 		}
 		if rarr, ok := r.(*[]Value); ok {
 			if li < 0 {
-				return Value(valueError(pos, "can't multiply array by a negative number"))
+				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
 			// Optimized array repetition with batch processing for large arrays
 			totalSize := len(*rarr) * li
@@ -424,8 +426,8 @@ func evalTimes(pos Position, l, r Value) Value {
 					result = SmartAppend(result, *rarr...)
 				}
 				final := make([]Value, len(result))
-			copy(final, result)
-			globalComplexPool.PutArray(&result)
+				copy(final, result)
+				globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -446,14 +448,14 @@ func evalTimes(pos Position, l, r Value) Value {
 	} else if ls, ok := l.(string); ok {
 		if ri, ok := r.(int); ok {
 			if ri < 0 {
-				return Value(valueError(pos, "can't multiply string by a negative number"))
+				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
 			return Value(strings.Repeat(ls, ri))
 		}
 	} else if larr, ok := l.(*[]Value); ok {
 		if ri, ok := r.(int); ok {
 			if ri < 0 {
-				return Value(valueError(pos, "can't multiply array by a negative number"))
+				panic(valueError(pos, "can't multiply array by a negative number"))
 			}
 			// Optimized array repetition using ArrayConcatenator
 			concat := NewArrayConcatenator(len(*larr) * ri)
@@ -463,16 +465,16 @@ func evalTimes(pos Position, l, r Value) Value {
 			return Value(concat.Result())
 		}
 	}
-	return Value(typeError(pos, "* requires two integers or floats, or a string or array and an integer"))
+	panic(typeError(pos, "* requires two integers or floats, or a string or array and an integer"))
 }
 
 func evalDivide(pos Position, l, r Value) Value {
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
-		return Value(typeError(pos, "/ requires two floats or integers"))
+		panic(typeError(pos, "/ requires two floats or integers"))
 	}
 	if ri == 0 {
-		return Value(valueError(pos, "can't divide by zero"))
+		panic(valueError(pos, "can't divide by zero"))
 	}
 	return Value(li / ri)
 }
@@ -480,10 +482,10 @@ func evalDivide(pos Position, l, r Value) Value {
 func evalModulo(pos Position, l, r Value) Value {
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
-		return Value(typeError(pos, "% requires two floats or integers"))
+		panic(typeError(pos, "modulo operator requires two floats or integers"))
 	}
 	if ri == 0 {
-		return Value(valueError(pos, "can't divide by zero"))
+		panic(valueError(pos, "can't divide by zero"))
 	}
 	return Value(int(li) % int(ri))
 }
@@ -493,7 +495,7 @@ func evalModulo(pos Position, l, r Value) Value {
 func evalPower(pos Position, l, r Value) Value {
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
-		return Value(typeError(pos, "** requires two floats or integers"))
+		panic(typeError(pos, "** requires two floats or integers"))
 	}
 	result := math.Pow(li, ri)
 	return Value(result)
@@ -513,7 +515,7 @@ func evalNot(pos Position, v Value) Value {
 	if v, ok := v.(bool); ok {
 		return Value(!v)
 	}
-	return Value(typeError(pos, "not requires a bool"))
+	panic(typeError(pos, "not requires a bool"))
 }
 
 // Unary operator negative evaluation function
@@ -524,7 +526,7 @@ func evalNegative(pos Position, v Value) Value {
 		return Value(-vf)
 	}
 
-	return Value(typeError(pos, "unary - requires an integer or float"))
+	panic(typeError(pos, "unary - requires an integer or float"))
 }
 
 // Function type for subscript evaluation
@@ -537,11 +539,11 @@ func evalSubscript(pos Position, container, subscript Value) Value {
 				s = len(c) + s
 			}
 			if s < 0 || s >= len(c) {
-				return Value(valueError(pos, "subscript %d out of range", s))
+				panic(valueError(pos, "subscript %d out of range", s))
 			}
 			return Value(string([]byte{c[s]}))
 		}
-		return Value(typeError(pos, "string subscript must be an integer"))
+		panic(typeError(pos, "string subscript must be an integer"))
 	case *[]Value:
 		if s, ok := subscript.(int); ok {
 			// Handle negative indexing for arrays
@@ -549,21 +551,21 @@ func evalSubscript(pos Position, container, subscript Value) Value {
 				s = len(*c) + s
 			}
 			if s < 0 || s >= len(*c) {
-				return Value(valueError(pos, "subscript %d out of range", s))
+				panic(valueError(pos, "subscript %d out of range", s))
 			}
 			return (*c)[s]
 		}
-		return Value(typeError(pos, "array subscript must be an integer"))
+		panic(typeError(pos, "array subscript must be an integer"))
 	case map[string]Value:
 		if s, ok := subscript.(string); ok {
 			if value, ok := c[s]; ok {
 				return value
 			}
-			return Value(valueError(pos, "key not found: %q", s))
+			panic(valueError(pos, "key not found: %q", s))
 		}
-		return Value(typeError(pos, "object subscript must be a string"))
+		panic(typeError(pos, "object subscript must be a string"))
 	default:
-		return Value(typeError(pos, "can only subscript string, array, or object"))
+		panic(typeError(pos, "can only subscript string, array, or object"))
 	}
 }
 
@@ -578,10 +580,10 @@ func (interp *interpreter) evalAnd(pos Position, le, re Expression) Value {
 		if r, ok := r.(bool); ok {
 			return Value(r)
 		} else {
-			return Value(typeError(pos, "and requires two bools"))
+			panic(typeError(pos, "and requires two bools"))
 		}
 	} else {
-		return Value(typeError(pos, "and requires two bools"))
+		panic(typeError(pos, "and requires two bools"))
 	}
 }
 
@@ -596,10 +598,10 @@ func (interp *interpreter) evalOr(pos Position, le, re Expression) Value {
 		if r, ok := r.(bool); ok {
 			return Value(r)
 		} else {
-			return Value(typeError(pos, "or requires two bools"))
+			panic(typeError(pos, "or requires two bools"))
 		}
 	} else {
-		return Value(typeError(pos, "or requires two bools"))
+		panic(typeError(pos, "or requires two bools"))
 	}
 }
 
@@ -656,6 +658,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 }
 
 func (interp *interpreter) evaluate(expr Expression) Value {
+	interp.currentPos = expr.Position()
 	interp.stats.Ops++
 	switch e := expr.(type) {
 	case *Binary:
@@ -671,13 +674,13 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 			return interp.evalXor(e.Position(), e.Left, e.Right)
 		}
 		// Parser should never give us this
-		return Value(runtimeError(e.Position(), "unknown binary operator %v", e.Operator))
+		panic(runtimeError(e.Position(), "unknown binary operator %v", e.Operator))
 	case *Unary:
 		if f, ok := unaryEvalFuncs[e.Operator]; ok {
 			return f(e.Position(), interp.evaluate(e.Operand))
 		}
 		// Parser should never give us this
-		return Value(runtimeError(e.Position(), "unknown unary operator %v", e.Operator))
+		panic(runtimeError(e.Position(), "unknown unary operator %v", e.Operator))
 	case *Ternary:
 		condition := interp.evaluate(e.Condition)
 		if IsTruthy(condition) {
@@ -701,14 +704,14 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 			}
 			return interp.callFunction(e.Function.Position(), f, args)
 		}
-		return Value(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
+		panic(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
 	case *Literal:
 		return Value(e.Value)
 	case *Variable:
 		if v, ok := interp.lookup(e.Name); ok {
 			return v
 		}
-		return Value(nameError(e.Position(), "name %q not found", e.Name))
+		panic(nameError(e.Position(), "name %q not found", e.Name))
 	case *List:
 		// Use array pool for better memory management
 		values := interp.getArray()
@@ -728,7 +731,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 			if k, ok := key.(string); ok {
 				value[k] = interp.evaluate(item.Value)
 			} else {
-				return Value(typeError(item.Key.Position(), "object key must be string, not %s", typeName(key)))
+				panic(typeError(item.Key.Position(), "object key must be string, not %s", typeName(key)))
 			}
 		}
 		return Value(value)
@@ -741,7 +744,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		return &userFunction{"", e.Parameters, e.Ellipsis, e.Body, closure}
 	default:
 		// Parser should never get us here
-		return Value(runtimeError(Position{}, "unexpected expression type %T", expr))
+		panic(runtimeError(Position{}, "unexpected expression type %T", expr))
 	}
 }
 
@@ -801,7 +804,7 @@ func (li *listIterator) Value() Value {
 	return v
 }
 
-func getIterator(pos Position, value Value) iteratorType {
+func getIterator(_ Position, value Value) iteratorType {
 	switch iterable := value.(type) {
 	case string:
 		strs := []Value{}
@@ -919,6 +922,8 @@ func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, cont
 
 func (interp *interpreter) executeStatement(s Statement) {
 	interp.stats.Ops++
+	// Track current position for better error reporting
+	interp.currentPos = s.Position()
 	switch s := s.(type) {
 	case *Assign:
 		switch target := s.Target.(type) {
@@ -987,12 +992,12 @@ func (interp *interpreter) executeStatement(s Statement) {
 						interp.executeBlock(s.Body)
 					}()
 				} else {
-				// Check if it's an error first
-				if err, ok := cond.(error); ok {
-					panic(err)
+					// Check if it's an error first
+					if err, ok := cond.(error); ok {
+						panic(err)
+					}
+					panic(typeError(s.Condition.Position(), "while condition must be bool, got %T", cond))
 				}
-				panic(typeError(s.Condition.Position(), "while condition must be bool, got %T", cond))
-			}
 			}
 		}()
 	case *For:
@@ -1056,9 +1061,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 					case returnResult:
 						// Re-panic return statements to handle them normally
 						panic(r)
-					case BreakException, ContinueException:
-						// Re-panic break and continue to be handled by loops
-						panic(r)
+					// case BreakException, ContinueException:
+					// 	// Re-panic break and continue to be handled by loops
+					// 	panic(r)
 					default:
 						errValue = fmt.Sprintf("%v", r)
 					}
@@ -1193,23 +1198,48 @@ func Evaluate(expr Expression, config *Config) (v Value, stats *Stats, err error
 // program. Return interpreter statistics, and an error which is nil on
 // success or an interpreter.Error if there's an error.
 func Execute(prog *Program, config *Config) (stats *Stats, err error) {
+	interp := newInterpreter(config)
 	defer func() {
 		if r := recover(); r != nil {
+			// Use the current position from interpreter for better error reporting
+			currentPos := interp.currentPos
+			// If currentPos is zero value, fall back to 1:1
+			if currentPos.Line == 0 {
+				currentPos = Position{Line: 1, Column: 1}
+			}
+			
 			switch e := r.(type) {
-			case Error:
-				err = e
-			case returnResult:
-				err = runtimeError(e.pos, "can't return at top level")
 			case BreakException:
 				err = runtimeError(e.pos, "break statement not within a loop")
 			case ContinueException:
 				err = runtimeError(e.pos, "continue statement not within a loop")
+			case ErrorInterpreter:
+				// Handle all errors that implement ErrorInterpreter (NameError, ValueError, TypeError, etc.)
+				err = e
+			case Error:
+				err = e
+			case returnResult:
+				err = runtimeError(e.pos, "can't return at top level")
+			case error:
+				// Handle other error types that implement the error interface
+				// but are not specifically handled above
+				errorMsg := r.(error).Error()
+				// Convert technical error messages to user-friendly ones
+				if strings.Contains(errorMsg, "nil pointer dereference") || strings.Contains(errorMsg, "invalid memory address") {
+					err = runtimeError(currentPos, "an error occurred while accessing data - this might be caused by undefined variables or invalid operations")
+				} else if strings.Contains(errorMsg, "index out of range") {
+					err = runtimeError(currentPos, "array or string index is out of bounds")
+				} else if strings.Contains(errorMsg, "slice bounds out of range") {
+					err = runtimeError(currentPos, "slice operation is out of bounds")
+				} else {
+					err = runtimeError(currentPos, "unexpected runtime error: %s", errorMsg)
+				}
 			default:
-				err = r.(error)
+				// Handle non-error panic values
+				err = runtimeError(currentPos, "unexpected runtime error occurred")
 			}
 		}
 	}()
-	interp := newInterpreter(config)
 	interp.execute(prog)
 	stats = &interp.stats
 	return

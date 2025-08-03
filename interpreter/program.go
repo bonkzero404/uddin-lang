@@ -156,15 +156,17 @@ func RunProgram(inputSource string) (bool, string) {
 	if err != nil {
 		errorMessage := fmt.Sprintf("%s", err)
 
-		// If it's an interpreter error with position information, show the source context
+		// Show source context for all errors with position information
 		if e, ok := err.(ErrorInterpreter); ok {
 			console += showErrorSource([]byte(inputSource), e.Position(), len(errorMessage))
+			console += errorMessage
 		} else if e, ok := err.(Error); ok {
 			console += showErrorSource([]byte(inputSource), e.Position, len(errorMessage))
+			console += errorMessage
+		} else {
+			// For other errors without position information
+			console += errorMessage
 		}
-
-		// Add the error message to the console output
-		console += errorMessage
 		return false, console
 	}
 
