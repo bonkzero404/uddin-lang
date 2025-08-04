@@ -35,18 +35,29 @@ jobs:
             - name: Setup Node.js
               uses: actions/setup-node@v4
               with:
-                  node-version: "18"
+                  node-version: "20"
                   cache: "npm"
                   cache-dependency-path: docs/package-lock.json
 
             - name: Setup Pages
               uses: actions/configure-pages@v4
 
+            - name: Clear npm cache
+              run: npm cache clean --force
+
+            - name: Delete node_modules and package-lock.json
+              run: |
+                  rm -rf node_modules
+                  rm -f package-lock.json
+
             - name: Install dependencies
-              run: npm ci
+              run: npm install --legacy-peer-deps
 
             - name: Build with Docusaurus
               run: npm run build
+              env:
+                  NODE_OPTIONS: "--max-old-space-size=4096"
+                  NODE_ENV: "production"
 
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3

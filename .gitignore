@@ -86,3 +86,4 @@ testdata/output/
 test_output/
 
 docs/node_modules/
+docs/.docusaurus/

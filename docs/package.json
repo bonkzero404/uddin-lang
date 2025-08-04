@@ -30,6 +30,9 @@
         "eslint": "^9.32.0",
         "eslint-plugin-react": "^7.37.5"
     },
+    "resolutions": {
+        "undici": "^5.28.4"
+    },
     "browserslist": {
         "production": [
             ">0.5%",
