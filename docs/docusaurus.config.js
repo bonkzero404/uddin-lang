@@ -87,6 +87,11 @@ const config = {
                     },
                 ],
             },
+            colorMode: {
+                defaultMode: 'light',
+                disableSwitch: false,
+                respectPrefersColorScheme: true,
+            },
             footer: {
                 style: 'light',
                 copyright: `© ${new Date().getFullYear()} UDDIN-LANG. Built with ❤️ • Licensed under <a href="https://github.com/bonkzero404/uddin-lang/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">MIT</a>`,
