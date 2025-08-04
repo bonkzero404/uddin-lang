@@ -202,26 +202,13 @@
 button[title*="theme"],
 button[aria-label*="theme"],
 .colorModeToggle_DEke,
-.toggle_vylO,
-div[class*="colorModeToggle"],
-button[class*="colorModeToggle"],
-.navbar__item--right button[class*="toggle"],
-.navbar__item button[class*="colorMode"] {
+.toggle_vylO {
     color: #2d3436 !important;
     background: #ffcc02 !important;
     border-radius: 8px !important;
     padding: 8px !important;
     transition: all 0.3s ease !important;
     border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: auto !important;
-    height: auto !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
 }
 
 .clean-btn[title*="theme"]:hover,
@@ -231,11 +218,7 @@ button[class*="colorModeToggle"],
 button[title*="theme"]:hover,
 button[aria-label*="theme"]:hover,
 .colorModeToggle_DEke:hover,
-.toggle_vylO:hover,
-div[class*="colorModeToggle"]:hover,
-button[class*="colorModeToggle"]:hover,
-.navbar__item--right button[class*="toggle"]:hover,
-.navbar__item button[class*="colorMode"]:hover {
+.toggle_vylO:hover {
     color: #2d3436 !important;
     background: #ffd700 !important;
     transform: scale(1.05) !important;
@@ -282,26 +265,13 @@ button[class*="colorModeToggle"]:hover,
 [data-theme="dark"] button[title*="theme"],
 [data-theme="dark"] button[aria-label*="theme"],
 [data-theme="dark"] .colorModeToggle_DEke,
-[data-theme="dark"] .toggle_vylO,
-[data-theme="dark"] div[class*="colorModeToggle"],
-[data-theme="dark"] button[class*="colorModeToggle"],
-[data-theme="dark"] .navbar__item--right button[class*="toggle"],
-[data-theme="dark"] .navbar__item button[class*="colorMode"] {
+[data-theme="dark"] .toggle_vylO {
     color: #2d3436 !important;
     background: #ffcc02 !important;
     border-radius: 8px !important;
     padding: 8px !important;
     transition: all 0.3s ease !important;
     border: none !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: auto !important;
-    height: auto !important;
-    min-width: 36px !important;
-    min-height: 36px !important;
-    opacity: 1 !important;
-    visibility: visible !important;
 }
 
 [data-theme="dark"] .clean-btn[title*="theme"]:hover,
@@ -311,11 +281,7 @@ button[class*="colorModeToggle"]:hover,
 [data-theme="dark"] button[title*="theme"]:hover,
 [data-theme="dark"] button[aria-label*="theme"]:hover,
 [data-theme="dark"] .colorModeToggle_DEke:hover,
-[data-theme="dark"] .toggle_vylO:hover,
-[data-theme="dark"] div[class*="colorModeToggle"]:hover,
-[data-theme="dark"] button[class*="colorModeToggle"]:hover,
-[data-theme="dark"] .navbar__item--right button[class*="toggle"]:hover,
-[data-theme="dark"] .navbar__item button[class*="colorMode"]:hover {
+[data-theme="dark"] .toggle_vylO:hover {
     color: #2d3436 !important;
     background: #ffd700 !important;
     transform: scale(1.05) !important;
