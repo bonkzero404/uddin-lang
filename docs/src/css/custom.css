@@ -33,6 +33,9 @@
     --ifm-color-emphasis-200: #e8eaed;
     --ifm-color-emphasis-300: #dadce0;
 
+    /* darker */
+    --ifm-background-color-dark: #2d3436
+
     /* Flat design - remove shadows */
     --ifm-global-shadow-lw: none;
     --ifm-global-shadow-md: none;
@@ -322,10 +325,10 @@ button[class*="colorModeToggle"]:hover,
 .navbar__items button,
 .navbar__item .clean-btn,
 .navbar__item button {
-    color: #2d3436 !important;
-    background: #ffcc02 !important;
+    /* color: #2d3436 !important; */
+    /* background: #ffcc02 !important; */
     border-radius: 6px !important;
-    padding: 0 !important;
+    padding: 6 !important;
     transition: all 0.3s ease !important;
     border: none !important;
 }
@@ -334,8 +337,8 @@ button[class*="colorModeToggle"]:hover,
 .navbar__items button:hover,
 .navbar__item .clean-btn:hover,
 .navbar__item button:hover {
-    color: #2d3436 !important;
-    background: #ffd700 !important;
+    /* color: #2d3436 !important;
+    background: #ffd700 !important; */
     transform: scale(1.05) !important;
 }
 
@@ -344,7 +347,7 @@ button[class*="colorModeToggle"]:hover,
 .navbar__items button svg,
 .navbar__item .clean-btn svg,
 .navbar__item button svg {
-    color: #2d3436 !important;
+    color: #fff !important;
     fill: #2d3436 !important;
 }
 
@@ -654,12 +657,48 @@ html [class*="toggle"] button svg {
     color: var(--ifm-color-primary) !important;
 }
 
-/* Navbar toggle and theme icons */
+/* Navbar toggle and theme icons - Enhanced */
 .navbar__toggle {
     color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50% !important;
+    padding: 0.4rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: none !important; /* Hide by default on desktop */
+    width: 36px;
+    height: 36px;
+}
+
+.navbar__toggle svg {
+    width: 18px !important;
+    height: 18px !important;
+    color: #ffffff !important;
+    transition: all 0.3s ease;
+}
+
+/* Show burger button only on mobile */
+@media screen and (max-width: 996px) {
+    .navbar__toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
 }
 
 .navbar__toggle:hover {
+    color: var(--ifm-color-primary) !important;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+    border-color: var(--ifm-color-primary);
+}
+
+.navbar__toggle svg {
+    color: #ffffff !important;
+    transition: all 0.3s ease;
+}
+
+.navbar__toggle:hover svg {
     color: var(--ifm-color-primary) !important;
 }
 
@@ -686,36 +725,278 @@ html [class*="toggle"] button svg {
     fill: var(--ifm-color-primary) !important;
 }
 
-/* Mobile navbar styling */
+/* Mobile navbar styling - Enhanced Visibility */
 .navbar-sidebar {
-    background: #2d3436;
+    background: #2d3436 !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-right: none !important;
+    z-index: 9999 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100vh !important;
+    overflow-y: auto !important;
+    /* width: 100vw !important; */
+    max-width: 100vw !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    animation: slideInFromLeft 0.3s ease-out;
+    scrollbar-width: thin;
+    scrollbar-color: var(--ifm-color-primary) rgba(255, 255, 255, 0.1);
+    color: #ffffff !important;
+}
+
+/* Ensure all text in navbar sidebar is white */
+.navbar-sidebar * {
+    color: #ffffff !important;
+}
+
+.navbar-sidebar a,
+.navbar-sidebar .navbar__link,
+.navbar-sidebar .menu__link {
+    color: #ffffff !important;
+}
+
+/* Navbar sidebar webkit scrollbar */
+.navbar-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.navbar-sidebar::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.navbar-sidebar::-webkit-scrollbar-thumb {
+    background: var(--ifm-color-primary);
+    border-radius: 3px;
+}
+
+.navbar-sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--ifm-color-primary-dark);
 }
 
 .navbar-sidebar__brand {
-    color: var(--ifm-color-primary);
+    color: #ffffff !important;
+    font-weight: 700;
+    padding: 0.8rem;
+    /* height: 70px; */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 0;
+    display: block !important;
+    text-decoration: none !important;
+    width: 100% !important;
+}
+
+.navbar-sidebar__brand:hover {
+    color: var(--ifm-color-primary) !important;
+}
+
+/* Navbar sidebar items container */
+.navbar-sidebar .navbar-sidebar__items {
+    padding: 1rem 0 !important;
+    margin: 0 !important;
+    list-style: none !important;
+}
+
+.navbar-sidebar .navbar-sidebar__items .navbar-sidebar__item:first-child {
+    margin-top: 0 !important;
+}
+
+.navbar-sidebar .navbar-sidebar__items .navbar-sidebar__item:last-child {
+    margin-bottom: 0.5rem !important;
 }
 
 .navbar-sidebar__item {
-    color: #ffffff;
+    margin: 0 !important;
+    border-radius: 0;
+    transition: all 0.3s ease;
+    display: block !important;
+    list-style: none !important;
+    width: 100% !important;
 }
 
-.navbar-sidebar__item:hover {
-    background: var(--ifm-color-primary);
-    color: #ffffff;
+.navbar-sidebar__item .menu__link,
+.navbar-sidebar__item > a {
+    color: #ffffff !important;
+    padding: 1rem 1.5rem !important;
+    font-weight: 500;
+    border-radius: 0;
+    transition: all 0.3s ease;
+    text-decoration: none !important;
+    display: block !important;
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+}
+
+.navbar-sidebar__item .menu__link:hover,
+.navbar-sidebar__item > a:hover {
+    background: var(--ifm-color-primary) !important;
+    color: #ffffff !important;
+    transform: none;
+}
+
+.navbar-sidebar__item .menu__link--active,
+.navbar-sidebar__item > a.navbar__link--active {
+    background: var(--ifm-color-primary) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    border-left: 4px solid #ffcc02;
+    border-radius: 0;
+}
+
+/* Mobile navbar toggle button */
+.navbar__toggle {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50% !important;
+    padding: 0.4rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    display: none !important; /* Hide by default on desktop */
+    width: 36px;
+    height: 36px;
+}
+
+/* Show burger button only on mobile */
+@media screen and (max-width: 996px) {
+    .navbar__toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+}
+
+.navbar__toggle:hover {
+    color: var(--ifm-color-primary) !important;
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+    border-color: var(--ifm-color-primary) !important;
+}
+
+/* Navbar sidebar backdrop */
+.navbar-sidebar__backdrop {
+    background: rgba(45, 52, 54, 0.8) !important;
+    backdrop-filter: blur(4px);
+    z-index: 9998 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+
+/* Navbar sidebar close button - Hidden */
+.navbar-sidebar__close {
+    display: none !important;
+}
+
+/* Hide theme toggle in mobile navbar sidebar */
+.navbar-sidebar .clean-btn[title*="theme"],
+.navbar-sidebar .clean-btn[aria-label*="theme"],
+.navbar-sidebar .clean-btn[title*="Switch"],
+.navbar-sidebar .clean-btn[aria-label*="Switch"],
+.navbar-sidebar button[title*="theme"],
+.navbar-sidebar button[aria-label*="theme"],
+.navbar-sidebar .colorModeToggle_DEke,
+.navbar-sidebar .toggle_vylO,
+.navbar-sidebar div[class*="colorModeToggle"],
+.navbar-sidebar button[class*="colorModeToggle"],
+.navbar-sidebar .navbar__item--right button[class*="toggle"],
+.navbar-sidebar .navbar__item button[class*="colorMode"],
+.navbar-sidebar [class*="colorModeToggle"],
+.navbar-sidebar [class*="toggle"][title*="Switch"],
+.navbar-sidebar [class*="toggle"][aria-label*="Switch"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.navbar-sidebar__close:hover {
+    color: var(--ifm-color-primary) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    transform: scale(1.05);
+    border-color: var(--ifm-color-primary) !important;
 }
 
 /* Dark mode mobile navbar */
 [data-theme="dark"] .navbar-sidebar {
-    background: #1a1a1a;
+    background: #2d3436 !important;
+    border-right: 3px solid var(--ifm-color-primary);
 }
 
-[data-theme="dark"] .navbar-sidebar__item {
-    color: #ffffff;
+[data-theme="dark"] .navbar-sidebar__brand {
+    color: #ffffff !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-[data-theme="dark"] .navbar-sidebar__item:hover {
-    background: var(--ifm-color-primary);
-    color: #ffffff;
+[data-theme="dark"] .navbar-sidebar__brand:hover {
+    color: var(--ifm-color-primary) !important;
+}
+
+[data-theme="dark"] .navbar-sidebar__item .menu__link,
+[data-theme="dark"] .navbar-sidebar__item > a {
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .navbar-sidebar__item .menu__link:hover,
+[data-theme="dark"] .navbar-sidebar__item > a:hover {
+    background: var(--ifm-color-primary) !important;
+    color: #ffffff !important;
+    transform: translateX(4px);
+}
+
+[data-theme="dark"] .navbar-sidebar__item .menu__link--active,
+[data-theme="dark"] .navbar-sidebar__item > a.navbar__link--active {
+    background: var(--ifm-color-primary) !important;
+    color: #ffffff !important;
+    border-left: 4px solid #ffcc02;
+}
+
+[data-theme="dark"] .navbar__toggle {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 50% !important;
+    padding: 0.4rem;
+    width: 36px;
+    height: 36px;
+    display: none !important; /* Hide by default on desktop */
+}
+
+[data-theme="dark"] .navbar__toggle svg {
+    width: 18px !important;
+    height: 18px !important;
+    color: #ffffff !important;
+    transition: all 0.3s ease;
+}
+
+[data-theme="dark"] .navbar__toggle:hover {
+    color: var(--ifm-color-primary) !important;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: var(--ifm-color-primary) !important;
+}
+
+/* Show dark mode burger button only on mobile */
+@media screen and (max-width: 996px) {
+    [data-theme="dark"] .navbar__toggle {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+}
+
+[data-theme="dark"] .navbar-sidebar__backdrop {
+    background: rgba(26, 26, 26, 0.8) !important;
+}
+
+[data-theme="dark"] .navbar-sidebar__close {
+    display: none !important;
 }
 
 /* Buttons flat design */
@@ -857,6 +1138,111 @@ html [class*="toggle"] button svg {
         width: 100%;
         margin-bottom: 0.5rem;
     }
+
+    /* Mobile navbar improvements - Additional responsive adjustments */
+    .navbar-sidebar {
+        min-height: 100vh !important;
+    }
+
+    .navbar-sidebar__brand {
+        font-size: 1.2rem;
+        padding: 1.25rem 1rem;
+        background: rgba(0, 0, 0, 0.1) !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .navbar-sidebar__item {
+        margin: 0 !important;
+    }
+
+    .navbar-sidebar__item .menu__link,
+    .navbar-sidebar__item > a {
+        font-size: 1rem !important;
+        padding: 1rem 1.5rem !important;
+        margin: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        color: #ffffff !important;
+        font-weight: 500 !important;
+        border-radius: 0 !important;
+        display: block !important;
+        text-decoration: none !important;
+        line-height: 1.4 !important;
+        width: 100% !important;
+    }
+
+    .navbar-sidebar__item .menu__link:hover,
+    .navbar-sidebar__item > a:hover {
+        background: var(--ifm-color-primary) !important;
+        color: #ffffff !important;
+        transform: none !important;
+    }
+
+    .navbar-sidebar__item .menu__link--active,
+    .navbar-sidebar__item > a.navbar__link--active {
+        background: var(--ifm-color-primary) !important;
+        color: #ffffff !important;
+        font-weight: 600 !important;
+        border-left: 4px solid #ffcc02 !important;
+    }
+
+    .navbar-sidebar__close {
+        display: none !important;
+    }
+
+    /* Dark mode mobile close button */
+    [data-theme="dark"] .navbar-sidebar__close {
+        display: none !important;
+    }
+
+    /* Mobile navbar backdrop */
+    .navbar-sidebar__backdrop {
+        background: rgba(45, 52, 54, 0.8) !important;
+        backdrop-filter: blur(4px);
+    }
+
+    [data-theme="dark"] .navbar-sidebar__backdrop {
+        background: rgba(26, 26, 26, 0.8) !important;
+    }
+
+    /* Mobile navbar animations - keyframes only */
+    @keyframes slideInFromLeft {
+        from {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Hide theme toggle in mobile navbar sidebar - Mobile specific */
+    .navbar-sidebar .clean-btn[title*="theme"],
+    .navbar-sidebar .clean-btn[aria-label*="theme"],
+    .navbar-sidebar .clean-btn[title*="Switch"],
+    .navbar-sidebar .clean-btn[aria-label*="Switch"],
+    .navbar-sidebar button[title*="theme"],
+    .navbar-sidebar button[aria-label*="theme"],
+    .navbar-sidebar .colorModeToggle_DEke,
+    .navbar-sidebar .toggle_vylO,
+    .navbar-sidebar div[class*="colorModeToggle"],
+    .navbar-sidebar button[class*="colorModeToggle"],
+    .navbar-sidebar .navbar__item--right,
+    .navbar-sidebar .navbar__item button[class*="colorMode"],
+    .navbar-sidebar [class*="colorModeToggle"],
+    .navbar-sidebar [class*="toggle"][title*="Switch"],
+    .navbar-sidebar [class*="toggle"][aria-label*="Switch"],
+    .navbar-sidebar__items .navbar__item:last-child {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+    }
+
 }
 
 /* Custom animations */
@@ -914,7 +1300,7 @@ html [class*="toggle"] button svg {
 
 /* Sidebar flat design */
 .menu {
-    background: var(--ifm-background-color);
+    background: var(--ifm-background-color-dark);
 }
 
 /* Table of contents flat design */
