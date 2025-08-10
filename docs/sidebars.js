@@ -46,12 +46,12 @@ const sidebars = {
             items: [
                 'tutorial/advanced/built-in-functions',
                 'tutorial/advanced/math-functions',
+                'tutorial/advanced/memoization',
                 'tutorial/advanced/networking',
                 'tutorial/advanced/regex-and-datetime',
                 'tutorial/advanced/xml-and-knowledge-systems',
                 'tutorial/advanced/error-handling-and-debugging',
                 'tutorial/advanced/development-tools',
-                // 'tutorial/advanced/best-practices',
             ],
         }
     ],

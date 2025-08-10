@@ -446,6 +446,48 @@ end
 result = add(5, 3)
 ```
 
+### Function Memoization (Experimental)
+
+:::warning Experimental Feature
+Memoization is an experimental feature and is not production-ready. Use with caution as it may have thread safety issues and memory management limitations.
+:::
+
+Memoization allows functions to cache their results to improve performance for expensive computations with repeated calls.
+
+```uddin
+// Function without memoization (recalculates every time)
+fun fibonacci_slow(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fibonacci_slow(n - 1) + fibonacci_slow(n - 2)
+    end
+end
+
+// Function with memoization (caches results automatically)
+memo fun fibonacci_fast(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fibonacci_fast(n - 1) + fibonacci_fast(n - 2)
+    end
+end
+
+// Usage example
+print("Slow version:")
+print(fibonacci_slow(30))  // Takes longer
+
+print("Fast version with memoization:")
+print(fibonacci_fast(30))  // Much faster on subsequent calls
+```
+
+**Key Points:**
+- Use the `memo` keyword before `fun` to enable memoization
+- Memoized functions automatically cache results based on input parameters
+- Subsequent calls with the same parameters return cached results
+- Best suited for pure functions (functions without side effects)
+- **Warning:** This feature is experimental and may have performance or memory issues in production
+
 ## Error Handling
 
 ### Try-Catch Blocks

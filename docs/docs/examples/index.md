@@ -348,6 +348,52 @@ Module system and library imports.
 
 File system operations and file handling.
 
+## 🧪 Experimental Features
+
+:::warning Experimental
+The following examples demonstrate experimental features that are not production-ready. Use with caution.
+:::
+
+### Function Memoization Demo
+**File:** `33_memoization_demo.din` | [📁 View on GitHub](https://github.com/bonkzero404/uddin-lang/blob/main/examples/33_memoization_demo.din)
+
+Demonstrates automatic function memoization for performance optimization.
+
+```uddin
+// Function without memoization
+fun fibonacci_normal(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fibonacci_normal(n - 1) + fibonacci_normal(n - 2)
+    end
+end
+
+// Function with memoization (experimental)
+memo fun fibonacci_memo(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fibonacci_memo(n - 1) + fibonacci_memo(n - 2)
+    end
+end
+```
+
+**Features demonstrated:**
+- `memo` keyword for automatic caching
+- Performance comparison between memoized and non-memoized functions
+- Fibonacci sequence optimization
+
+### Memoization Verification Test
+**File:** `34_memoization_verification_test.din` | [📁 View on GitHub](https://github.com/bonkzero404/uddin-lang/blob/main/examples/34_memoization_verification_test.din)
+
+Verifies that memoization only works on functions marked with the `memo` keyword.
+
+**Features demonstrated:**
+- Testing memoization behavior
+- Comparing cached vs non-cached function calls
+- Verification of experimental feature functionality
+
 ## 📚 Utility Libraries
 
 ### Math Library
@@ -399,10 +445,11 @@ To run any of these examples:
 | **Data Formats** | 3 | JSON, XML, multiline strings |
 | **Pattern Matching** | 5 | Regex, rule engines, CEP |
 | **System Integration** | 2 | Imports, filesystem operations |
+| **Experimental** | 2 | Memoization and performance features |
 | **Utilities** | 1 | Reusable libraries |
 | **Testing** | 2 | Debug and test utilities |
 
-**Total Examples:** 31 files
+**Total Examples:** 33 files
 
 ---
 
