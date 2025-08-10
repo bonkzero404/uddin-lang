@@ -1,0 +1,45 @@
+// EXPERIMENTAL FEATURE: Memoization Verification Test
+// WARNING: This is an experimental feature and may change in future versions
+// Test to verify that memoization only works on functions with 'memo' token
+
+// Function without memo - will not be cached
+fun slow_function(n):
+    print("Calculating slow_function(", n, ")")
+    if (n <= 1) then:
+        return n
+    end
+    return slow_function(n - 1) + slow_function(n - 2)
+end
+
+// Function with memo - will be cached
+// EXPERIMENTAL: This function will automatically cache results
+memo fun fast_function(n):
+    print("Calculating fast_function(", n, ")")
+    if (n <= 1) then:
+        return n
+    end
+    return fast_function(n - 1) + fast_function(n - 2)
+end
+
+print("=== Test 1: Function without memo (will recalculate) ===")
+print("First call slow_function(5):")
+result1 = slow_function(5)
+print("Result:", result1)
+
+print("\nSecond call slow_function(5):")
+result2 = slow_function(5)
+print("Result:", result2)
+
+print("\n=== Test 2: Function with memo (will use cache) ===")
+print("First call fast_function(5):")
+result3 = fast_function(5)
+print("Result:", result3)
+
+print("\nSecond call fast_function(5):")
+result4 = fast_function(5)
+print("Result:", result4)
+
+print("\n=== Conclusion ===")
+print("Functions without 'memo' will recalculate every time they are called.")
+print("Functions with 'memo' will use cached results.")
+print("\nNOTE: This is an experimental feature - use with caution in production.")

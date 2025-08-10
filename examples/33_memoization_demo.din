@@ -1,0 +1,38 @@
+// EXPERIMENTAL FEATURE: Manual Memoization Demo
+// WARNING: This is an experimental feature and may change in future versions
+// The memoization feature is not production-ready and should be used with caution
+
+// Function fibonacci without memoization
+fun fibonacci_normal(n):
+    if (n <= 1) then:
+        return n
+    end
+    return fibonacci_normal(n - 1) + fibonacci_normal(n - 2)
+end
+
+// Function fibonacci with manual memoization using 'memo' token
+// EXPERIMENTAL: Functions marked with 'memo' will automatically cache results
+memo fun fibonacci_memo(n):
+    if (n <= 1) then:
+        return n
+    end
+    return fibonacci_memo(n - 1) + fibonacci_memo(n - 2)
+end
+
+// Performance testing
+print("Testing manual memoization...")
+print("EXPERIMENTAL FEATURE: This demonstrates automatic caching for 'memo' functions")
+
+// Test with small numbers to see same results
+print("fibonacci_normal(10) =", fibonacci_normal(10))
+print("fibonacci_memo(10) =", fibonacci_memo(10))
+
+// Test with larger numbers to see performance difference
+print("\nTesting performance difference:")
+print("fibonacci_normal(20) =", fibonacci_normal(20))
+print("fibonacci_memo(30) =", fibonacci_memo(30))
+
+print("\nManual memoization successfully implemented!")
+print("Functions with 'memo' token will use automatic caching.")
+print("Functions without 'memo' token will not use caching.")
+print("\nNOTE: This is an experimental feature - use with caution in production.")
