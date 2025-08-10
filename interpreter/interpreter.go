@@ -621,9 +621,9 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Track function calls for performance monitoring
 	TrackOperation("function_call")
 
-	// Check memoization cache for recursive functions
-	// Only cache functions that return non-nil values to avoid caching side-effect functions
-	if uf, ok := f.(*userFunction); ok && uf.Name != "" {
+	// Check memoization cache for functions marked with memo
+	// Only cache functions that are explicitly memoized and return non-nil values
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized {
 		memoKey := getMemoKey(uf.Name, args)
 		if cached, exists := interp.memoCache[memoKey]; exists {
 			return cached
@@ -634,8 +634,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 		if r := recover(); r != nil {
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
-				// Cache the result for memoization only if it's not nil
-				if uf, ok := f.(*userFunction); ok && uf.Name != "" && ret != nil {
+				// Cache the result for memoization only if function is marked as memoized and result is not nil
+				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
 					memoKey := getMemoKey(uf.Name, args)
 					interp.memoCache[memoKey] = ret
 				}
@@ -647,9 +647,9 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 	result := f.call(interp, pos, args)
 
-	// Cache the result for memoization only if it's not nil
+	// Cache the result for memoization only if function is marked as memoized and result is not nil
 	// This prevents caching functions with side effects that return nil
-	if uf, ok := f.(*userFunction); ok && uf.Name != "" && result != nil {
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && result != nil {
 		memoKey := getMemoKey(uf.Name, args)
 		interp.memoCache[memoKey] = result
 	}
@@ -741,7 +741,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		return evalSubscript(e.Subscript.Position(), container, subscript)
 	case *FunctionExpression:
 		closure := interp.vars[len(interp.vars)-1]
-		return &userFunction{"", e.Parameters, e.Ellipsis, e.Body, closure}
+		return &userFunction{"", e.Parameters, e.Ellipsis, e.Body, closure, false}
 	default:
 		// Parser should never get us here
 		panic(runtimeError(Position{}, "unexpected expression type %T", expr))
@@ -1091,7 +1091,7 @@ func (interp *interpreter) executeStatement(s Statement) {
 		interp.mutex.RLock()
 		closure := interp.vars[len(interp.vars)-1]
 		interp.mutex.RUnlock()
-		interp.assign(s.Name, &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, closure})
+		interp.assign(s.Name, &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, closure, s.Memoized})
 	case *Return:
 		result := interp.evaluate(s.Result)
 		panic(returnResult{result, s.Position()})

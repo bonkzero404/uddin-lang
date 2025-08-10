@@ -76,6 +76,7 @@ const (
 	TRY      = 517
 	WHILE    = 518
 	XOR      = 519
+	MEMO     = 520
 
 	// Literals and identifiers (sequential from 600)
 	INT   = 600
@@ -97,6 +98,7 @@ var keywordTokens = map[string]Token{
 	"if":       IF,
 	"import":   IMPORT,
 	"in":       IN,
+	"memo":     MEMO,
 	"null":     NULL,
 	"not":      NOT,
 	"or":       OR,
@@ -157,6 +159,7 @@ var tokenNames = map[Token]string{
 	IF:       "if",
 	IMPORT:   "import",
 	IN:       "in",
+	MEMO:     "memo",
 	NULL:     "null",
 	NOT:      "not",
 	OR:       "or",

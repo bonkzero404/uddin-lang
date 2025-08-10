@@ -95,8 +95,10 @@ func (e *Evaluator) EvaluateExpression(expr Expression) Value {
 		return &userFunction{
 			Name:       "<anonymous>",
 			Parameters: node.Parameters,
+			Ellipsis:   node.Ellipsis,
 			Body:       node.Body,
 			Closure:    e.env.vars[len(e.env.vars)-1],
+			Memoized:   false,
 		}
 	default:
 		panic(runtimeError(expr.Position(), "unexpected expression type %T", expr))
@@ -308,6 +310,16 @@ func (e *Evaluator) evaluateSubscript(node *Subscript) Value {
 func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Value) Value {
 	e.stats.UserCalls++
 
+	// Check memoization cache for functions marked with memo
+	if fn.Name != "" && fn.Memoized {
+		memoKey := getMemoKey(fn.Name, args)
+		if e.interp.memoCache != nil {
+			if cached, exists := e.interp.memoCache[memoKey]; exists {
+				return cached
+			}
+		}
+	}
+
 	// Check parameter count
 	if len(args) != len(fn.Parameters) {
 		panic(valueError(pos, "function %s expects %d arguments, got %d",
@@ -342,6 +354,11 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 		if r := recover(); r != nil {
 			if ret, ok := r.(returnResult); ok {
 				result = ret.value
+				// Cache the result for memoized functions
+				if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
+					memoKey := getMemoKey(fn.Name, args)
+					e.interp.memoCache[memoKey] = result
+				}
 			} else {
 				panic(r) // Re-panic other errors
 			}
@@ -357,9 +374,16 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 		exit:       e.env.exit,
 		stats:      *e.stats,
 		inUnitTest: e.env.inUnitTest,
+		memoCache:  e.interp.memoCache, // Share memo cache
 	}
 	interp.executeBlock(fn.Body)
 	*e.stats = interp.stats // Update stats
+
+	// Cache the result for memoized functions
+	if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
+		memoKey := getMemoKey(fn.Name, args)
+		e.interp.memoCache[memoKey] = result
+	}
 
 	return result // Will be nil if no explicit return
 }

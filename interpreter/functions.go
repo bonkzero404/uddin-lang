@@ -50,6 +50,7 @@ type userFunction struct {
 	Ellipsis   bool             // Whether the last parameter is variadic
 	Body       Block            // Function body statements
 	Closure    map[string]Value // Captured variables from outer scopes
+	Memoized   bool             // Whether this function should use memoization
 }
 
 // ensureNumArgs checks if the number of arguments matches the required count

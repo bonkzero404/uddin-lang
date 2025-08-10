@@ -96,6 +96,8 @@ func (p *parser) statements(end Token) Block {
 //	call dot ASSIGN expression
 func (p *parser) statement() Statement {
 	switch p.tok {
+	case MEMO:
+		return p.memoFun_()
 	case IF:
 		return p.if_()
 	case WHILE:
@@ -246,18 +248,10 @@ func (p *parser) tryCatch() Statement {
 	return &TryCatch{pos, tryBlock, errVar, catchBlock}
 }
 
-// return = RETURN [expression]
+// return = RETURN expression
 func (p *parser) return_() Statement {
 	pos := p.pos
 	p.expect(RETURN)
-	
-	// Check if there's an expression after RETURN
-	// If the next token is a statement terminator or end of block, return null
-	if p.tok == EOF || p.tok == RBRACE || p.tok == END || p.tok == ELSE || p.tok == CATCH {
-		// Return null if no expression is provided
-		return &Return{pos, &Literal{pos, nil}}
-	}
-	
 	result := p.expression()
 	return &Return{pos, result}
 }
@@ -273,12 +267,29 @@ func (p *parser) fun_() Statement {
 		p.next()
 		params, ellipsis := p.params()
 		body := p.block()
-		return &FunctionDefinition{pos, name, params, ellipsis, body}
+		return &FunctionDefinition{pos, name, params, ellipsis, body, false}
 	} else {
 		params, ellipsis := p.params()
 		body := p.block()
 		expr := &FunctionExpression{pos, params, ellipsis, body}
 		return &ExpressionStatement{pos, expr}
+	}
+}
+
+// memoFun_ parses a memoized function definition: memo fun name(params) body end
+func (p *parser) memoFun_() Statement {
+	pos := p.pos
+	p.expect(MEMO)
+	p.expect(FUN)
+	if p.tok == NAME {
+		name := p.val
+		p.next()
+		params, ellipsis := p.params()
+		body := p.block()
+		return &FunctionDefinition{pos, name, params, ellipsis, body, true}
+	} else {
+		p.error("expected function name after 'memo fun'")
+		return nil
 	}
 }
 

@@ -354,12 +354,17 @@ type FunctionDefinition struct {
 	Parameters []string // Parameter names
 	Ellipsis   bool     // Whether the function accepts variable arguments
 	Body       Block    // Function body
+	Memoized   bool     // Whether the function should use memoization
 }
 
 func (s *FunctionDefinition) Position() Position { return s.pos }
 
 // String returns a string representation of the function definition.
 func (s *FunctionDefinition) String() string {
+	memoStr := ""
+	if s.Memoized {
+		memoStr = "memo "
+	}
 	ellipsisStr := ""
 	if s.Ellipsis {
 		ellipsisStr = "..."
@@ -368,8 +373,8 @@ func (s *FunctionDefinition) String() string {
 	if len(s.Body) != 0 {
 		bodyStr = "\n" + indent(s.Body.String())
 	}
-	return fmt.Sprintf("fun %s(%s%s):%s\nend",
-		s.Name, strings.Join(s.Parameters, ", "), ellipsisStr, bodyStr)
+	return fmt.Sprintf("%sfun %s(%s%s):%s\nend",
+		memoStr, s.Name, strings.Join(s.Parameters, ", "), ellipsisStr, bodyStr)
 }
 
 // Expression is an interface that all expression nodes in the AST must implement.
