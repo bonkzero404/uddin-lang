@@ -372,6 +372,7 @@ var builtins = map[string]builtinFunction{
 
 	// Date/Time Functions - Advanced Operations
 	"date_now":        {datenowFunc, "date_now"},
+	"time_now":        {timenowFunc, "time_now"},
 	"date_format":     {dateformatFunc, "date_format"},
 	"date_parse":      {dateParseFunc, "date_parse"},
 	"date_format_new": {dateFormatEnhancedFunc, "date_format_new"},
@@ -1090,6 +1091,20 @@ func datenowFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	// Get current time and format as RFC3339
 	return Value(time.Now().Format(time.RFC3339))
+}
+
+// timenowFunc implements the time_now() built-in function
+// Returns the current Unix timestamp in milliseconds
+// Parameters: none
+// Returns the current timestamp as an integer (milliseconds since Unix epoch)
+// Example: time_now() -> 1640995445123
+func timenowFunc(interp *interpreter, pos Position, args []Value) Value {
+	if err := ensureNumArgs(pos, "time_now", args, 0); err != Value(nil) {
+		return err
+	}
+	// Get current time in milliseconds since Unix epoch
+	// Convert to int to match Uddin-Lang's integer type
+	return Value(int(time.Now().UnixMilli()))
 }
 
 // dateformatFunc implements the date_format() built-in function
