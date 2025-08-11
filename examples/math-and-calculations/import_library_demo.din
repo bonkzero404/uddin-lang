@@ -8,7 +8,7 @@
 //
 
 // Import a simple math library
-import "examples/math_library.din"
+import "examples/math-and-calculations/math_library.din"
 
 fun main():
     print("===================================")

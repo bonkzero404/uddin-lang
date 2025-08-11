@@ -31,8 +31,8 @@ cleanup
 echo "Testing all .din files in examples/ directory..."
 echo "========================================"
 
-# Loop through all .din files in examples directory
-for file in examples/*.din; do
+# Loop through all .din files in examples directory and subdirectories
+for file in $(find examples -name "*.din" | sort); do
     if [[ -f "$file" ]]; then
         total_files=$((total_files + 1))
         filename=$(basename "$file" .din)
@@ -62,7 +62,7 @@ for file in examples/*.din; do
         
         # Step 4: Execute the converted .din file
         # Special handling for persistent HTTP server
-        if [[ "$filename" == "19_persistent_http_server" ]]; then
+        if [[ "$filename" == "persistent_http_server" ]]; then
             # Start the server in background and kill it after 3 seconds
             timeout 3s go run main.go "test_${filename}_back.din" >/dev/null 2>&1
             exit_code=$?
