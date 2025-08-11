@@ -100,6 +100,11 @@ quote = "He said, \"Hello!\""
 longText = "This is a very long string " +
            "that spans multiple lines " +
            "for better readability"
+
+// Multi-line strings with backticks
+longText = `This is a very long string
+that spans multiple lines
+for better readability`
 ```
 
 ### Booleans

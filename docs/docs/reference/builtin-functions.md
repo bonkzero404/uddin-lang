@@ -14,7 +14,10 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 | `int(value)` | Convert to integer | `int("42")` → `42` | int |
 | `float(value)` | Convert to float | `float("3.14")` → `3.14` | float |
 | `bool(value)` | Convert to boolean | `bool(1)` → `true` | bool |
+| `char(value)` | Convert to character | `char(65)` → `"A"` | string |
+| `rune(value)` | Convert to Unicode rune | `rune("A")` → `65` | int |
 | `type(value)` | Get type name | `type(42)` → `"int"` | string |
+| `typeof(value)` | Get detailed type info | `typeof([1,2,3])` → `"array[int]"` | string |
 
 ## String Functions
 
@@ -35,7 +38,6 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 |----------|-------------|---------|-------------|
 | `upper(string)` | Convert to uppercase | `upper("hello")` → `"HELLO"` | string |
 | `lower(string)` | Convert to lowercase | `lower("HELLO")` → `"hello"` | string |
-| `title(string)` | Convert to title case | `title("hello world")` → `"Hello World"` | string |
 
 ### String Search Functions
 
@@ -44,44 +46,6 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 | `contains(string, substring)` | Check if contains | `contains("hello", "ell")` → `true` | bool |
 | `starts_with(string, prefix)` | Check prefix | `starts_with("hello", "he")` → `true` | bool |
 | `ends_with(string, suffix)` | Check suffix | `ends_with("hello", "lo")` → `true` | bool |
-| `index(string, substring)` | Find first index | `index("hello", "l")` → `2` | int |
-| `last_index(string, substring)` | Find last index | `last_index("hello", "l")` → `3` | int |
-| `count(string, substring)` | Count occurrences | `count("hello", "l")` → `2` | int |
-
-### String Validation Functions
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `is_alpha(string)` | Check if alphabetic | `is_alpha("hello")` → `true` | bool |
-| `is_digit(string)` | Check if numeric | `is_digit("123")` → `true` | bool |
-| `is_alnum(string)` | Check if alphanumeric | `is_alnum("abc123")` → `true` | bool |
-| `is_space(string)` | Check if whitespace | `is_space(" \t\n")` → `true` | bool |
-| `is_upper(string)` | Check if uppercase | `is_upper("HELLO")` → `true` | bool |
-| `is_lower(string)` | Check if lowercase | `is_lower("hello")` → `true` | bool |
-
-### Multiline Strings
-
-Uddin-Lang supports multiline strings using backticks for JSON, SQL, HTML, and configuration files:
-
-```uddin
-json_data = `{
-    "name": "Alice",
-    "age": 30,
-    "city": "New York"
-}`
-
-sql_query = `SELECT users.name, orders.total
-             FROM users
-             JOIN orders ON users.id = orders.user_id
-             WHERE orders.date >= '2024-01-01'
-             ORDER BY orders.total DESC`
-
-html_template = `<div class="user-card">
-    <h2>{{name}}</h2>
-    <p>Age: {{age}}</p>
-    <p>City: {{city}}</p>
-</div>`
-```
 
 ## Array Functions
 
@@ -123,7 +87,6 @@ html_template = `<div class="user-card">
 | `set_has(set, elem)` | Check if element exists | `set_has(my_set, 1)` → `true` |
 | `set_remove(set, elem)` | Remove element | `set_remove(my_set, 1)` → `true` |
 | `set_size(set)` | Get number of elements | `set_size(my_set)` → `3` |
-| `set_clear(set)` | Remove all elements | `set_clear(my_set)` |
 | `set_to_array(set)` | Convert set to array | `set_to_array(my_set)` → `[1,2,3]` |
 
 ### Stack (LIFO - Last In, First Out)
@@ -135,7 +98,7 @@ html_template = `<div class="user-card">
 | `stack_pop(stack)` | Remove and return top element | `stack_pop(my_stack)` → `"item"` |
 | `stack_peek(stack)` | View top element without removing | `stack_peek(my_stack)` → `"item"` |
 | `stack_size(stack)` | Get number of elements | `stack_size(my_stack)` → `3` |
-| `stack_is_empty(stack)` | Check if stack is empty | `stack_is_empty(my_stack)` → `false` |
+| `stack_empty(stack)` | Check if stack is empty | `stack_empty(my_stack)` → `false` |
 
 ### Queue (FIFO - First In, First Out)
 
@@ -146,7 +109,7 @@ html_template = `<div class="user-card">
 | `queue_dequeue(queue)` | Remove and return front element | `queue_dequeue(my_queue)` → `"task"` |
 | `queue_front(queue)` | View front element without removing | `queue_front(my_queue)` → `"task"` |
 | `queue_size(queue)` | Get number of elements | `queue_size(my_queue)` → `3` |
-| `queue_is_empty(queue)` | Check if queue is empty | `queue_is_empty(my_queue)` → `false` |
+| `queue_empty(queue)` | Check if queue is empty | `queue_empty(my_queue)` → `false` |
 
 ## Math Functions
 
@@ -182,6 +145,14 @@ html_template = `<div class="user-card">
 | `acos(x)` | Arc cosine (returns radians) | `acos(1)` → `0.0` | float |
 | `atan(x)` | Arc tangent (returns radians) | `atan(1)` → `0.7854` | float |
 | `atan2(y, x)` | Arc tangent of y/x | `atan2(1, 1)` → `0.7854` | float |
+
+### Hyperbolic Functions
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `sinh(x)` | Hyperbolic sine | `sinh(1.0)` → `1.175` | float |
+| `cosh(x)` | Hyperbolic cosine | `cosh(1.0)` → `1.543` | float |
+| `tanh(x)` | Hyperbolic tangent | `tanh(1.0)` → `0.762` | float |
 
 ### Logarithmic Functions
 
@@ -242,12 +213,12 @@ html_template = `<div class="user-card">
 
 ## I/O Functions
 
-| Function | Description | Example |
-|----------|-------------|----------|
-| `print(values...)` | Print to console | `print("Hello", "World")` |
-| `input(prompt)` | Read user input | `name = input("Enter name: ")` |
-| `read_file(path)` | Read file content | `content = read_file("data.txt")` |
-| `write_file(path, content)` | Write to file | `write_file("out.txt", "Hello")` |
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `print(values...)` | Print to console | `print("Hello", "World")` | void |
+| `input(prompt)` | Read user input | `name = input("Enter name: ")` | string |
+| `read_file(path)` | Read file content | `content = read_file("data.txt")` | string |
+| `write_file(path, content)` | Write to file | `write_file("out.txt", "Hello")` | bool |
 
 ## File System Operations
 
@@ -380,8 +351,53 @@ html_template = `<div class="user-card">
 | `is_nan(x)` | Check if value is NaN | `is_nan(0.0/0.0)` → `true` | bool |
 | `is_infinite(x)` | Check if value is infinite | `is_infinite(1.0/0.0)` → `true` | bool |
 | `date_now()` | Current timestamp | `date_now()` → `"2025-06-26T14:30:00Z"` | string |
+| `time_now()` | Current Unix timestamp in milliseconds | `time_now()` → `1640995445123` | int |
 | `date_format(date, fmt)` | Format date | `date_format(date_now(), "YYYY-MM-DD")` | string |
-| `exit(code)` | Exit program | `exit(0)` | void |
-| `sleep(seconds)` | Pause execution | `sleep(1.5)` | void |
+| `date_parse(date_str, layout)` | Parse date string | `date_parse("2023-01-01", "2006-01-02")` | int |
+| `date_format_new(timestamp, layout)` | Format timestamp with layout | `date_format_new(time_now(), "2006-01-02 15:04:05")` | string |
+| `date_add(timestamp, duration)` | Add duration to timestamp | `date_add(time_now(), "24h")` | int |
+| `date_subtract(timestamp, duration)` | Subtract duration from timestamp | `date_subtract(time_now(), "1h30m")` | int |
+| `date_diff(timestamp1, timestamp2)` | Calculate difference between timestamps | `date_diff(time2, time1)` | int |
+| `date_between(timestamp, start, end)` | Check if timestamp is between two dates | `date_between(now, start, end)` | bool |
+| `date_compare(timestamp1, timestamp2)` | Compare two timestamps | `date_compare(time1, time2)` | int |
+
+## Regular Expression Functions
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `is_regex_match(pattern, text)` | Check if text matches regex pattern | `is_regex_match("^[0-9]+$", "123")` → `true` | bool |
+| `regex_match(text, pattern)` | Check if text matches regex pattern | `regex_match("hello@example.com", email_pattern)` | bool |
+| `regex_find(text, pattern)` | Find first match of regex pattern | `regex_find("Phone: 123-456-7890", "[0-9-]+")` → `"123-456-7890"` | string |
+| `regex_find_all(text, pattern)` | Find all matches of regex pattern | `regex_find_all(text, email_pattern)` | array |
+| `regex_replace(text, pattern, replacement)` | Replace regex matches | `regex_replace("hello world", "world", "universe")` | string |
+| `regex_split(text, pattern)` | Split text by regex pattern | `regex_split("a,b;c", "[,;]")` → `["a", "b", "c"]` | array |
+
+## System Functions
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `exit(code)` | Exit program with code | `exit(0)` | void |
+
+## Rule Engine - Fact Database Functions
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `fact_assert(type, id, data)` | Add fact to database | `fact_assert("person", "john", {"age": 30})` | bool |
+| `fact_retract(type, id, data)` | Remove fact from database | `fact_retract("person", "john", {})` | bool |
+| `fact_query(type, id, pattern)` | Query facts with pattern | `fact_query("person", null, {"city": "Jakarta"})` | array |
+| `fact_exists(type, id, pattern)` | Check if fact exists | `fact_exists("person", "john", {})` | bool |
+| `fact_count(type, id, pattern)` | Count matching facts | `fact_count("person", null, {})` | int |
+| `fact_clear()` | Clear all facts | `fact_clear()` | void |
+| `fact_get_all()` | Get all facts | `fact_get_all()` | array |
+
+## Complex Event Processing Functions
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `event_emit(type, data)` | Emit event | `event_emit("user_login", {"user": "john"})` | void |
+| `event_define_pattern(name, pattern)` | Define event pattern | `event_define_pattern("login_pattern", pattern)` | bool |
+| `event_get_window(name)` | Get event window | `event_get_window("recent_events")` | array |
+| `event_clear()` | Clear all events | `event_clear()` | void |
+| `event_count(type)` | Count events by type | `event_count("user_login")` | int |
 
 For more detailed examples and advanced usage, see the [Tutorial](../tutorial/basics/introduction.md) section.
