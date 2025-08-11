@@ -4,115 +4,156 @@
 // This example demonstrates Linked List data structure operations including
 // adding nodes to beginning and end, and iterating through the list in Uddin-Lang.
 
+// Node structure using dictionary
+fun createNode(data):
+    return {"data": data, "next": null}
+end
+
+// Helper function to check if list is empty
+fun isEmpty(list):
+    return list["head"] == null
+end
+
+// Add node to the beginning of the list
+fun addToBeginning(list, data):
+    new_node = createNode(data)
+    new_node["next"] = list["head"]
+    list["head"] = new_node
+    list["size"] = list["size"] + 1
+    print("Added '" + str(data) + "' to beginning")
+end
+
+// Add node to the end of the list
+fun addToEnd(list, data):
+    new_node = createNode(data)
+
+    if (isEmpty(list)) then:
+        list["head"] = new_node
+    else:
+        current = list["head"]
+        while (current["next"] != null):
+            current = current["next"]
+        end
+        current["next"] = new_node
+    end
+
+    list["size"] = list["size"] + 1
+    print("Added '" + str(data) + "' to end")
+end
+
+// Display the entire list
+fun displayList(list):
+    if (isEmpty(list)) then:
+        print("List is empty")
+    else:
+        result = "List: "
+        current = list["head"]
+        while (current != null):
+            result = result + str(current["data"])
+            if (current["next"] != null) then:
+                result = result + " -> "
+            end
+            current = current["next"]
+        end
+        result = result + " -> null"
+        print(result)
+        print("Size: " + str(list["size"]))
+    end
+end
+
+// Find a node with specific data
+fun findNode(list, data):
+    current = list["head"]
+    position = 0
+
+    while (current != null):
+        if (current["data"] == data) then:
+            return {"found": true, "position": position, "node": current}
+        end
+        current = current["next"]
+        position = position + 1
+    end
+
+    return {"found": false, "position": -1, "node": null}
+end
+
+// Remove node with specific data
+fun removeNode(list, data):
+    if (isEmpty(list)) then:
+        print("Cannot remove from empty list")
+        return false
+    end
+
+    // If removing head node
+    if (list["head"]["data"] == data) then:
+        list["head"] = list["head"]["next"]
+        list["size"] = list["size"] - 1
+        print("Removed '" + str(data) + "' from beginning")
+        return true
+    end
+
+    // Find and remove node
+    current = list["head"]
+    while (current["next"] != null):
+        if (current["next"]["data"] == data) then:
+            current["next"] = current["next"]["next"]
+            list["size"] = list["size"] - 1
+            print("Removed '" + str(data) + "' from list")
+            return true
+        end
+        current = current["next"]
+    end
+
+    print("'" + str(data) + "' not found in list")
+    return false
+end
+
+// Get list as array for easier processing
+fun toArray(list):
+    result = []
+    current = list["head"]
+    while (current != null):
+        push(result, current["data"])
+        current = current["next"]
+    end
+    return result
+end
+
+// Count specific elements
+fun countOccurrences(list, data):
+    count = 0
+    current = list["head"]
+    while (current != null):
+        if (current["data"] == data) then:
+            count = count + 1
+        end
+        current = current["next"]
+    end
+    return count
+end
+
+// Reverse the list
+fun reverseList(list):
+    if (not (isEmpty(list) or list["head"]["next"] == null)) then:
+        prev = null
+        current = list["head"]
+
+        while (current != null):
+            next_node = current["next"]
+            current["next"] = prev
+            prev = current
+            current = next_node
+        end
+
+        list["head"] = prev
+    end
+end
+
 fun main():
     print("=== Linked List Demo ===")
 
-    // Node structure using dictionary
-    fun createNode(data):
-        return {"data": data, "next": null}
-    end
-
     // Linked List structure
     linked_list = {"head": null, "size": 0}
-
-    // Helper function to check if list is empty
-    fun isEmpty(list):
-        return list["head"] == null
-    end
-
-    // Add node to the beginning of the list
-    fun addToBeginning(list, data):
-        new_node = createNode(data)
-        new_node["next"] = list["head"]
-        list["head"] = new_node
-        list["size"] = list["size"] + 1
-        print("Added '" + str(data) + "' to beginning")
-    end
-
-    // Add node to the end of the list
-    fun addToEnd(list, data):
-        new_node = createNode(data)
-
-        if (isEmpty(list)) then:
-            list["head"] = new_node
-        else:
-            current = list["head"]
-            while (current["next"] != null):
-                current = current["next"]
-            end
-            current["next"] = new_node
-        end
-
-        list["size"] = list["size"] + 1
-        print("Added '" + str(data) + "' to end")
-    end
-
-    // Display the entire list
-    fun displayList(list):
-        if (isEmpty(list)) then:
-            print("List is empty")
-        else:
-            result = "List: "
-            current = list["head"]
-            while (current != null):
-                result = result + str(current["data"])
-                if (current["next"] != null) then:
-                    result = result + " -> "
-                end
-                current = current["next"]
-            end
-            result = result + " -> null"
-            print(result)
-            print("Size: " + str(list["size"]))
-        end
-    end
-
-    // Find a node with specific data
-    fun findNode(list, data):
-        current = list["head"]
-        position = 0
-
-        while (current != null):
-            if (current["data"] == data) then:
-                return {"found": true, "position": position, "node": current}
-            end
-            current = current["next"]
-            position = position + 1
-        end
-
-        return {"found": false, "position": -1, "node": null}
-    end
-
-    // Remove node with specific data
-    fun removeNode(list, data):
-        if (isEmpty(list)) then:
-            print("Cannot remove from empty list")
-            return false
-        end
-
-        // If removing head node
-        if (list["head"]["data"] == data) then:
-            list["head"] = list["head"]["next"]
-            list["size"] = list["size"] - 1
-            print("Removed '" + str(data) + "' from beginning")
-            return true
-        end
-
-        // Find and remove node
-        current = list["head"]
-        while (current["next"] != null):
-            if (current["next"]["data"] == data) then:
-                current["next"] = current["next"]["next"]
-                list["size"] = list["size"] - 1
-                print("Removed '" + str(data) + "' from list")
-                return true
-            end
-            current = current["next"]
-        end
-
-        print("'" + str(data) + "' not found in list")
-        return false
-    end
 
     print("\nInitial state:")
     displayList(linked_list)
@@ -183,32 +224,8 @@ fun main():
     // Demonstrate list operations
     print("\n--- List Operations ---")
 
-    // Get list as array for easier processing
-    fun toArray(list):
-        result = []
-        current = list["head"]
-        while (current != null):
-            push(result, current["data"])
-            current = current["next"]
-        end
-        return result
-    end
-
     array_representation = toArray(linked_list)
     print("List as array: " + str(array_representation))
-
-    // Count specific elements
-    fun countOccurrences(list, data):
-        count = 0
-        current = list["head"]
-        while (current != null):
-            if (current["data"] == data) then:
-                count = count + 1
-            end
-            current = current["next"]
-        end
-        return count
-    end
 
     // Add some duplicate data
     addToEnd(linked_list, "Second")
@@ -225,22 +242,6 @@ fun main():
 
     // Reverse the list
     print("\n--- Reversing List ---")
-    fun reverseList(list):
-        if (not (isEmpty(list) or list["head"]["next"] == null)) then:
-            prev = null
-            current = list["head"]
-
-            while (current != null):
-                next_node = current["next"]
-                current["next"] = prev
-                prev = current
-                current = next_node
-            end
-
-            list["head"] = prev
-        end
-    end
-
     print("Before reverse:")
     displayList(linked_list)
 

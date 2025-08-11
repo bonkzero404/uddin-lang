@@ -4,176 +4,176 @@
 // This example demonstrates Graph data structure using adjacency list
 // representation to store connections between nodes like city routes in Uddin-Lang.
 
+// Add vertex to graph
+fun addVertex(g, vertex):
+    if (not (vertex in g)) then:
+        g[vertex] = []
+        print("Added vertex: " + str(vertex))
+    else:
+        print("Vertex " + str(vertex) + " already exists")
+    end
+end
+
+// Add edge between two vertices (undirected)
+fun addEdge(g, vertex1, vertex2):
+    // Ensure both vertices exist
+    if (not (vertex1 in g)) then:
+        addVertex(g, vertex1)
+    end
+    if (not (vertex2 in g)) then:
+        addVertex(g, vertex2)
+    end
+
+    // Add edge in both directions (undirected graph)
+    if (not (contains(g[vertex1], vertex2))) then:
+        push(g[vertex1], vertex2)
+    end
+    if (not (contains(g[vertex2], vertex1))) then:
+        push(g[vertex2], vertex1)
+    end
+
+    print("Added edge: " + str(vertex1) + " <-> " + str(vertex2))
+end
+
+// Add directed edge
+fun addDirectedEdge(g, from_vertex, to_vertex):
+    if (not (from_vertex in g)) then:
+        addVertex(g, from_vertex)
+    end
+    if (not (to_vertex in g)) then:
+        addVertex(g, to_vertex)
+    end
+
+    if (not (contains(g[from_vertex], to_vertex))) then:
+        push(g[from_vertex], to_vertex)
+    end
+
+    print("Added directed edge: " + str(from_vertex) + " -> " + str(to_vertex))
+end
+
+// Display graph
+fun displayGraph(g):
+    print("\nGraph structure:")
+    for (vertex in g):
+        neighbors = g[vertex]
+        print("  " + str(vertex) + " -> " + str(neighbors))
+    end
+    print("")
+end
+
+// Get all vertices
+fun getVertices(g):
+    vertices = []
+    for (vertex in g):
+        push(vertices, vertex)
+    end
+    return vertices
+end
+
+// Get neighbors of a vertex
+fun getNeighbors(g, vertex):
+    if (vertex in g) then:
+        return g[vertex]
+    else:
+        return []
+    end
+end
+
+// Check if edge exists
+fun hasEdge(g, vertex1, vertex2):
+    if (vertex1 in g) then:
+        return contains(g[vertex1], vertex2)
+    end
+    return false
+end
+
+// Depth-First Search (DFS)
+fun dfs(g, start_vertex, visited, result):
+    if (not contains(visited, start_vertex)) then:
+        push(visited, start_vertex)
+        push(result, start_vertex)
+        print("Visiting: " + str(start_vertex))
+
+        neighbors = getNeighbors(g, start_vertex)
+        for (neighbor in neighbors):
+            if (not (contains(visited, neighbor))) then:
+                dfs(g, neighbor, visited, result)
+            end
+        end
+    end
+end
+
+// Breadth-First Search (BFS)
+fun bfs(g, start_vertex):
+    visited = []
+    result = []
+    queue = [start_vertex]
+
+    push(visited, start_vertex)
+
+    while (len(queue) > 0):
+        current = shift(queue)
+        push(result, current)
+        print("Visiting: " + str(current))
+
+        neighbors = getNeighbors(g, current)
+        for (neighbor in neighbors):
+            if (not (contains(visited, neighbor))) then:
+                push(visited, neighbor)
+                push(queue, neighbor)
+            end
+        end
+    end
+
+    return result
+end
+
+// Find path between two vertices using BFS
+fun findPath(g, start, target):
+    if (start == target) then:
+        return [start]
+    end
+
+    visited = []
+    queue = [[start]]  // Queue of paths
+    push(visited, start)
+
+    while (len(queue) > 0):
+        path = shift(queue)
+        current = path[len(path) - 1]
+
+        neighbors = getNeighbors(g, current)
+        for (neighbor in neighbors):
+            if (neighbor == target) then:
+                new_path = []
+                for (vertex in path):
+                    push(new_path, vertex)
+                end
+                push(new_path, neighbor)
+                return new_path
+            end
+
+            if (not (contains(visited, neighbor))) then:
+                push(visited, neighbor)
+                new_path = []
+                for (vertex in path):
+                    push(new_path, vertex)
+                end
+                push(new_path, neighbor)
+                push(queue, new_path)
+            end
+        end
+    end
+
+    return []  // No path found
+end
+
 fun main():
     print("=== Graph (Adjacency List) Demo ===")
 
     // Graph structure using adjacency list
     // Each vertex maps to a list of its neighbors
     graph = {}
-
-    // Add vertex to graph
-    fun addVertex(g, vertex):
-        if (not (vertex in g)) then:
-            g[vertex] = []
-            print("Added vertex: " + str(vertex))
-        else:
-            print("Vertex " + str(vertex) + " already exists")
-        end
-    end
-
-    // Add edge between two vertices (undirected)
-    fun addEdge(g, vertex1, vertex2):
-        // Ensure both vertices exist
-        if (not (vertex1 in g)) then:
-            addVertex(g, vertex1)
-        end
-        if (not (vertex2 in g)) then:
-            addVertex(g, vertex2)
-        end
-
-        // Add edge in both directions (undirected graph)
-        if (not (contains(g[vertex1], vertex2))) then:
-            push(g[vertex1], vertex2)
-        end
-        if (not (contains(g[vertex2], vertex1))) then:
-            push(g[vertex2], vertex1)
-        end
-
-        print("Added edge: " + str(vertex1) + " <-> " + str(vertex2))
-    end
-
-    // Add directed edge
-    fun addDirectedEdge(g, from_vertex, to_vertex):
-        if (not (from_vertex in g)) then:
-            addVertex(g, from_vertex)
-        end
-        if (not (to_vertex in g)) then:
-            addVertex(g, to_vertex)
-        end
-
-        if (not (contains(g[from_vertex], to_vertex))) then:
-            push(g[from_vertex], to_vertex)
-        end
-
-        print("Added directed edge: " + str(from_vertex) + " -> " + str(to_vertex))
-    end
-
-    // Display graph
-    fun displayGraph(g):
-        print("\nGraph structure:")
-        for (vertex in g):
-            neighbors = g[vertex]
-            print("  " + str(vertex) + " -> " + str(neighbors))
-        end
-        print("")
-    end
-
-    // Get all vertices
-    fun getVertices(g):
-        vertices = []
-        for (vertex in g):
-            push(vertices, vertex)
-        end
-        return vertices
-    end
-
-    // Get neighbors of a vertex
-    fun getNeighbors(g, vertex):
-        if (vertex in g) then:
-            return g[vertex]
-        else:
-            return []
-        end
-    end
-
-    // Check if edge exists
-    fun hasEdge(g, vertex1, vertex2):
-        if (vertex1 in g) then:
-            return contains(g[vertex1], vertex2)
-        end
-        return false
-    end
-
-    // Depth-First Search (DFS)
-    fun dfs(g, start_vertex, visited, result):
-        if (not contains(visited, start_vertex)) then:
-            push(visited, start_vertex)
-            push(result, start_vertex)
-            print("Visiting: " + str(start_vertex))
-
-            neighbors = getNeighbors(g, start_vertex)
-            for (neighbor in neighbors):
-                if (not (contains(visited, neighbor))) then:
-                    dfs(g, neighbor, visited, result)
-                end
-            end
-        end
-    end
-
-    // Breadth-First Search (BFS)
-    fun bfs(g, start_vertex):
-        visited = []
-        result = []
-        queue = [start_vertex]
-
-        push(visited, start_vertex)
-
-        while (len(queue) > 0):
-            current = shift(queue)
-            push(result, current)
-            print("Visiting: " + str(current))
-
-            neighbors = getNeighbors(g, current)
-            for (neighbor in neighbors):
-                if (not (contains(visited, neighbor))) then:
-                    push(visited, neighbor)
-                    push(queue, neighbor)
-                end
-            end
-        end
-
-        return result
-    end
-
-    // Find path between two vertices using BFS
-    fun findPath(g, start, target):
-        if (start == target) then:
-            return [start]
-        end
-
-        visited = []
-        queue = [[start]]  // Queue of paths
-        push(visited, start)
-
-        while (len(queue) > 0):
-            path = shift(queue)
-            current = path[len(path) - 1]
-
-            neighbors = getNeighbors(g, current)
-            for (neighbor in neighbors):
-                if (neighbor == target) then:
-                    new_path = []
-                    for (vertex in path):
-                        push(new_path, vertex)
-                    end
-                    push(new_path, neighbor)
-                    return new_path
-                end
-
-                if (not (contains(visited, neighbor))) then:
-                    push(visited, neighbor)
-                    new_path = []
-                    for (vertex in path):
-                        push(new_path, vertex)
-                    end
-                    push(new_path, neighbor)
-                    push(queue, new_path)
-                end
-            end
-        end
-
-        return []  // No path found
-    end
 
     // Build city route network
     print("\n--- Building City Route Network ---")

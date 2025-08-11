@@ -4,6 +4,55 @@
 // This example demonstrates Stack (Last In, First Out) data structure
 // operations including push, pop, and peek in Uddin-Lang.
 
+// Helper function to check if stack is empty
+fun isStackEmpty(s):
+    return len(s) == 0
+end
+
+// Helper function to peek at top element without removing
+fun stackPeek(s):
+    if (isStackEmpty(s)) then:
+        return null
+    else:
+        return s[len(s) - 1]
+    end
+end
+
+fun checkParentheses(expression):
+    paren_stack = []
+
+    print("Checking expression: " + expression)
+
+    i = 0
+    while (i < len(expression)):
+        char = substr(expression, i, i+1)
+
+        if (char == "(") then:
+            push(paren_stack, char)
+            print("  Found '(', pushed to stack. Stack: " + str(paren_stack))
+        else:
+            if (char == ")") then:
+                if (isStackEmpty(paren_stack)) then:
+                    print("  Found ')' but stack is empty - UNMATCHED!")
+                    return false
+                else:
+                    popped = pop(paren_stack)
+                    print("  Found ')', popped '" + str(popped) + "' from stack. Stack: " + str(paren_stack))
+                end
+            end
+        end
+        i = i + 1
+    end
+
+    if (isStackEmpty(paren_stack)) then:
+        print("  All parentheses matched!")
+        return true
+    else:
+        print("  Unmatched opening parentheses: " + str(paren_stack))
+        return false
+    end
+end
+
 fun main():
     print("=== Stack (LIFO) Demo ===")
 
@@ -12,20 +61,6 @@ fun main():
 
     print("\nInitial stack: " + str(stack))
     print("Stack size: " + str(len(stack)))
-
-    // Helper function to check if stack is empty
-    fun isStackEmpty(s):
-        return len(s) == 0
-    end
-
-    // Helper function to peek at top element without removing
-    fun stackPeek(s):
-        if (isStackEmpty(s)) then:
-            return nil
-        else:
-            return s[len(s) - 1]
-        end
-    end
 
     // Push operations (add to top)
     print("\n--- Push Operations ---")
@@ -64,41 +99,6 @@ fun main():
 
     // Demonstrate practical stack usage - expression evaluation
     print("--- Practical Example: Parentheses Matching ---")
-
-    fun checkParentheses(expression):
-        paren_stack = []
-
-        print("Checking expression: " + expression)
-
-        i = 0
-        while (i < len(expression)):
-            char = substr(expression, i, i+1)
-
-            if (char == "(") then:
-                push(paren_stack, char)
-                print("  Found '(', pushed to stack. Stack: " + str(paren_stack))
-            else:
-                if (char == ")") then:
-                    if (isStackEmpty(paren_stack)) then:
-                        print("  Found ')' but stack is empty - UNMATCHED!")
-                        return false
-                    else:
-                        popped = pop(paren_stack)
-                        print("  Found ')', popped '" + str(popped) + "' from stack. Stack: " + str(paren_stack))
-                    end
-                end
-            end
-            i = i + 1
-        end
-
-        if (isStackEmpty(paren_stack)) then:
-            print("  All parentheses matched!")
-            return true
-        else:
-            print("  Unmatched opening parentheses: " + str(paren_stack))
-            return false
-        end
-    end
 
     // Test parentheses matching
     print("\nTest 1: Balanced parentheses")

@@ -4,140 +4,140 @@
 // This example demonstrates Set data structure operations including
 // adding unique elements and performing union/intersection operations in Uddin-Lang.
 
+// Set implementation using array (maintaining uniqueness)
+fun createSet():
+    return []
+end
+
+// Add element to set (only if not already present)
+fun setAdd(set, element):
+    if (not (contains(set, element))) then:
+        push(set, element)
+        print("Added '" + str(element) + "' to set")
+        return true
+    else:
+        print("'" + str(element) + "' already exists in set (duplicate ignored)")
+        return false
+    end
+end
+
+// Remove element from set
+fun setRemove(set, element):
+    new_set = []
+    found = false
+
+    for (item in set):
+        if (item != element) then:
+            push(new_set, item)
+        else:
+            found = true
+        end
+    end
+
+    // Clear original set and copy new_set back
+    while (len(set) > 0):
+        pop(set)
+    end
+
+    for (item in new_set):
+        push(set, item)
+    end
+
+    if (found) then:
+        print("Removed '" + str(element) + "' from set")
+    else:
+        print("'" + str(element) + "' not found in set")
+    end
+
+    return found
+end
+
+// Check if element exists in set
+fun setContains(set, element):
+    return contains(set, element)
+end
+
+// Get set size
+fun setSize(set):
+    return len(set)
+end
+
+// Display set
+fun displaySet(set, name):
+    print(name + ": " + str(set) + " (size: " + str(len(set)) + ")")
+end
+
+// Union of two sets (A ∪ B)
+fun setUnion(set1, set2):
+    result = createSet()
+
+    // Add all elements from set1
+    for (element in set1):
+        setAdd(result, element)
+    end
+
+    // Add all elements from set2 (duplicates will be ignored)
+    for (element in set2):
+        setAdd(result, element)
+    end
+
+    return result
+end
+
+// Intersection of two sets (A ∩ B)
+fun setIntersection(set1, set2):
+    result = createSet()
+
+    for (element in set1):
+        if (contains(set2, element)) then:
+            push(result, element)
+        end
+    end
+
+    return result
+end
+
+// Difference of two sets (A - B)
+fun setDifference(set1, set2):
+    result = createSet()
+
+    for (element in set1):
+        if (not (contains(set2, element))) then:
+            push(result, element)
+        end
+    end
+
+    return result
+end
+
+// Symmetric difference (A ⊕ B = (A - B) ∪ (B - A))
+fun setSymmetricDifference(set1, set2):
+    diff1 = setDifference(set1, set2)
+    diff2 = setDifference(set2, set1)
+    return setUnion(diff1, diff2)
+end
+
+// Check if set1 is subset of set2
+fun isSubset(set1, set2):
+    for (element in set1):
+        if (not (contains(set2, element))) then:
+            return false
+        end
+    end
+    return true
+end
+
+// Check if two sets are equal
+fun setsEqual(set1, set2):
+    if (len(set1) != len(set2)) then:
+        return false
+    end
+
+    return isSubset(set1, set2)
+end
+
 fun main():
     print("=== Set (Unique Elements) Demo ===")
-
-    // Set implementation using array (maintaining uniqueness)
-    fun createSet():
-        return []
-    end
-
-    // Add element to set (only if not already present)
-    fun setAdd(set, element):
-        if (not (contains(set, element))) then:
-            push(set, element)
-            print("Added '" + str(element) + "' to set")
-            return true
-        else:
-            print("'" + str(element) + "' already exists in set (duplicate ignored)")
-            return false
-        end
-    end
-
-    // Remove element from set
-    fun setRemove(set, element):
-        new_set = []
-        found = false
-
-        for (item in set):
-            if (item != element) then:
-                push(new_set, item)
-            else:
-                found = true
-            end
-        end
-
-        // Clear original set and copy new_set back
-        while (len(set) > 0):
-            pop(set)
-        end
-
-        for (item in new_set):
-            push(set, item)
-        end
-
-        if (found) then:
-            print("Removed '" + str(element) + "' from set")
-        else:
-            print("'" + str(element) + "' not found in set")
-        end
-
-        return found
-    end
-
-    // Check if element exists in set
-    fun setContains(set, element):
-        return contains(set, element)
-    end
-
-    // Get set size
-    fun setSize(set):
-        return len(set)
-    end
-
-    // Display set
-    fun displaySet(set, name):
-        print(name + ": " + str(set) + " (size: " + str(len(set)) + ")")
-    end
-
-    // Union of two sets (A ∪ B)
-    fun setUnion(set1, set2):
-        result = createSet()
-
-        // Add all elements from set1
-        for (element in set1):
-            setAdd(result, element)
-        end
-
-        // Add all elements from set2 (duplicates will be ignored)
-        for (element in set2):
-            setAdd(result, element)
-        end
-
-        return result
-    end
-
-    // Intersection of two sets (A ∩ B)
-    fun setIntersection(set1, set2):
-        result = createSet()
-
-        for (element in set1):
-            if (contains(set2, element)) then:
-                push(result, element)
-            end
-        end
-
-        return result
-    end
-
-    // Difference of two sets (A - B)
-    fun setDifference(set1, set2):
-        result = createSet()
-
-        for (element in set1):
-            if (not (contains(set2, element))) then:
-                push(result, element)
-            end
-        end
-
-        return result
-    end
-
-    // Symmetric difference (A ⊕ B = (A - B) ∪ (B - A))
-    fun setSymmetricDifference(set1, set2):
-        diff1 = setDifference(set1, set2)
-        diff2 = setDifference(set2, set1)
-        return setUnion(diff1, diff2)
-    end
-
-    // Check if set1 is subset of set2
-    fun isSubset(set1, set2):
-        for (element in set1):
-            if (not (contains(set2, element))) then:
-                return false
-            end
-        end
-        return true
-    end
-
-    // Check if two sets are equal
-    fun setsEqual(set1, set2):
-        if (len(set1) != len(set2)) then:
-            return false
-        end
-
-        return isSubset(set1, set2)
-    end
 
     // Create and demonstrate basic set operations
     print("\n--- Basic Set Operations ---")

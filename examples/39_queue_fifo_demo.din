@@ -4,6 +4,37 @@
 // This example demonstrates Queue (First In, First Out) data structure
 // operations including enqueue, dequeue, and the difference from Stack in Uddin-Lang.
 
+// Helper function to check if queue is empty
+fun isQueueEmpty(q):
+    return len(q) == 0
+end
+
+// Helper function to peek at front element without removing
+fun queuePeek(q):
+    if (isQueueEmpty(q)) then:
+        return null
+    else:
+        return q[0]
+    end
+end
+
+fun addPrintJob(queue, job_name, priority):
+    job = {"name": job_name, "priority": priority}
+    push(queue, job)
+    print("Added print job: " + job_name + " (Priority: " + str(priority) + ")")
+end
+
+fun processPrintJob(queue):
+    if (isQueueEmpty(queue)) then:
+        print("No print jobs in queue")
+        return null
+    else:
+        job = shift(queue)
+        print("Processing: " + job["name"] + " (Priority: " + str(job["priority"]) + ")")
+        return job
+    end
+end
+
 fun main():
     print("=== Queue (FIFO) Demo ===")
 
@@ -12,20 +43,6 @@ fun main():
 
     print("\nInitial queue: " + str(queue))
     print("Queue size: " + str(len(queue)))
-
-    // Helper function to check if queue is empty
-    fun isQueueEmpty(q):
-        return len(q) == 0
-    end
-
-    // Helper function to peek at front element without removing
-    fun queuePeek(q):
-        if (isQueueEmpty(q)) then:
-            return nil
-        else:
-            return q[0]
-        end
-    end
 
     // Enqueue operations (add to rear/end)
     print("\n--- Enqueue Operations (Add to Rear) ---")
@@ -108,23 +125,6 @@ fun main():
     print("\n--- Practical Example: Print Job Queue ---")
 
     print_queue = []
-
-    fun addPrintJob(queue, job_name, priority):
-        job = {"name": job_name, "priority": priority}
-        push(queue, job)
-        print("Added print job: " + job_name + " (Priority: " + str(priority) + ")")
-    end
-
-    fun processPrintJob(queue):
-        if (isQueueEmpty(queue)) then:
-            print("No print jobs in queue")
-            return nil
-        else:
-            job = shift(queue)
-            print("Processing: " + job["name"] + " (Priority: " + str(job["priority"]) + ")")
-            return job
-        end
-    end
 
     // Add print jobs
     addPrintJob(print_queue, "Document1.pdf", 1)

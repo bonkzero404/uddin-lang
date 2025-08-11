@@ -4,145 +4,171 @@
 // This example demonstrates Binary Tree data structure and implements
 // in-order, pre-order, and post-order traversals in Uddin-Lang.
 
+// Node structure for binary tree
+fun createNode(data):
+    return {"data": data, "left": null, "right": null}
+end
+
+// Insert node into binary search tree
+fun insertNode(root, data):
+    if (root == null) then:
+        return createNode(data)
+    end
+
+    if (data < root["data"]) then:
+        root["left"] = insertNode(root["left"], data)
+    else:
+        if (data > root["data"]) then:
+            root["right"] = insertNode(root["right"], data)
+        end
+    end
+
+    return root
+end
+
+// In-order traversal (Left -> Root -> Right)
+// For BST, this gives sorted order
+fun inOrderTraversal(node, result):
+    if (node != null) then:
+        inOrderTraversal(node["left"], result)   // Visit left subtree
+        push(result, node["data"])               // Visit root
+        inOrderTraversal(node["right"], result)  // Visit right subtree
+    end
+end
+
+// Pre-order traversal (Root -> Left -> Right)
+// Useful for copying the tree
+fun preOrderTraversal(node, result):
+    if (node != null) then:
+        push(result, node["data"])               // Visit root
+        preOrderTraversal(node["left"], result)  // Visit left subtree
+        preOrderTraversal(node["right"], result) // Visit right subtree
+    end
+end
+
+// Post-order traversal (Left -> Right -> Root)
+// Useful for deleting the tree
+fun postOrderTraversal(node, result):
+    if (node != null) then:
+        postOrderTraversal(node["left"], result)  // Visit left subtree
+        postOrderTraversal(node["right"], result) // Visit right subtree
+        push(result, node["data"])                // Visit root
+    end
+end
+
+// Level-order traversal (Breadth-first)
+fun levelOrderTraversal(root):
+    if (root == null) then:
+        return []
+    end
+
+    result = []
+    queue = [root]
+
+    while (len(queue) > 0):
+        current = shift(queue)  // Dequeue
+        push(result, current["data"])
+
+        if (current["left"] != null) then:
+            push(queue, current["left"])   // Enqueue left child
+        end
+
+        if (current["right"] != null) then:
+            push(queue, current["right"])  // Enqueue right child
+        end
+    end
+
+    return result
+end
+
+// Search for a value in the tree
+fun searchTree(node, value):
+    if (node == null) then:
+        return false
+    end
+
+    if (value == node["data"]) then:
+        return true
+    else:
+        if (value < node["data"]) then:
+            return searchTree(node["left"], value)
+        else:
+            return searchTree(node["right"], value)
+        end
+    end
+end
+
+// Calculate tree height
+fun treeHeight(node):
+    if (node == null) then:
+        return 0
+    end
+
+    left_height = treeHeight(node["left"])
+    right_height = treeHeight(node["right"])
+
+    if (left_height > right_height) then:
+        return left_height + 1
+    else:
+        return right_height + 1
+    end
+end
+
+// Count total nodes in tree
+fun countNodes(node):
+    if (node == null) then:
+        return 0
+    end
+
+    return 1 + countNodes(node["left"]) + countNodes(node["right"])
+end
+
+// Display tree structure (simplified)
+fun displayTree(node, level, prefix):
+    if (node != null) then:
+        displayTree(node["right"], level + 1, "    " + prefix)
+
+        indent = ""
+        i = 0
+        while (i < level):
+            indent = indent + "    "
+            i = i + 1
+        end
+
+        print(indent + prefix + str(node["data"]))
+
+        displayTree(node["left"], level + 1, "    " + prefix)
+    end
+end
+
+// Find minimum value in BST
+fun findMin(node):
+    if (node == null) then:
+        return null
+    end
+
+    while (node["left"] != null):
+        node = node["left"]
+    end
+
+    return node["data"]
+end
+
+// Find maximum value in BST
+fun findMax(node):
+    if (node == null) then:
+        return null
+    end
+
+    while (node["right"] != null):
+        node = node["right"]
+    end
+
+    return node["data"]
+end
+
 fun main():
     print("=== Binary Tree Traversal Demo ===")
-
-    // Node structure for binary tree
-    fun createNode(data):
-        return {"data": data, "left": null, "right": null}
-    end
-
-    // Insert node into binary search tree
-    fun insertNode(root, data):
-        if (root == null) then:
-            return createNode(data)
-        end
-
-        if (data < root["data"]) then:
-            root["left"] = insertNode(root["left"], data)
-        else:
-            if (data > root["data"]) then:
-                root["right"] = insertNode(root["right"], data)
-            end
-        end
-
-        return root
-    end
-
-    // In-order traversal (Left -> Root -> Right)
-    // For BST, this gives sorted order
-    fun inOrderTraversal(node, result):
-        if (node != null) then:
-            inOrderTraversal(node["left"], result)   // Visit left subtree
-            push(result, node["data"])               // Visit root
-            inOrderTraversal(node["right"], result)  // Visit right subtree
-        end
-    end
-
-    // Pre-order traversal (Root -> Left -> Right)
-    // Useful for copying the tree
-    fun preOrderTraversal(node, result):
-        if (node != null) then:
-            push(result, node["data"])               // Visit root
-            preOrderTraversal(node["left"], result)  // Visit left subtree
-            preOrderTraversal(node["right"], result) // Visit right subtree
-        end
-    end
-
-    // Post-order traversal (Left -> Right -> Root)
-    // Useful for deleting the tree
-    fun postOrderTraversal(node, result):
-        if (node != null) then:
-            postOrderTraversal(node["left"], result)  // Visit left subtree
-            postOrderTraversal(node["right"], result) // Visit right subtree
-            push(result, node["data"])                // Visit root
-        end
-    end
-
-    // Level-order traversal (Breadth-first)
-    fun levelOrderTraversal(root):
-        if (root == null) then:
-            return []
-        end
-
-        result = []
-        queue = [root]
-
-        while (len(queue) > 0):
-            current = shift(queue)  // Dequeue
-            push(result, current["data"])
-
-            if (current["left"] != null) then:
-                push(queue, current["left"])   // Enqueue left child
-            end
-
-            if (current["right"] != null) then:
-                push(queue, current["right"])  // Enqueue right child
-            end
-        end
-
-        return result
-    end
-
-    // Search for a value in the tree
-    fun searchTree(node, value):
-        if (node == null) then:
-            return false
-        end
-
-        if (value == node["data"]) then:
-            return true
-        else:
-            if (value < node["data"]) then:
-                return searchTree(node["left"], value)
-            else:
-                return searchTree(node["right"], value)
-            end
-        end
-    end
-
-    // Calculate tree height
-    fun treeHeight(node):
-        if (node == null) then:
-            return 0
-        end
-
-        left_height = treeHeight(node["left"])
-        right_height = treeHeight(node["right"])
-
-        if (left_height > right_height) then:
-            return left_height + 1
-        else:
-            return right_height + 1
-        end
-    end
-
-    // Count total nodes in tree
-    fun countNodes(node):
-        if (node == null) then:
-            return 0
-        end
-
-        return 1 + countNodes(node["left"]) + countNodes(node["right"])
-    end
-
-    // Display tree structure (simplified)
-    fun displayTree(node, level, prefix):
-        if (node != null) then:
-            displayTree(node["right"], level + 1, "    " + prefix)
-
-            indent = ""
-            i = 0
-            while (i < level):
-                indent = indent + "    "
-                i = i + 1
-            end
-
-            print(indent + prefix + str(node["data"]))
-
-            displayTree(node["left"], level + 1, "    " + prefix)
-        end
-    end
 
     // Create binary search tree
     print("\n--- Building Binary Search Tree ---")
@@ -233,30 +259,6 @@ fun main():
 
     // Find minimum and maximum values
     print("\n--- Min/Max Values ---")
-
-    fun findMin(node):
-        if (node == null) then:
-            return null
-        end
-
-        while (node["left"] != null):
-            node = node["left"]
-        end
-
-        return node["data"]
-    end
-
-    fun findMax(node):
-        if (node == null) then:
-            return null
-        end
-
-        while (node["right"] != null):
-            node = node["right"]
-        end
-
-        return node["data"]
-    end
 
     min_value = findMin(root)
     max_value = findMax(root)
