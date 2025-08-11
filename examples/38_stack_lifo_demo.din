@@ -1,0 +1,141 @@
+// =============================================================================
+// 38_stack_lifo_demo.din - Stack (LIFO) Operations Demo
+// =============================================================================
+// This example demonstrates Stack (Last In, First Out) data structure
+// operations including push, pop, and peek in Uddin-Lang.
+
+fun main():
+    print("=== Stack (LIFO) Demo ===")
+
+    // Create an empty stack using array
+    stack = []
+
+    print("\nInitial stack: " + str(stack))
+    print("Stack size: " + str(len(stack)))
+
+    // Helper function to check if stack is empty
+    fun isStackEmpty(s):
+        return len(s) == 0
+    end
+
+    // Helper function to peek at top element without removing
+    fun stackPeek(s):
+        if (isStackEmpty(s)) then:
+            return nil
+        else:
+            return s[len(s) - 1]
+        end
+    end
+
+    // Push operations (add to top)
+    print("\n--- Push Operations ---")
+
+    push(stack, "First")
+    print("After pushing 'First': " + str(stack))
+    print("Stack size: " + str(len(stack)) + ", Top element: " + str(stackPeek(stack)))
+
+    push(stack, "Second")
+    print("After pushing 'Second': " + str(stack))
+    print("Stack size: " + str(len(stack)) + ", Top element: " + str(stackPeek(stack)))
+
+    push(stack, "Third")
+    print("After pushing 'Third': " + str(stack))
+    print("Stack size: " + str(len(stack)) + ", Top element: " + str(stackPeek(stack)))
+
+    push(stack, "Fourth")
+    print("After pushing 'Fourth': " + str(stack))
+    print("Stack size: " + str(len(stack)) + ", Top element: " + str(stackPeek(stack)))
+
+    // Demonstrate LIFO behavior with pop operations
+    print("\n--- Pop Operations (LIFO - Last In, First Out) ---")
+
+    while (not isStackEmpty(stack)):
+        top_element = stackPeek(stack)
+        popped = pop(stack)
+        print("Popped: " + str(popped) + ", Remaining stack: " + str(stack))
+        print("  Stack size now: " + str(len(stack)))
+        if (not isStackEmpty(stack)) then:
+            print("  New top element: " + str(stackPeek(stack)))
+        else:
+            print("  Stack is now empty")
+        end
+        print("")
+    end
+
+    // Demonstrate practical stack usage - expression evaluation
+    print("--- Practical Example: Parentheses Matching ---")
+
+    fun checkParentheses(expression):
+        paren_stack = []
+
+        print("Checking expression: " + expression)
+
+        i = 0
+        while (i < len(expression)):
+            char = substr(expression, i, i+1)
+
+            if (char == "(") then:
+                push(paren_stack, char)
+                print("  Found '(', pushed to stack. Stack: " + str(paren_stack))
+            else:
+                if (char == ")") then:
+                    if (isStackEmpty(paren_stack)) then:
+                        print("  Found ')' but stack is empty - UNMATCHED!")
+                        return false
+                    else:
+                        popped = pop(paren_stack)
+                        print("  Found ')', popped '" + str(popped) + "' from stack. Stack: " + str(paren_stack))
+                    end
+                end
+            end
+            i = i + 1
+        end
+
+        if (isStackEmpty(paren_stack)) then:
+            print("  All parentheses matched!")
+            return true
+        else:
+            print("  Unmatched opening parentheses: " + str(paren_stack))
+            return false
+        end
+    end
+
+    // Test parentheses matching
+    print("\nTest 1: Balanced parentheses")
+    result1 = checkParentheses("((())())")
+    print("Result: " + str(result1))
+
+    print("\nTest 2: Unbalanced parentheses")
+    result2 = checkParentheses("((()")
+    print("Result: " + str(result2))
+
+    print("\nTest 3: Extra closing parentheses")
+    result3 = checkParentheses("())")
+    print("Result: " + str(result3))
+
+    // Demonstrate stack with numbers - reverse order
+    print("\n--- Number Stack Example ---")
+    number_stack = []
+    numbers = [1, 2, 3, 4, 5]
+
+    print("Original numbers: " + str(numbers))
+
+    // Push all numbers onto stack
+    for (num in numbers):
+        push(number_stack, num)
+        print("Pushed " + str(num) + ", stack: " + str(number_stack))
+    end
+
+    // Pop all numbers (they come out in reverse order)
+    print("\nPopping numbers (reverse order):")
+    reversed_numbers = []
+    while (not isStackEmpty(number_stack)):
+        popped_num = pop(number_stack)
+        push(reversed_numbers, popped_num)
+        print("Popped: " + str(popped_num))
+    end
+
+    print("\nReversed numbers: " + str(reversed_numbers))
+
+    print("\n=== Stack (LIFO) Demo Complete ===")
+end

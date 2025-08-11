@@ -1,0 +1,357 @@
+// =============================================================================
+// 44_heap_demo.din - Heap (Min-Heap / Max-Heap) Demo
+// =============================================================================
+// This example demonstrates Heap data structure operations including
+// insert values and extract minimum/maximum elements in Uddin-Lang.
+
+fun main():
+    print("=== Heap (Min-Heap / Max-Heap) Demo ===")
+
+    // Heap implementation using array
+    // For min-heap: parent <= children
+    // For max-heap: parent >= children
+
+    fun createHeap(is_min_heap):
+        return {"data": [], "is_min": is_min_heap}
+    end
+
+    // Get parent index
+    fun getParentIndex(index):
+        return (index - 1) // 2
+    end
+
+    // Get left child index
+    fun getLeftChildIndex(index):
+        return 2 * index + 1
+    end
+
+    // Get right child index
+    fun getRightChildIndex(index):
+        return 2 * index + 2
+    end
+
+    // Swap two elements in array
+    fun swapElements(arr, index1, index2):
+        temp = arr[index1]
+        arr[index1] = arr[index2]
+        arr[index2] = temp
+    end
+
+    // Compare function for heap property
+    fun shouldSwap(heap, parent_val, child_val):
+        if (heap["is_min"]) then:
+            return parent_val > child_val  // Min-heap: parent should be smaller
+        else:
+            return parent_val < child_val  // Max-heap: parent should be larger
+        end
+    end
+
+    // Heapify up (bubble up) - used after insertion
+    fun heapifyUp(heap, index):
+        if (index != 0) then:
+            parent_index = getParentIndex(index)
+            data = heap["data"]
+
+            if (shouldSwap(heap, data[parent_index], data[index])) then:
+                swapElements(data, parent_index, index)
+                print("  Swapped " + str(data[index]) + " with " + str(data[parent_index]))
+                heapifyUp(heap, parent_index)
+            end
+        end
+    end
+
+    // Heapify down (bubble down) - used after extraction
+    fun heapifyDown(heap, index):
+        data = heap["data"]
+        size = len(data)
+
+        left_index = getLeftChildIndex(index)
+        right_index = getRightChildIndex(index)
+        target_index = index
+
+        // Find the target index based on heap type
+        if (left_index < size) then:
+            if (shouldSwap(heap, data[target_index], data[left_index])) then:
+                target_index = left_index
+            end
+        end
+
+        if (right_index < size) then:
+            if (shouldSwap(heap, data[target_index], data[right_index])) then:
+                target_index = right_index
+            end
+        end
+
+        if (target_index != index) then:
+            swapElements(data, index, target_index)
+            print("  Swapped " + str(data[target_index]) + " with " + str(data[index]))
+            heapifyDown(heap, target_index)
+        end
+    end
+
+    // Insert element into heap
+    fun heapInsert(heap, value):
+        data = heap["data"]
+        push(data, value)
+
+        heap_type = ""
+        if (heap["is_min"]) then:
+            heap_type = "min-heap"
+        else:
+            heap_type = "max-heap"
+        end
+
+        print("Inserting " + str(value) + " into " + heap_type)
+
+        if (len(data) > 1) then:
+            heapifyUp(heap, len(data) - 1)
+        end
+
+        print("  Heap after insertion: " + str(data))
+    end
+
+    // Extract root element (min for min-heap, max for max-heap)
+    fun heapExtract(heap):
+        data = heap["data"]
+
+        if (len(data) == 0) then:
+            print("Heap is empty, cannot extract")
+            return nil
+        end
+
+        if (len(data) == 1) then:
+            return pop(data)
+        end
+
+        root = data[0]
+        data[0] = pop(data)  // Move last element to root
+
+        heap_type = ""
+        if (heap["is_min"]) then:
+            heap_type = "minimum"
+        else:
+            heap_type = "maximum"
+        end
+
+        print("Extracting " + heap_type + " element: " + str(root))
+
+        if (len(data) > 1) then:
+            heapifyDown(heap, 0)
+        end
+
+        print("  Heap after extraction: " + str(data))
+        return root
+    end
+
+    // Peek at root without removing
+    fun heapPeek(heap):
+        data = heap["data"]
+        if (len(data) > 0) then:
+            return data[0]
+        else:
+            return nil
+        end
+    end
+
+    // Get heap size
+    fun heapSize(heap):
+        return len(heap["data"])
+    end
+
+    // Check if heap is empty
+    fun heapIsEmpty(heap):
+        return len(heap["data"]) == 0
+    end
+
+    // Display heap information
+    fun displayHeap(heap, name):
+        data = heap["data"]
+        heap_type = ""
+        if (heap["is_min"]) then:
+            heap_type = "Min-Heap"
+        else:
+            heap_type = "Max-Heap"
+        end
+
+        print(name + " (" + heap_type + "): " + str(data))
+        print("  Size: " + str(len(data)))
+
+        if (len(data) > 0) then:
+            root_desc = ""
+            if (heap["is_min"]) then:
+                root_desc = "minimum"
+            else:
+                root_desc = "maximum"
+            end
+            print("  Root (" + root_desc + "): " + str(data[0]))
+        end
+    end
+
+    // Demonstrate Min-Heap
+    print("\n--- Min-Heap Demo ---")
+    min_heap = createHeap(true)
+
+    print("Created empty min-heap")
+    displayHeap(min_heap, "Min-Heap")
+
+    // Insert values into min-heap
+    print("\nInserting values into min-heap:")
+    values = [15, 10, 20, 8, 25, 5, 7, 6, 2, 9, 11]
+
+    for (value in values):
+        heapInsert(min_heap, value)
+        print("")
+    end
+
+    displayHeap(min_heap, "Final Min-Heap")
+
+    // Extract minimum elements
+    print("\n--- Extracting Minimum Elements ---")
+    extracted_mins = []
+
+    while (not heapIsEmpty(min_heap)):
+        min_val = heapExtract(min_heap)
+        push(extracted_mins, min_val)
+        print("")
+    end
+
+    print("Extracted elements in order: " + str(extracted_mins))
+    print("Note: Elements come out in sorted order (ascending)")
+
+    // Demonstrate Max-Heap
+    print("\n--- Max-Heap Demo ---")
+    max_heap = createHeap(false)
+
+    print("Created empty max-heap")
+    displayHeap(max_heap, "Max-Heap")
+
+    // Insert same values into max-heap
+    print("\nInserting same values into max-heap:")
+
+    for (value in values):
+        heapInsert(max_heap, value)
+        print("")
+    end
+
+    displayHeap(max_heap, "Final Max-Heap")
+
+    // Extract maximum elements
+    print("\n--- Extracting Maximum Elements ---")
+    extracted_maxs = []
+
+    while (not heapIsEmpty(max_heap)):
+        max_val = heapExtract(max_heap)
+        push(extracted_maxs, max_val)
+        print("")
+    end
+
+    print("Extracted elements in order: " + str(extracted_maxs))
+    print("Note: Elements come out in sorted order (descending)")
+
+    // Practical example: Priority Queue
+    print("\n--- Practical Example: Priority Queue (Task Scheduler) ---")
+
+    // Using max-heap for priority queue (higher priority = higher number)
+    priority_queue = createHeap(false)
+
+    // Task structure: {"name": "task_name", "priority": priority_value}
+    // We'll use priority as the heap key
+
+    fun addTask(pq, task_name, priority):
+        print("Adding task: " + task_name + " (Priority: " + str(priority) + ")")
+        heapInsert(pq, priority)
+        print("")
+    end
+
+    fun processNextTask(pq):
+        if (heapIsEmpty(pq)) then:
+            print("No tasks to process")
+            return nil
+        end
+
+        priority = heapExtract(pq)
+        print("Processing task with priority: " + str(priority))
+        print("")
+        return priority
+    end
+
+    // Add tasks with different priorities
+    print("Adding tasks to priority queue:")
+    addTask(priority_queue, "Send Email", 3)
+    addTask(priority_queue, "Fix Critical Bug", 10)
+    addTask(priority_queue, "Update Documentation", 2)
+    addTask(priority_queue, "Code Review", 7)
+    addTask(priority_queue, "Deploy to Production", 9)
+    addTask(priority_queue, "Team Meeting", 5)
+
+    displayHeap(priority_queue, "Priority Queue")
+
+    // Process tasks in priority order
+    print("\nProcessing tasks in priority order:")
+    task_count = 1
+    while (not heapIsEmpty(priority_queue)):
+        print("Task " + str(task_count) + ": ", false)
+        processNextTask(priority_queue)
+        task_count = task_count + 1
+    end
+
+    // Heap Sort demonstration
+    print("--- Heap Sort Demonstration ---")
+
+    fun heapSort(arr, ascending):
+        // Create appropriate heap
+        heap = createHeap(not ascending)  // Use opposite for desired order
+
+        // Insert all elements
+        for (element in arr):
+            heapInsert(heap, element)
+        end
+
+        // Extract all elements
+        sorted_arr = []
+        while (not heapIsEmpty(heap)):
+            extracted = heapExtract(heap)
+            push(sorted_arr, extracted)
+        end
+
+        return sorted_arr
+    end
+
+    unsorted = [64, 34, 25, 12, 22, 11, 90, 5]
+    print("\nUnsorted array: " + str(unsorted))
+
+    sorted_asc = heapSort(unsorted, true)
+    print("Sorted ascending (using max-heap): " + str(sorted_asc))
+
+    sorted_desc = heapSort(unsorted, false)
+    print("Sorted descending (using min-heap): " + str(sorted_desc))
+
+    // Find kth largest/smallest element
+    print("\n--- Finding Kth Largest/Smallest ---")
+
+    fun findKthLargest(arr, k):
+        min_heap = createHeap(true)
+
+        for (element in arr):
+            if (heapSize(min_heap) < k) then:
+                heapInsert(min_heap, element)
+            else:
+                if (element > heapPeek(min_heap)) then:
+                    heapExtract(min_heap)
+                    heapInsert(min_heap, element)
+                end
+            end
+        end
+
+        return heapPeek(min_heap)
+    end
+
+    test_array = [7, 10, 4, 3, 20, 15, 8, 2]
+    print("Array: " + str(test_array))
+
+    k = 3
+    kth_largest = findKthLargest(test_array, k)
+    print(str(k) + "rd largest element: " + str(kth_largest))
+
+    print("\n=== Heap (Min-Heap / Max-Heap) Demo Complete ===")
+end

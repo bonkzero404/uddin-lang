@@ -1,0 +1,79 @@
+// =============================================================================
+// 36_dynamic_list_demo.din - Dynamic List Operations Demo
+// =============================================================================
+// This example demonstrates dynamic list operations including append and remove
+// functionality in Uddin-Lang.
+
+fun main():
+    print("=== Dynamic List Demo ===")
+
+    // Start with an empty list
+    dynamic_list = []
+    print("\nStarting with empty list: " + str(dynamic_list))
+    print("Initial length: " + str(len(dynamic_list)))
+
+    // Add elements using push (append to end)
+    print("\n--- Adding Elements ---")
+    push(dynamic_list, "apple")
+    print("After adding 'apple': " + str(dynamic_list))
+
+    push(dynamic_list, "banana")
+    print("After adding 'banana': " + str(dynamic_list))
+
+    push(dynamic_list, "cherry")
+    print("After adding 'cherry': " + str(dynamic_list))
+
+    push(dynamic_list, "date")
+    print("After adding 'date': " + str(dynamic_list))
+
+    print("Current length: " + str(len(dynamic_list)))
+
+    // Add element to beginning using unshift
+    print("\n--- Adding to Beginning ---")
+    unshift(dynamic_list, "apricot")
+    print("After adding 'apricot' to beginning: " + str(dynamic_list))
+
+    // Remove elements from end using pop
+    print("\n--- Removing from End ---")
+    removed_item = pop(dynamic_list)
+    print("Removed item: " + str(removed_item))
+    print("List after pop: " + str(dynamic_list))
+
+    // Remove elements from beginning using shift
+    print("\n--- Removing from Beginning ---")
+    removed_first = shift(dynamic_list)
+    print("Removed first item: " + str(removed_first))
+    print("List after shift: " + str(dynamic_list))
+
+    // Demonstrate multiple operations
+    print("\n--- Multiple Operations ---")
+    push(dynamic_list, "elderberry")
+    push(dynamic_list, "fig")
+    print("After adding elderberry and fig: " + str(dynamic_list))
+
+    // Remove specific elements by recreating list without them
+    print("\n--- Removing Specific Element ('banana') ---")
+    new_list = []
+    for (item in dynamic_list):
+        if (item != "banana") then:
+            push(new_list, item)
+        end
+    end
+    dynamic_list = new_list
+    print("After removing 'banana': " + str(dynamic_list))
+
+    // Show final state
+    print("\n--- Final State ---")
+    print("Final list: " + str(dynamic_list))
+    print("Final length: " + str(len(dynamic_list)))
+
+    // Iterate through final list
+    print("\nFinal elements:")
+    i = 0
+    for (item in dynamic_list):
+        print("  [" + str(i) + "] " + str(item))
+        i = i + 1
+    end
+
+    print("\n=== Dynamic List Demo Complete ===")
+end

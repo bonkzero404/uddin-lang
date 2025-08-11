@@ -1,0 +1,53 @@
+// =============================================================================
+// 35_simple_array_demo.din - Simple Array Operations Demo
+// =============================================================================
+// This example demonstrates basic array creation, access, and iteration
+// in Uddin-Lang.
+
+fun main():
+    print("=== Simple Array Demo ===")
+
+    // Create an array of numbers
+    numbers = [10, 20, 30, 40, 50]
+
+    print("\nOriginal array: " + str(numbers))
+    print("Array length: " + str(len(numbers)))
+
+    // Access individual elements
+    print("\n--- Accessing Elements ---")
+    print("First element (index 0): " + str(numbers[0]))
+    print("Third element (index 2): " + str(numbers[2]))
+    print("Last element (index 4): " + str(numbers[4]))
+
+    // Modify an element
+    print("\n--- Modifying Elements ---")
+    print("Before modification: " + str(numbers))
+    numbers[2] = 99
+    print("After changing index 2 to 99: " + str(numbers))
+
+    // Iterate through all elements using for loop
+    print("\n--- Iterating Through Array ---")
+    print("All elements:")
+    for (num in numbers):
+        print("  " + str(num))
+    end
+
+    // Calculate sum of all elements
+    print("\n--- Array Operations ---")
+    sum = 0
+    for (num in numbers):
+        sum = sum + num
+    end
+    print("Sum of all elements: " + str(sum))
+
+    // Find maximum element
+    max_val = numbers[0]
+    for (num in numbers):
+        if (num > max_val) then:
+            max_val = num
+        end
+    end
+    print("Maximum element: " + str(max_val))
+
+    print("\n=== Array Demo Complete ===")
+end

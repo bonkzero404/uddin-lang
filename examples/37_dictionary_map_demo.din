@@ -1,0 +1,126 @@
+// =============================================================================
+// 37_dictionary_map_demo.din - Dictionary/Map Operations Demo
+// =============================================================================
+// This example demonstrates dictionary/map operations using key-value pairs
+// to store and manage student data in Uddin-Lang.
+
+fun main():
+    print("=== Dictionary/Map Demo ===")
+
+    // Create a student record using dictionary/map
+    student1 = {
+        "name": "Alice Johnson",
+        "age": 20,
+        "grade": "A",
+        "major": "Computer Science",
+        "gpa": 3.8
+    }
+
+    print("\n--- Student Record ---")
+    print("Student 1: " + str(student1))
+    print("Dictionary size: " + str(len(student1)))
+
+    // Access individual values
+    print("\n--- Accessing Values ---")
+    print("Name: " + str(student1["name"]))
+    print("Age: " + str(student1["age"]))
+    print("Grade: " + str(student1["grade"]))
+    print("Major: " + str(student1["major"]))
+    print("GPA: " + str(student1["gpa"]))
+
+    // Modify existing values
+    print("\n--- Modifying Values ---")
+    print("Before grade change: " + str(student1["grade"]))
+    student1["grade"] = "A+"
+    print("After grade change: " + str(student1["grade"]))
+
+    // Add new key-value pairs
+    print("\n--- Adding New Fields ---")
+    student1["email"] = "alice.johnson@university.edu"
+    student1["year"] = "Junior"
+    print("After adding email and year: " + str(student1))
+    print("New dictionary size: " + str(len(student1)))
+
+    // Create multiple student records
+    print("\n--- Multiple Students ---")
+    student2 = {
+        "name": "Bob Smith",
+        "age": 19,
+        "grade": "B+",
+        "major": "Mathematics",
+        "gpa": 3.5,
+        "email": "bob.smith@university.edu",
+        "year": "Sophomore"
+    }
+
+    student3 = {
+        "name": "Carol Davis",
+        "age": 21,
+        "grade": "A-",
+        "major": "Physics",
+        "gpa": 3.7,
+        "email": "carol.davis@university.edu",
+        "year": "Senior"
+    }
+
+    // Store students in an array of dictionaries
+    students = [student1, student2, student3]
+
+    print("\n--- Student Database ---")
+    print("Total students: " + str(len(students)))
+
+    // Display all students
+    i = 1
+    for (student in students):
+        print("\nStudent " + str(i) + ":")
+        print("  Name: " + str(student["name"]))
+        print("  Age: " + str(student["age"]))
+        print("  Major: " + str(student["major"]))
+        print("  Grade: " + str(student["grade"]))
+        print("  GPA: " + str(student["gpa"]))
+        i = i + 1
+    end
+
+    // Find students by criteria
+    print("\n--- Search Operations ---")
+
+    // Find students with GPA > 3.6
+    print("Students with GPA > 3.6:")
+    for (student in students):
+        if (student["gpa"] > 3.6) then:
+            print("  " + str(student["name"]) + " (GPA: " + str(student["gpa"]) + ")")
+        end
+    end
+
+    // Find Computer Science students
+    print("\nComputer Science students:")
+    for (student in students):
+        if (student["major"] == "Computer Science") then:
+            print("  " + str(student["name"]) + " (" + str(student["year"]) + ")")
+        end
+    end
+
+    // Calculate average GPA
+    print("\n--- Statistics ---")
+    total_gpa = 0.0
+    for (student in students):
+        total_gpa = total_gpa + student["gpa"]
+    end
+    average_gpa = total_gpa / len(students)
+    print("Average GPA: " + str(average_gpa))
+
+    // Create a grade distribution map
+    grade_count = {}
+    for (student in students):
+        grade = student["grade"]
+        if (grade in grade_count) then:
+            grade_count[grade] = grade_count[grade] + 1
+        else:
+            grade_count[grade] = 1
+        end
+    end
+
+    print("\nGrade distribution: " + str(grade_count))
+
+    print("\n=== Dictionary/Map Demo Complete ===")
+end

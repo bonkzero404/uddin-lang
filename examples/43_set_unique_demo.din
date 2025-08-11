@@ -1,0 +1,312 @@
+// =============================================================================
+// 43_set_unique_demo.din - Set (Unique Elements) Demo
+// =============================================================================
+// This example demonstrates Set data structure operations including
+// adding unique elements and performing union/intersection operations in Uddin-Lang.
+
+fun main():
+    print("=== Set (Unique Elements) Demo ===")
+
+    // Set implementation using array (maintaining uniqueness)
+    fun createSet():
+        return []
+    end
+
+    // Add element to set (only if not already present)
+    fun setAdd(set, element):
+        if (not (contains(set, element))) then:
+            push(set, element)
+            print("Added '" + str(element) + "' to set")
+            return true
+        else:
+            print("'" + str(element) + "' already exists in set (duplicate ignored)")
+            return false
+        end
+    end
+
+    // Remove element from set
+    fun setRemove(set, element):
+        new_set = []
+        found = false
+
+        for (item in set):
+            if (item != element) then:
+                push(new_set, item)
+            else:
+                found = true
+            end
+        end
+
+        // Clear original set and copy new_set back
+        while (len(set) > 0):
+            pop(set)
+        end
+
+        for (item in new_set):
+            push(set, item)
+        end
+
+        if (found) then:
+            print("Removed '" + str(element) + "' from set")
+        else:
+            print("'" + str(element) + "' not found in set")
+        end
+
+        return found
+    end
+
+    // Check if element exists in set
+    fun setContains(set, element):
+        return contains(set, element)
+    end
+
+    // Get set size
+    fun setSize(set):
+        return len(set)
+    end
+
+    // Display set
+    fun displaySet(set, name):
+        print(name + ": " + str(set) + " (size: " + str(len(set)) + ")")
+    end
+
+    // Union of two sets (A ∪ B)
+    fun setUnion(set1, set2):
+        result = createSet()
+
+        // Add all elements from set1
+        for (element in set1):
+            setAdd(result, element)
+        end
+
+        // Add all elements from set2 (duplicates will be ignored)
+        for (element in set2):
+            setAdd(result, element)
+        end
+
+        return result
+    end
+
+    // Intersection of two sets (A ∩ B)
+    fun setIntersection(set1, set2):
+        result = createSet()
+
+        for (element in set1):
+            if (contains(set2, element)) then:
+                push(result, element)
+            end
+        end
+
+        return result
+    end
+
+    // Difference of two sets (A - B)
+    fun setDifference(set1, set2):
+        result = createSet()
+
+        for (element in set1):
+            if (not (contains(set2, element))) then:
+                push(result, element)
+            end
+        end
+
+        return result
+    end
+
+    // Symmetric difference (A ⊕ B = (A - B) ∪ (B - A))
+    fun setSymmetricDifference(set1, set2):
+        diff1 = setDifference(set1, set2)
+        diff2 = setDifference(set2, set1)
+        return setUnion(diff1, diff2)
+    end
+
+    // Check if set1 is subset of set2
+    fun isSubset(set1, set2):
+        for (element in set1):
+            if (not (contains(set2, element))) then:
+                return false
+            end
+        end
+        return true
+    end
+
+    // Check if two sets are equal
+    fun setsEqual(set1, set2):
+        if (len(set1) != len(set2)) then:
+            return false
+        end
+
+        return isSubset(set1, set2)
+    end
+
+    // Create and demonstrate basic set operations
+    print("\n--- Basic Set Operations ---")
+
+    set_a = createSet()
+    print("Created empty set A")
+    displaySet(set_a, "Set A")
+
+    // Add elements to set A
+    print("\nAdding elements to Set A:")
+    elements_a = [1, 2, 3, 4, 5, 3, 2, 6]  // Note: 3 and 2 are duplicates
+
+    for (element in elements_a):
+        setAdd(set_a, element)
+    end
+
+    displaySet(set_a, "Set A after additions")
+
+    // Create set B
+    print("\n--- Creating Set B ---")
+    set_b = createSet()
+    elements_b = [4, 5, 6, 7, 8, 9, 5, 4]  // Note: 5 and 4 are duplicates
+
+    for (element in elements_b):
+        setAdd(set_b, element)
+    end
+
+    displaySet(set_b, "Set B")
+
+    // Demonstrate set operations
+    print("\n--- Set Operations ---")
+    displaySet(set_a, "Set A")
+    displaySet(set_b, "Set B")
+
+    // Union
+    union_result = setUnion(set_a, set_b)
+    displaySet(union_result, "Union (A ∪ B)")
+
+    // Intersection
+    intersection_result = setIntersection(set_a, set_b)
+    displaySet(intersection_result, "Intersection (A ∩ B)")
+
+    // Difference
+    difference_a_b = setDifference(set_a, set_b)
+    displaySet(difference_a_b, "Difference (A - B)")
+
+    difference_b_a = setDifference(set_b, set_a)
+    displaySet(difference_b_a, "Difference (B - A)")
+
+    // Symmetric difference
+    symmetric_diff = setSymmetricDifference(set_a, set_b)
+    displaySet(symmetric_diff, "Symmetric Difference (A ⊕ B)")
+
+    // Subset testing
+    print("\n--- Subset Testing ---")
+    small_set = createSet()
+    setAdd(small_set, 2)
+    setAdd(small_set, 4)
+    displaySet(small_set, "Small Set")
+
+    is_subset_a = isSubset(small_set, set_a)
+    is_subset_b = isSubset(small_set, set_b)
+
+    print("Is Small Set ⊆ Set A? " + str(is_subset_a))
+    print("Is Small Set ⊆ Set B? " + str(is_subset_b))
+
+    // Equality testing
+    print("\n--- Equality Testing ---")
+    set_c = createSet()
+    for (element in set_a):
+        setAdd(set_c, element)
+    end
+
+    displaySet(set_c, "Set C (copy of A)")
+
+    equal_a_c = setsEqual(set_a, set_c)
+    equal_a_b = setsEqual(set_a, set_b)
+
+    print("Are Set A and Set C equal? " + str(equal_a_c))
+    print("Are Set A and Set B equal? " + str(equal_a_b))
+
+    // Practical example: Student courses
+    print("\n--- Practical Example: Student Courses ---")
+
+    // Student course enrollments
+    alice_courses = createSet()
+    bob_courses = createSet()
+    charlie_courses = createSet()
+
+    alice_subjects = ["Math", "Physics", "Chemistry", "Biology"]
+    bob_subjects = ["Math", "Computer Science", "Physics", "Statistics"]
+    charlie_subjects = ["Chemistry", "Biology", "Math", "English"]
+
+    print("\nEnrolling students in courses:")
+
+    print("Alice's courses:")
+    for (course in alice_subjects):
+        setAdd(alice_courses, course)
+    end
+
+    print("\nBob's courses:")
+    for (course in bob_subjects):
+        setAdd(bob_courses, course)
+    end
+
+    print("\nCharlie's courses:")
+    for (course in charlie_subjects):
+        setAdd(charlie_courses, course)
+    end
+
+    print("\n--- Course Analysis ---")
+    displaySet(alice_courses, "Alice")
+    displaySet(bob_courses, "Bob")
+    displaySet(charlie_courses, "Charlie")
+
+    // Find common courses
+    alice_bob_common = setIntersection(alice_courses, bob_courses)
+    alice_charlie_common = setIntersection(alice_courses, charlie_courses)
+    bob_charlie_common = setIntersection(bob_courses, charlie_courses)
+
+    print("\nCommon courses:")
+    displaySet(alice_bob_common, "Alice & Bob")
+    displaySet(alice_charlie_common, "Alice & Charlie")
+    displaySet(bob_charlie_common, "Bob & Charlie")
+
+    // All courses offered
+    all_courses = setUnion(alice_courses, setUnion(bob_courses, charlie_courses))
+    displaySet(all_courses, "All courses offered")
+
+    // Courses unique to each student
+    print("\nCourses unique to each student:")
+    alice_unique = setDifference(alice_courses, setUnion(bob_courses, charlie_courses))
+    bob_unique = setDifference(bob_courses, setUnion(alice_courses, charlie_courses))
+    charlie_unique = setDifference(charlie_courses, setUnion(alice_courses, bob_courses))
+
+    displaySet(alice_unique, "Alice only")
+    displaySet(bob_unique, "Bob only")
+    displaySet(charlie_unique, "Charlie only")
+
+    // Remove and add operations
+    print("\n--- Dynamic Set Operations ---")
+    test_set = createSet()
+
+    print("Adding numbers 1-10:")
+    i = 1
+    while (i <= 10):
+        setAdd(test_set, i)
+        i = i + 1
+    end
+    displaySet(test_set, "Test Set")
+
+    print("\nRemoving even numbers:")
+    i = 2
+    while (i <= 10):
+        setRemove(test_set, i)
+        i = i + 2
+    end
+    displaySet(test_set, "Test Set after removing evens")
+
+    print("\nChecking membership:")
+    check_values = [1, 2, 5, 8, 10]
+    for (value in check_values):
+        exists = setContains(test_set, value)
+        if (exists) then:
+            print("  " + str(value) + " is in the set")
+        else:
+            print("  " + str(value) + " is NOT in the set")
+        end
+    end
+
+    print("\n=== Set (Unique Elements) Demo Complete ===")
+end

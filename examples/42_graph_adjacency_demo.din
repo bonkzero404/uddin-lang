@@ -1,0 +1,303 @@
+// =============================================================================
+// 42_graph_adjacency_demo.din - Graph (Adjacency List) Demo
+// =============================================================================
+// This example demonstrates Graph data structure using adjacency list
+// representation to store connections between nodes like city routes in Uddin-Lang.
+
+fun main():
+    print("=== Graph (Adjacency List) Demo ===")
+
+    // Graph structure using adjacency list
+    // Each vertex maps to a list of its neighbors
+    graph = {}
+
+    // Add vertex to graph
+    fun addVertex(g, vertex):
+        if (not (vertex in g)) then:
+            g[vertex] = []
+            print("Added vertex: " + str(vertex))
+        else:
+            print("Vertex " + str(vertex) + " already exists")
+        end
+    end
+
+    // Add edge between two vertices (undirected)
+    fun addEdge(g, vertex1, vertex2):
+        // Ensure both vertices exist
+        if (not (vertex1 in g)) then:
+            addVertex(g, vertex1)
+        end
+        if (not (vertex2 in g)) then:
+            addVertex(g, vertex2)
+        end
+
+        // Add edge in both directions (undirected graph)
+        if (not (contains(g[vertex1], vertex2))) then:
+            push(g[vertex1], vertex2)
+        end
+        if (not (contains(g[vertex2], vertex1))) then:
+            push(g[vertex2], vertex1)
+        end
+
+        print("Added edge: " + str(vertex1) + " <-> " + str(vertex2))
+    end
+
+    // Add directed edge
+    fun addDirectedEdge(g, from_vertex, to_vertex):
+        if (not (from_vertex in g)) then:
+            addVertex(g, from_vertex)
+        end
+        if (not (to_vertex in g)) then:
+            addVertex(g, to_vertex)
+        end
+
+        if (not (contains(g[from_vertex], to_vertex))) then:
+            push(g[from_vertex], to_vertex)
+        end
+
+        print("Added directed edge: " + str(from_vertex) + " -> " + str(to_vertex))
+    end
+
+    // Display graph
+    fun displayGraph(g):
+        print("\nGraph structure:")
+        for (vertex in g):
+            neighbors = g[vertex]
+            print("  " + str(vertex) + " -> " + str(neighbors))
+        end
+        print("")
+    end
+
+    // Get all vertices
+    fun getVertices(g):
+        vertices = []
+        for (vertex in g):
+            push(vertices, vertex)
+        end
+        return vertices
+    end
+
+    // Get neighbors of a vertex
+    fun getNeighbors(g, vertex):
+        if (vertex in g) then:
+            return g[vertex]
+        else:
+            return []
+        end
+    end
+
+    // Check if edge exists
+    fun hasEdge(g, vertex1, vertex2):
+        if (vertex1 in g) then:
+            return contains(g[vertex1], vertex2)
+        end
+        return false
+    end
+
+    // Depth-First Search (DFS)
+    fun dfs(g, start_vertex, visited, result):
+        if (not contains(visited, start_vertex)) then:
+            push(visited, start_vertex)
+            push(result, start_vertex)
+            print("Visiting: " + str(start_vertex))
+
+            neighbors = getNeighbors(g, start_vertex)
+            for (neighbor in neighbors):
+                if (not (contains(visited, neighbor))) then:
+                    dfs(g, neighbor, visited, result)
+                end
+            end
+        end
+    end
+
+    // Breadth-First Search (BFS)
+    fun bfs(g, start_vertex):
+        visited = []
+        result = []
+        queue = [start_vertex]
+
+        push(visited, start_vertex)
+
+        while (len(queue) > 0):
+            current = shift(queue)
+            push(result, current)
+            print("Visiting: " + str(current))
+
+            neighbors = getNeighbors(g, current)
+            for (neighbor in neighbors):
+                if (not (contains(visited, neighbor))) then:
+                    push(visited, neighbor)
+                    push(queue, neighbor)
+                end
+            end
+        end
+
+        return result
+    end
+
+    // Find path between two vertices using BFS
+    fun findPath(g, start, target):
+        if (start == target) then:
+            return [start]
+        end
+
+        visited = []
+        queue = [[start]]  // Queue of paths
+        push(visited, start)
+
+        while (len(queue) > 0):
+            path = shift(queue)
+            current = path[len(path) - 1]
+
+            neighbors = getNeighbors(g, current)
+            for (neighbor in neighbors):
+                if (neighbor == target) then:
+                    new_path = []
+                    for (vertex in path):
+                        push(new_path, vertex)
+                    end
+                    push(new_path, neighbor)
+                    return new_path
+                end
+
+                if (not (contains(visited, neighbor))) then:
+                    push(visited, neighbor)
+                    new_path = []
+                    for (vertex in path):
+                        push(new_path, vertex)
+                    end
+                    push(new_path, neighbor)
+                    push(queue, new_path)
+                end
+            end
+        end
+
+        return []  // No path found
+    end
+
+    // Build city route network
+    print("\n--- Building City Route Network ---")
+
+    cities = ["New York", "Los Angeles", "Chicago", "Houston", "Phoenix", "Philadelphia", "San Antonio", "San Diego", "Dallas", "San Jose"]
+
+    // Add all cities as vertices
+    for (city in cities):
+        addVertex(graph, city)
+    end
+
+    displayGraph(graph)
+
+    // Add routes (edges) between cities
+    print("--- Adding Routes ---")
+    addEdge(graph, "New York", "Philadelphia")
+    addEdge(graph, "New York", "Chicago")
+    addEdge(graph, "Los Angeles", "San Diego")
+    addEdge(graph, "Los Angeles", "Phoenix")
+    addEdge(graph, "Los Angeles", "San Jose")
+    addEdge(graph, "Chicago", "Dallas")
+    addEdge(graph, "Houston", "Dallas")
+    addEdge(graph, "Houston", "San Antonio")
+    addEdge(graph, "Phoenix", "San Diego")
+    addEdge(graph, "Philadelphia", "Chicago")
+    addEdge(graph, "Dallas", "San Antonio")
+
+    displayGraph(graph)
+
+    // Graph statistics
+    print("--- Graph Statistics ---")
+    vertices = getVertices(graph)
+    print("Total cities (vertices): " + str(len(vertices)))
+
+    total_edges = 0
+    for (city in graph):
+        total_edges = total_edges + len(graph[city])
+    end
+    total_edges = total_edges / 2  // Undirected graph, so divide by 2
+    print("Total routes (edges): " + str(total_edges))
+
+    // Show connections for each city
+    print("\n--- City Connections ---")
+    for (city in cities):
+        neighbors = getNeighbors(graph, city)
+        print(city + " is connected to: " + str(neighbors) + " (" + str(len(neighbors)) + " routes)")
+    end
+
+    // Demonstrate graph traversals
+    print("\n--- Depth-First Search (DFS) from New York ---")
+    dfs_visited = []
+    dfs_result = []
+    dfs(graph, "New York", dfs_visited, dfs_result)
+    print("DFS traversal order: " + str(dfs_result))
+
+    print("\n--- Breadth-First Search (BFS) from New York ---")
+    bfs_result = bfs(graph, "New York")
+    print("BFS traversal order: " + str(bfs_result))
+
+    // Find paths between cities
+    print("\n--- Finding Routes Between Cities ---")
+
+    route_queries = [
+        ["New York", "San Diego"],
+        ["Houston", "Los Angeles"],
+        ["Chicago", "Phoenix"],
+        ["Philadelphia", "San Jose"]
+    ]
+
+    for (query in route_queries):
+        start_city = query[0]
+        end_city = query[1]
+        path = findPath(graph, start_city, end_city)
+
+        if (len(path) > 0) then:
+            print("Route from " + start_city + " to " + end_city + ":")
+            print("  " + str(path))
+            print("  Distance: " + str(len(path) - 1) + " hops")
+        else:
+            print("No route found from " + start_city + " to " + end_city)
+        end
+    end
+
+    // Create a directed graph example (flight routes)
+    print("\n--- Directed Graph Example (Flight Routes) ---")
+    flight_graph = {}
+
+    airports = ["JFK", "LAX", "ORD", "DFW", "ATL"]
+
+    for (airport in airports):
+        addVertex(flight_graph, airport)
+    end
+
+    // Add directed flights
+    addDirectedEdge(flight_graph, "JFK", "LAX")
+    addDirectedEdge(flight_graph, "JFK", "ORD")
+    addDirectedEdge(flight_graph, "LAX", "DFW")
+    addDirectedEdge(flight_graph, "ORD", "DFW")
+    addDirectedEdge(flight_graph, "DFW", "ATL")
+    addDirectedEdge(flight_graph, "ATL", "JFK")
+    addDirectedEdge(flight_graph, "LAX", "ATL")
+
+    displayGraph(flight_graph)
+
+    // Check connectivity
+    print("--- Flight Connectivity ---")
+    flight_checks = [
+        ["JFK", "LAX"],
+        ["LAX", "JFK"],
+        ["ORD", "ATL"],
+        ["ATL", "ORD"]
+    ]
+
+    for (check in flight_checks):
+        from_airport = check[0]
+        to_airport = check[1]
+        has_flight = hasEdge(flight_graph, from_airport, to_airport)
+
+        if (has_flight) then:
+            print("Direct flight available: " + from_airport + " -> " + to_airport)
+        else:
+            print("No direct flight: " + from_airport + " -> " + to_airport)
+        end
+    end
+
+    print("\n=== Graph (Adjacency List) Demo Complete ===")
+end

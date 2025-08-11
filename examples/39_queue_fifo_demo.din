@@ -1,0 +1,176 @@
+// =============================================================================
+// 39_queue_fifo_demo.din - Queue (FIFO) Operations Demo
+// =============================================================================
+// This example demonstrates Queue (First In, First Out) data structure
+// operations including enqueue, dequeue, and the difference from Stack in Uddin-Lang.
+
+fun main():
+    print("=== Queue (FIFO) Demo ===")
+
+    // Create an empty queue using array
+    queue = []
+
+    print("\nInitial queue: " + str(queue))
+    print("Queue size: " + str(len(queue)))
+
+    // Helper function to check if queue is empty
+    fun isQueueEmpty(q):
+        return len(q) == 0
+    end
+
+    // Helper function to peek at front element without removing
+    fun queuePeek(q):
+        if (isQueueEmpty(q)) then:
+            return nil
+        else:
+            return q[0]
+        end
+    end
+
+    // Enqueue operations (add to rear/end)
+    print("\n--- Enqueue Operations (Add to Rear) ---")
+
+    push(queue, "First")
+    print("After enqueuing 'First': " + str(queue))
+    print("Queue size: " + str(len(queue)) + ", Front element: " + str(queuePeek(queue)))
+
+    push(queue, "Second")
+    print("After enqueuing 'Second': " + str(queue))
+    print("Queue size: " + str(len(queue)) + ", Front element: " + str(queuePeek(queue)))
+
+    push(queue, "Third")
+    print("After enqueuing 'Third': " + str(queue))
+    print("Queue size: " + str(len(queue)) + ", Front element: " + str(queuePeek(queue)))
+
+    push(queue, "Fourth")
+    print("After enqueuing 'Fourth': " + str(queue))
+    print("Queue size: " + str(len(queue)) + ", Front element: " + str(queuePeek(queue)))
+
+    // Demonstrate FIFO behavior with dequeue operations
+    print("\n--- Dequeue Operations (FIFO - First In, First Out) ---")
+
+    while (not isQueueEmpty(queue)):
+        front_element = queuePeek(queue)
+        dequeued = shift(queue)  // Remove from front
+        print("Dequeued: " + str(dequeued) + ", Remaining queue: " + str(queue))
+        print("  Queue size now: " + str(len(queue)))
+        if (not isQueueEmpty(queue)) then:
+            print("  New front element: " + str(queuePeek(queue)))
+        else:
+            print("  Queue is now empty")
+        end
+        print("")
+    end
+
+    // Compare Stack vs Queue behavior
+    print("--- Comparison: Stack (LIFO) vs Queue (FIFO) ---")
+
+    // Prepare data
+    data = ["A", "B", "C", "D"]
+    stack_demo = []
+    queue_demo = []
+
+    print("\nInput data: " + str(data))
+
+    // Add all elements to both stack and queue
+    for (item in data):
+        push(stack_demo, item)  // Add to stack
+        push(queue_demo, item)  // Add to queue
+    end
+
+    print("\nStack after adding all: " + str(stack_demo))
+    print("Queue after adding all: " + str(queue_demo))
+
+    // Remove all elements and show the difference
+    print("\nRemoving elements:")
+    print("Stack (LIFO - Last In, First Out):")
+    stack_output = []
+    while (len(stack_demo) > 0):
+        popped = pop(stack_demo)  // Remove from end (top)
+        push(stack_output, popped)
+        print("  Popped: " + str(popped))
+    end
+
+    print("\nQueue (FIFO - First In, First Out):")
+    queue_output = []
+    while (len(queue_demo) > 0):
+        dequeued = shift(queue_demo)  // Remove from front
+        push(queue_output, dequeued)
+        print("  Dequeued: " + str(dequeued))
+    end
+
+    print("\nResults:")
+    print("Original order: " + str(data))
+    print("Stack output:   " + str(stack_output) + " (reversed)")
+    print("Queue output:   " + str(queue_output) + " (same order)")
+
+    // Practical example: Print job queue
+    print("\n--- Practical Example: Print Job Queue ---")
+
+    print_queue = []
+
+    fun addPrintJob(queue, job_name, priority):
+        job = {"name": job_name, "priority": priority}
+        push(queue, job)
+        print("Added print job: " + job_name + " (Priority: " + str(priority) + ")")
+    end
+
+    fun processPrintJob(queue):
+        if (isQueueEmpty(queue)) then:
+            print("No print jobs in queue")
+            return nil
+        else:
+            job = shift(queue)
+            print("Processing: " + job["name"] + " (Priority: " + str(job["priority"]) + ")")
+            return job
+        end
+    end
+
+    // Add print jobs
+    addPrintJob(print_queue, "Document1.pdf", 1)
+    addPrintJob(print_queue, "Photo.jpg", 2)
+    addPrintJob(print_queue, "Report.docx", 1)
+    addPrintJob(print_queue, "Presentation.pptx", 3)
+
+    print("\nCurrent print queue: " + str(print_queue))
+    print("Queue length: " + str(len(print_queue)))
+
+    // Process all print jobs
+    print("\nProcessing print jobs in FIFO order:")
+    job_number = 1
+    while (not isQueueEmpty(print_queue)):
+        print("Job " + str(job_number) + ": ", false)
+        processPrintJob(print_queue)
+        job_number = job_number + 1
+    end
+
+    // Customer service queue example
+    print("\n--- Customer Service Queue Example ---")
+
+    customer_queue = []
+
+    // Customers arrive
+    customers = ["Alice", "Bob", "Charlie", "Diana", "Eve"]
+
+    print("Customers arriving:")
+    for (customer in customers):
+        push(customer_queue, customer)
+        print("  " + customer + " joined the queue")
+    end
+
+    print("\nQueue status: " + str(customer_queue))
+    print("Next customer to be served: " + str(queuePeek(customer_queue)))
+
+    print("\nServing customers in order:")
+    position = 1
+    while (not isQueueEmpty(customer_queue)):
+        customer = shift(customer_queue)
+        print("  Serving customer " + str(position) + ": " + customer)
+        print("    Remaining in queue: " + str(len(customer_queue)))
+        position = position + 1
+    end
+
+    print("\nAll customers served!")
+
+    print("\n=== Queue (FIFO) Demo Complete ===")
+end
