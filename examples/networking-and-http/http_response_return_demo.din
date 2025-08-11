@@ -1,11 +1,18 @@
 // Demo: HTTP Response Return Value
 // This example shows how to use the return value from http_response() function
 
+print("Starting HTTP Response Return Demo...")
+
 server_id = "demo-server"
-port = 8081
+port = 8082
+
+print("Server ID: " + server_id)
+print("Port: " + str(port))
 
 // Start server
+print("About to start HTTP server...")
 http_server_start(port, server_id)
+print("HTTP server started successfully!")
 
 // Handler that uses http_response return value
 fun demoHandler(request, response):
@@ -15,13 +22,13 @@ fun demoHandler(request, response):
         "timestamp": date_now(),
         "method": request["method"]
     }))
-    
+
     // Log the response info
     print("Response sent:")
     print("  Status: " + str(result.status))
     print("  Body length: " + str(len(result.body)))
     print("  Sent: " + str(result.sent))
-    
+
     // You can now use the result for logging, metrics, etc.
     if (result.sent and result.status == 200) then:
         print("✓ Successfully sent response")
@@ -35,18 +42,18 @@ fun errorHandler(request, response):
     try:
         // Simulate some processing
         data = {"error": "Something went wrong", "code": 500}
-        
+
         // Send error response and capture result
         result = http_response(response, 500, {"Content-Type": "application/json"}, json_stringify(data))
-        
+
         // Log error response details
         print("Error response sent:")
         print("  Status: " + str(result.status))
         print("  Error sent: " + str(result.sent))
-        
+
         // You could save this to error logs, send to monitoring system, etc.
         return result  // Return the response info for further processing
-        
+
     catch (error):
         print("Failed to send error response: " + str(error))
         return null
@@ -56,7 +63,7 @@ end
 // Handler that shows conditional responses
 fun conditionalHandler(request, response):
     user_agent = request["headers"]["User-Agent"]
-    
+
     if ("curl" in user_agent) then:
         // Response for curl clients
         result = http_response(response, 200, {"Content-Type": "text/plain"}, "Hello curl user!")
@@ -67,12 +74,12 @@ fun conditionalHandler(request, response):
             "user_agent": user_agent
         }))
     end
-    
+
     // Log different response types
     print("Sent response for " + user_agent + ":")
     print("  Status: " + str(result.status))
     print("  Content-Type: " + ("curl" in user_agent ? "text/plain" : "application/json"))
-    
+
     return result
 end
 
