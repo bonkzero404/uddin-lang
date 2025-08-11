@@ -750,6 +750,8 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Write to the interpreter's stdout (this allows capture during testing)
 	if interp.stdout != nil {
 		interp.stdout.Write([]byte(output))
+		// Also write to real stdout for interactive programs
+		os.Stdout.WriteString(output)
 	} else {
 		// Fallback to direct stdout if no stdout is configured
 		os.Stdout.WriteString(output)
@@ -773,6 +775,12 @@ func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Print prompt if provided
 	if len(args) == 1 {
 		prompt := toString(args[0], false)
+		// For input prompts, always write to both configured stdout AND real stdout
+		// This ensures prompts are visible to the user even when output is captured
+		if interp.stdout != nil {
+			interp.stdout.Write([]byte(prompt))
+		}
+		// Always show prompt to user on real stdout for interactive input
 		fmt.Print(prompt)
 	}
 

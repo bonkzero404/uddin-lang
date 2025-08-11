@@ -205,6 +205,36 @@ fun rectanglePerimeter(length, width):
     return 2 * (length + width)
 end
 
+// =========== BASIC ARITHMETIC FUNCTIONS ===========
+
+// Function to calculate square of a number
+// Input: n (number)
+// Output: square of n
+fun square(n):
+    return n * n
+end
+
+// Function to calculate cube of a number
+// Input: n (number)
+// Output: cube of n
+fun cube(n):
+    return n * n * n
+end
+
+// Function to check if a number is even
+// Input: n (integer)
+// Output: true if even, false if odd
+fun isEven(n):
+    return (n % 2) == 0
+end
+
+// Function to check if a number is odd
+// Input: n (integer)
+// Output: true if odd, false if even
+fun isOdd(n):
+    return (n % 2) == 1
+end
+
 // =========== MATHEMATICAL UTILITIES ===========
 
 // Function to find maximum value of two numbers
@@ -263,6 +293,7 @@ print("Uddin-Lang Math Library successfully loaded!")
 print("========================================")
 print("Available functions:")
 print("- Basic Operations: power(), factorial(), squareRoot()")
+print("- Arithmetic: square(), cube(), isEven(), isOdd()")
 print("- Circle: circleArea(), circlePerimeter()")
 print("- Triangle: triangleArea(), trianglePerimeter()")
 print("- Rectangle: rectangleArea(), rectanglePerimeter()")
