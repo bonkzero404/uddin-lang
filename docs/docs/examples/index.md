@@ -12,61 +12,70 @@ The examples are organized into the following categories:
 
 ## 📚 Example Categories
 
-### 🚀 [Basics](./basics)
+### 🚀 [Basics](https://github.com/bonkzero404/uddin-lang/tree/main/examples/basics)
 Fundamental programming concepts and syntax
-- Hello World
-- Functional Programming
-- Assignment Operators
-- Logical Operators
-- Loop Control
-- Ternary Operators
+- [Hello World](https://github.com/bonkzero404/uddin-lang/blob/main/examples/basics/hello_world.din)
+- [Functional Programming](https://github.com/bonkzero404/uddin-lang/blob/main/examples/basics/functional_demo.din)
+- [Assignment Operators](https://github.com/bonkzero404/uddin-lang/blob/main/examples/basics/assignment_operators.din)
+- [Logical Operators](https://github.com/bonkzero404/uddin-lang/blob/main/examples/basics/logical_operators.din)
+- [Loop Control](https://github.com/bonkzero404/uddin-lang/blob/main/examples/basics/loop_control_demo.din)
+- [Ternary Operators](https://github.com/bonkzero404/uddin-lang/blob/main/examples/basics/ternary_examples.din)
 
-### 🗃️ [Data Structures](./data-structures)
+### 🗃️ [Data Structures](https://github.com/bonkzero404/uddin-lang/tree/main/examples/data-structures)
 Data organization and manipulation
-- Arrays and Lists
-- Dictionaries and Maps
-- Linked Lists
-- Stacks and Queues
-- Trees and Graphs
-- Sets and Heaps
+- [Simple Array Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/simple_array_demo.din)
+- [Array Methods Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/array_methods_demo.din)
+- [Dynamic List Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/dynamic_list_demo.din)
+- [Dictionary Map Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/dictionary_map_demo.din)
+- [Set Unique Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/set_unique_demo.din)
+- [Stack LIFO Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/stack_lifo_demo.din)
+- [Queue FIFO Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/queue_fifo_demo.din)
+- [Linked List Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/linked_list_demo.din)
+- [Binary Tree Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/binary_tree_demo.din)
+- [Heap Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/heap_demo.din)
+- [Graph Adjacency Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/graph_adjacency_demo.din)
+- [Data Structures Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/data-structures/data_structures_demo.din)
 
-### 🧮 [Math and Calculations](./math-and-calculations)
+### 🧮 [Math and Calculations](https://github.com/bonkzero404/uddin-lang/tree/main/examples/math-and-calculations)
 Mathematical operations and algorithms
-- Built-in Math Functions
-- Scientific Notation
-- Geometry Calculator
-- Statistics Analysis
-- Number Theory
-- Simple Calculator
+- [Built-in Math Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/builtin_math_demo.din)
+- [Digit Separator Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/digit_separator_demo.din)
+- [Geometry Calculator](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/geometry_calculator.din)
+- [Import Library Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/import_library_demo.din)
+- [Math Library](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/math_library.din)
+- [Number Theory Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/number_theory_demo.din)
+- [Power Operator Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/power_operator_demo.din)
+- [Scientific Notation Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/scientific_notation_demo.din)
+- [Simple Calculator](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/simple_calculator.din)
+- [Statistics Analysis](https://github.com/bonkzero404/uddin-lang/blob/main/examples/math-and-calculations/statistics_analysis.din)
 
-### 📁 [File and Data Handling](./file-and-data-handling)
+### 📁 [File and Data Handling](https://github.com/bonkzero404/uddin-lang/tree/main/examples/file-and-data-handling)
 File operations and data processing
-- Filesystem Operations
-- JSON Handling
-- XML Processing
-- String Manipulation
-- Multiline Strings
+- [Filesystem Operations Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/file-and-data-handling/filesystem_operations_demo.din)
+- [JSON Handling Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/file-and-data-handling/json_handling_demo.din)
+- [Multiline Strings Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/file-and-data-handling/multiline_strings_demo.din)
+- [String Manipulation Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/file-and-data-handling/string_manipulation_demo.din)
+- [XML Handling Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/file-and-data-handling/xml_handling_demo.din)
 
-### 🌐 [Networking and HTTP](./networking-and-http)
+### 🌐 [Networking and HTTP](https://github.com/bonkzero404/uddin-lang/tree/main/examples/networking-and-http)
 Network programming and web services
-- HTTP Client
-- HTTP Server
-- Networking Operations
-- Response Handling
+- [HTTP Client Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/networking-and-http/http_client_demo.din)
+- [HTTP Response Return Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/networking-and-http/http_response_return_demo.din)
+- [Networking Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/networking-and-http/networking_demo.din)
+- [Persistent HTTP Server](https://github.com/bonkzero404/uddin-lang/blob/main/examples/networking-and-http/persistent_http_server.din)
 
-### ⚡ [Performance and Optimization](./performance-and-optimization)
+### ⚡ [Performance and Optimization](https://github.com/bonkzero404/uddin-lang/tree/main/examples/performance-and-optimization)
 Performance enhancement techniques
-- Memoization
-- Optimization Strategies
-- Performance Testing
+- [Memoization Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/performance-and-optimization/memoization_demo.din)
+- [Memoization Verification Test](https://github.com/bonkzero404/uddin-lang/blob/main/examples/performance-and-optimization/memoization_verification_test.din)
 
-### 🔧 [Rule Engine](./rule-engine)
+### 🔧 [Rule Engine](https://github.com/bonkzero404/uddin-lang/tree/main/examples/rule-engine)
 Rule-based programming and pattern matching
-- Complex Event Processing (CEP)
-- Fact Database
-- DateTime Rules
-- Regex Patterns
-- Comprehensive Rule Systems
+- [Rule Engine CEP Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/rule-engine/rule_engine_cep_demo.din)
+- [Rule Engine Comprehensive Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/rule-engine/rule_engine_comprehensive_demo.din)
+- [Rule Engine DateTime Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/rule-engine/rule_engine_datetime_demo.din)
+- [Rule Engine Fact Database Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/rule-engine/rule_engine_fact_database_demo.din)
+- [Rule Engine Regex Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/rule-engine/rule_engine_regex_demo.din)
 
 ## 🚀 Quick Start
 
@@ -78,12 +87,7 @@ To run any of these examples:
    cd uddin-lang
    ```
 
-2. **Navigate to examples:**
-   ```bash
-   cd examples
-   ```
-
-3. **Run an example:**
+2. **Run an example:**
    ```bash
    go run main.go examples/basics/hello_world.din
    ```
@@ -102,9 +106,9 @@ To run any of these examples:
 
 **Total Examples:** 44 files across 7 categories
 
-## 🔍 Browse by Category
+## 🔍 Browse Examples
 
-Click on any category above to explore detailed examples with code snippets, explanations, and usage instructions.
+Click on any category or individual example link above to view the source code directly on GitHub. Each example includes detailed comments and demonstrates specific features of the Uddin programming language.
 
 ---
 
