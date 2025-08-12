@@ -81,6 +81,11 @@ const config = {
                         position: 'left',
                     },
                     {
+                        href: 'https://playground.uddinlang.com/',
+                        label: 'Code Playground',
+                        position: 'left',
+                    },
+                    {
                         href: 'https://github.com/bonkzero404/uddin-lang',
                         label: 'GitHub',
                         position: 'right',
