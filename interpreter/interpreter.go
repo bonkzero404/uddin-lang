@@ -121,6 +121,12 @@ func ensureIntToFloats(l, r Value) (float64, float64) {
 // Returns:
 //   - A boolean Value indicating whether the values are equal
 func evalEqual(pos Position, l, r Value) Value {
+	// Try fast evaluation first for simple types
+	if result, handled := GetFastEvaluator().FastEvalEqual(l, r); handled {
+		return result
+	}
+	
+	// Fallback to original deep equality logic
 	switch l := l.(type) {
 	case nil:
 		// nil is only equal to nil
@@ -260,33 +266,13 @@ func evalIn(pos Position, l, r Value) Value {
 // Returns:
 //   - A boolean Value indicating whether l < r
 func evalLess(pos Position, l, r Value) Value {
+	// Try fast evaluation first for simple types
+	if result, handled := GetFastEvaluator().FastEvalLess(l, r); handled {
+		return result
+	}
+	
+	// Fallback to original logic for complex types
 	switch l := l.(type) {
-	case int:
-		// Integer comparison
-		if r, ok := r.(int); ok {
-			return Value(l < r)
-		}
-		// Mixed int/float comparison
-		if r, ok := r.(float64); ok {
-			return Value(float64(l) < r)
-		}
-
-	case float64:
-		// Float comparison
-		if r, ok := r.(float64); ok {
-			return Value(l < r)
-		}
-		// Mixed float/int comparison
-		if r, ok := r.(int); ok {
-			return Value(l < float64(r))
-		}
-
-	case string:
-		// String lexicographical comparison
-		if r, ok := r.(string); ok {
-			return Value(l < r)
-		}
-
 	case *[]Value:
 		// Array lexicographical comparison
 		if r, ok := r.(*[]Value); ok {
@@ -310,22 +296,13 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("plus")
 
-	// Fast path for most common cases
-	if li, ok := l.(int); ok {
-		if ri, ok := r.(int); ok {
-			return Value(li + ri)
-		}
-		if rf, ok := r.(float64); ok {
-			return Value(float64(li) + rf)
-		}
-	} else if lf, ok := l.(float64); ok {
-		if rf, ok := r.(float64); ok {
-			return Value(lf + rf)
-		}
-		if ri, ok := r.(int); ok {
-			return Value(lf + float64(ri))
-		}
-	} else if ls, ok := l.(string); ok {
+	// Try fast numeric evaluation first to avoid interface{} boxing
+	if result, handled := GetFastEvaluator().FastEvalPlus(l, r); handled {
+		return result
+	}
+
+	// Handle non-numeric cases
+	if ls, ok := l.(string); ok {
 		if rs, ok := r.(string); ok {
 			// Use string interning for repeated strings
 			result := ls + rs
@@ -366,18 +343,9 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 }
 
 func evalMinus(pos Position, l, r Value) Value {
-	if li, ok := l.(int); ok {
-		if ri, ok := r.(int); ok {
-			return Value(li - ri)
-		} else if rf, ok := r.(float64); ok {
-			return Value(float64(li) - rf)
-		}
-	} else if lf, ok := l.(float64); ok {
-		if rf, ok := r.(float64); ok {
-			return Value(lf - rf)
-		} else if ri, ok := r.(int); ok {
-			return Value(lf - float64(ri))
-		}
+	// Try fast numeric evaluation first
+	if result, handled := GetFastEvaluator().FastEvalMinus(l, r); handled {
+		return result
 	}
 
 	panic(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
@@ -388,14 +356,13 @@ func evalTimes(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("times")
 
-	// Fast path for numeric operations
+	// Try fast numeric evaluation first for pure numeric operations
+	if result, handled := GetFastEvaluator().FastEvalTimes(l, r); handled {
+		return result
+	}
+
+	// Handle mixed type operations (int * string, int * array, etc.)
 	if li, ok := l.(int); ok {
-		if ri, ok := r.(int); ok {
-			return Value(li * ri)
-		}
-		if rf, ok := r.(float64); ok {
-			return Value(float64(li) * rf)
-		}
 		if rs, ok := r.(string); ok {
 			if li < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
@@ -469,6 +436,12 @@ func evalTimes(pos Position, l, r Value) Value {
 }
 
 func evalDivide(pos Position, l, r Value) Value {
+	// Try fast numeric evaluation first
+	if result, handled := GetFastEvaluator().FastEvalDivide(l, r); handled {
+		return result
+	}
+	
+	// Fallback to original logic
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
 		panic(typeError(pos, "/ requires two floats or integers"))
@@ -621,11 +594,11 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Track function calls for performance monitoring
 	TrackOperation("function_call")
 
-	// Check memoization cache for functions marked with memo
+	// Check optimized memoization cache for functions marked with memo
 	// Only cache functions that are explicitly memoized and return non-nil values
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized {
-		memoKey := getMemoKey(uf.Name, args)
-		if cached, exists := interp.memoCache[memoKey]; exists {
+		memoKey := OptimizedMemoKey(uf.Name, args)
+		if cached, exists := GetGlobalOptimizedMemoCache().Get(memoKey); exists {
 			return cached
 		}
 	}
@@ -636,8 +609,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 				ret = result.value
 				// Cache the result for memoization only if function is marked as memoized and result is not nil
 				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
-					memoKey := getMemoKey(uf.Name, args)
-					interp.memoCache[memoKey] = ret
+					memoKey := OptimizedMemoKey(uf.Name, args)
+					GetGlobalOptimizedMemoCache().Set(memoKey, ret)
 				}
 			} else {
 				panic(r)
@@ -650,8 +623,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Cache the result for memoization only if function is marked as memoized and result is not nil
 	// This prevents caching functions with side effects that return nil
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && result != nil {
-		memoKey := getMemoKey(uf.Name, args)
-		interp.memoCache[memoKey] = result
+		memoKey := OptimizedMemoKey(uf.Name, args)
+		GetGlobalOptimizedMemoCache().Set(memoKey, result)
 	}
 
 	return result
@@ -660,6 +633,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.currentPos = expr.Position()
 	interp.stats.Ops++
+	
+
 	switch e := expr.(type) {
 	case *Binary:
 		if e.Operator == PLUS {
