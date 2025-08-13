@@ -2,8 +2,17 @@
 
 # Script to test --from_json feature with all example files
 # Performs round-trip conversion: .din -> JSON -> .din and executes the result
+# Usage: ./test_from_json.sh [optimized]
+# If 'optimized' parameter is provided, runs with --memory-optimize flag
 
-echo "=== Testing --from_json feature for all examples ==="
+# Check if optimized flag is provided
+OPTIMIZED_FLAG=""
+if [[ "$1" == "optimized" ]]; then
+    OPTIMIZED_FLAG="--memory-optimize"
+    echo "=== Testing --from_json feature for all examples (with memory optimization) ==="
+else
+    echo "=== Testing --from_json feature for all examples ==="
+fi
 echo
 
 # Counters
@@ -64,24 +73,32 @@ for file in $(find examples -name "*.din" | sort); do
         # Special handling for HTTP servers that may run indefinitely
         if [[ "$filename" == "persistent_http_server" ]] || [[ "$filename" == "http_response_return_demo" ]]; then
             # Start the server in background and kill it after 3 seconds
-            timeout 3s go run main.go "test_${filename}_back.din" >/dev/null 2>&1
+            start_time=$(date +%s.%N)
+            timeout 3s go run main.go $OPTIMIZED_FLAG "test_${filename}_back.din" >/dev/null 2>&1
             exit_code=$?
+            end_time=$(date +%s.%N)
+            execution_time=$(echo "$end_time - $start_time" | bc -l)
             if [[ $exit_code -eq 124 ]] || [[ $exit_code -eq 0 ]]; then
                 # Exit code 124 means timeout (expected for server), 0 means normal exit
-                echo -e "${GREEN}EXEC-OK${NC} (server timeout - expected)"
+                printf "${GREEN}EXEC-OK${NC} (server timeout - expected) [%.3fs]\n" "$execution_time"
                 passed_files=$((passed_files + 1))
             else
-                echo -e "${RED}EXEC-FAIL${NC}"
+                printf "${RED}EXEC-FAIL${NC} [%.3fs]\n" "$execution_time"
                 failed_files=$((failed_files + 1))
                 failed_list+=("$file (execution)")
             fi
         else
             # Normal execution for other files
-            if go run main.go "test_${filename}_back.din" >/dev/null 2>&1; then
-                echo -e "${GREEN}EXEC-OK${NC}"
+            start_time=$(date +%s.%N)
+            if go run main.go $OPTIMIZED_FLAG "test_${filename}_back.din" >/dev/null 2>&1; then
+                end_time=$(date +%s.%N)
+                execution_time=$(echo "$end_time - $start_time" | bc -l)
+                printf "${GREEN}EXEC-OK${NC} [%.3fs]\n" "$execution_time"
                 passed_files=$((passed_files + 1))
             else
-                echo -e "${RED}EXEC-FAIL${NC}"
+                end_time=$(date +%s.%N)
+                execution_time=$(echo "$end_time - $start_time" | bc -l)
+                printf "${RED}EXEC-FAIL${NC} [%.3fs]\n" "$execution_time"
                 failed_files=$((failed_files + 1))
                 failed_list+=("$file (execution)")
             fi
@@ -106,11 +123,19 @@ fi
 
 echo
 if [[ $failed_files -eq 0 ]]; then
-    echo -e "${GREEN}🎉 All tests passed! --from_json feature is 100% compatible!${NC}"
+    if [[ -n "$OPTIMIZED_FLAG" ]]; then
+        echo -e "${GREEN}🎉 All tests passed! --from_json feature is 100% compatible (with memory optimization)!${NC}"
+    else
+        echo -e "${GREEN}🎉 All tests passed! --from_json feature is 100% compatible!${NC}"
+    fi
     success_rate="100%"
 else
     success_rate=$(( (passed_files * 100) / total_files ))
-    echo -e "${YELLOW}Success rate: ${success_rate}%${NC}"
+    if [[ -n "$OPTIMIZED_FLAG" ]]; then
+        echo -e "${YELLOW}Success rate: ${success_rate}% (with memory optimization)${NC}"
+    else
+        echo -e "${YELLOW}Success rate: ${success_rate}%${NC}"
+    fi
 fi
 
 # Cleanup temporary files

@@ -42,6 +42,8 @@ type interpreter struct {
 	stringBuilderPool sync.Pool
 	arrayPool         sync.Pool
 	mapPool           sync.Pool
+	// Variable lookup cache for performance optimization
+	variableLookupCache *VariableLookupCache
 	// Expression optimizer
 	optimizer         *ConstantFolder
 }
@@ -758,11 +760,20 @@ func (interp *interpreter) pushScope(scope map[string]Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	interp.vars = SmartAppendMapValue(interp.vars, scope)
+	// Invalidate cache when scope changes
+	if interp.variableLookupCache != nil {
+		interp.variableLookupCache.InvalidateScope(len(interp.vars) - 1)
+	}
 }
 
 func (interp *interpreter) popScope() {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
+	scopeLevel := len(interp.vars) - 1
+	// Invalidate cache for the scope being removed
+	if interp.variableLookupCache != nil {
+		interp.variableLookupCache.InvalidateScope(scopeLevel)
+	}
 	interp.vars = interp.vars[:len(interp.vars)-1]
 }
 
@@ -770,11 +781,44 @@ func (interp *interpreter) assign(name string, value Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	interp.vars[len(interp.vars)-1][name] = value
+	// Invalidate cache for this variable since it's been reassigned
+	if interp.variableLookupCache != nil {
+		interp.variableLookupCache.InvalidateVariable(name)
+	}
 }
 
 func (interp *interpreter) lookup(name string) (Value, bool) {
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
+	
+	// Use variable lookup cache if enabled
+	if interp.variableLookupCache != nil {
+		// Check cache first
+		if cached, exists := interp.variableLookupCache.cache[name]; exists {
+			// Verify the cached value is still valid for the current scope
+			if cached.ScopeLevel < len(interp.vars) {
+				if value, found := interp.vars[cached.ScopeLevel][name]; found && safeValueEqual(value, cached.Value) {
+					interp.variableLookupCache.hits++
+					return cached.Value, true
+				}
+			}
+			// Cache is stale, remove it
+			interp.variableLookupCache.InvalidateVariable(name)
+		}
+		
+		interp.variableLookupCache.misses++
+		
+		// Perform regular lookup and cache the result
+		for i := len(interp.vars) - 1; i >= 0; i-- {
+			if value, found := interp.vars[i][name]; found {
+				interp.variableLookupCache.CacheVariable(name, value, i)
+				return value, true
+			}
+		}
+		return nil, false
+	}
+	
+	// Fallback to standard lookup
 	for i := len(interp.vars) - 1; i >= 0; i-- {
 		thisVars := interp.vars[i]
 		if v, ok := thisVars[name]; ok {
@@ -1152,6 +1196,10 @@ func newInterpreter(config *Config) *interpreter {
 		New: func() any {
 			return make([]Value, 0, 16) // Pre-allocate with capacity 16
 		},
+	}
+	// Initialize variable lookup cache if enabled
+	if IsVariableLookupCacheEnabled() {
+		interp.variableLookupCache = NewVariableLookupCache(GetVariableLookupCacheSize())
 	}
 	// Initialize expression optimizer
 	interp.optimizer = NewConstantFolder(GetGlobalExpressionOptimizer())
