@@ -12,11 +12,12 @@ import (
 
 // CLI represents the command line interface
 type CLI struct {
-	args     []string
-	profile  bool
-	analyze  bool
-	toJson   bool
-	fromJson bool
+	args           []string
+	profile        bool
+	analyze        bool
+	toJson         bool
+	fromJson       bool
+	memoryOptimize bool
 }
 
 // NewCLI creates a new CLI instance
@@ -51,6 +52,10 @@ func (c *CLI) Run() error {
 			c.fromJson = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
+		case "--memory-optimize", "-m":
+			c.memoryOptimize = true
+			// Remove the flag from args
+			c.args = append(c.args[:i], c.args[i+1:]...)
 		}
 	}
 
@@ -81,6 +86,7 @@ func (c *CLI) printUsage() {
 	fmt.Println("  uddinlang <filename.din>   - Run a Uddin-Lang script file")
 	fmt.Println("  uddinlang --profile <filename.din> - Run with performance profiling")
 	fmt.Println("  uddinlang --analyze <filename.din> - Analyze syntax without execution")
+	fmt.Println("  uddinlang --memory-optimize <filename.din> - Run with memory layout optimizations")
 	fmt.Println("  uddinlang --to_json <filename.din> - Convert Uddin-Lang code to JSON AST")
 	fmt.Println("  uddinlang --from_json <filename.json> - Convert JSON AST back to Uddin-Lang code")
 	fmt.Println("  uddinlang --examples       - List available example files")
@@ -90,6 +96,7 @@ func (c *CLI) printUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("  --profile, -p              - Enable performance profiling output")
 	fmt.Println("  --analyze, -a              - Analyze syntax only (no execution)")
+	fmt.Println("  --memory-optimize, -m      - Enable experimental memory layout optimizations")
 	fmt.Println("  --to_json                  - Convert source code to JSON AST representation")
 }
 
@@ -154,9 +161,10 @@ func (c *CLI) runScript(filename string) error {
 		return nil
 	}
 
-	// Create options based on profile flag
+	// Create options based on flags
 	options := &interpreter.RunProgramOptions{
-		ShowProfiling: c.profile,
+		ShowProfiling:  c.profile,
+		MemoryOptimize: c.memoryOptimize,
 	}
 
 	// Execute the program with options

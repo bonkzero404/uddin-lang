@@ -177,7 +177,8 @@ func RunProgram(inputSource string) (bool, string) {
 
 // RunProgramOptions defines options for running a program
 type RunProgramOptions struct {
-	ShowProfiling bool // Whether to show execution profiling information
+	ShowProfiling   bool // Whether to show execution profiling information
+	MemoryOptimize  bool // Whether to enable experimental memory layout optimizations
 }
 
 // RunProgramWithOptions parses and executes the given program with custom options.
@@ -213,10 +214,20 @@ func RunProgramWithOptions(inputSource string, options *RunProgramOptions) (bool
 	}
 
 	// Create config to capture output
-	config := &Config{
-		Stdout: writerFunc(func(s string) {
+	var config *Config
+	if options != nil && options.MemoryOptimize {
+		// Use experimental config with memory optimizations
+		config = ExperimentalConfig()
+		config.Stdout = writerFunc(func(s string) {
 			resultProgram += s
-		}),
+		})
+	} else {
+		// Use default config
+		config = &Config{
+			Stdout: writerFunc(func(s string) {
+				resultProgram += s
+			}),
+		}
 	}
 
 	// Execute the program and capture output

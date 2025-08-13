@@ -42,6 +42,8 @@ type interpreter struct {
 	stringBuilderPool sync.Pool
 	arrayPool         sync.Pool
 	mapPool           sync.Pool
+	// Expression optimizer
+	optimizer         *ConstantFolder
 }
 
 // returnResult is used to handle return statements in functions.
@@ -615,6 +617,17 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 		}
 	}
 
+	// Handle builtin functions with dispatcher
+	if bf, ok := f.(builtinFunction); ok {
+		// Try builtin dispatcher first for optimized dispatch
+		dispatcher := GetGlobalBuiltinDispatcher()
+		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.Name, interp, pos, args); dispatched {
+			interp.stats.BuiltinCalls++
+			return result
+		}
+		// Fallback to original method if not in dispatcher
+	}
+
 	defer func() {
 		if r := recover(); r != nil {
 			if result, ok := r.(returnResult); ok {
@@ -646,6 +659,12 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.currentPos = expr.Position()
 	interp.stats.Ops++
 	
+	// Try constant folding optimization first
+	if interp.optimizer != nil {
+		if result, ok := interp.optimizer.FoldConstants(expr); ok {
+			return result
+		}
+	}
 
 	switch e := expr.(type) {
 	case *Binary:
@@ -1115,6 +1134,13 @@ func (interp *interpreter) execute(prog *Program) {
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
 
+	// Set global memory layout configuration
+	if config.MemoryLayout != nil {
+		SetGlobalMemoryLayoutConfig(config.MemoryLayout)
+	} else {
+		SetGlobalMemoryLayoutConfig(DefaultMemoryLayoutConfig())
+	}
+
 	// Initialize optimization caches
 	interp.memoCache = make(map[string]Value)
 	interp.stringBuilderPool = sync.Pool{
@@ -1127,6 +1153,11 @@ func newInterpreter(config *Config) *interpreter {
 			return make([]Value, 0, 16) // Pre-allocate with capacity 16
 		},
 	}
+	// Initialize expression optimizer
+	interp.optimizer = NewConstantFolder(GetGlobalExpressionOptimizer())
+
+	// Initialize builtin dispatcher
+	InitializeBuiltinDispatcher()
 
 	interp.pushScope(make(map[string]Value))
 	for k, v := range builtins {

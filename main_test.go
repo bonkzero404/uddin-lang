@@ -10,7 +10,7 @@ import (
 )
 
 func getSampleScriptForTest() string {
-	content, err := os.ReadFile("examples/02_functional_demo.din")
+	content, err := os.ReadFile("examples/basics/functional_demo.din")
 	if err != nil {
 		return `
 		// Fungsi main sederhana untuk test
@@ -199,7 +199,11 @@ func TestMainExecutionStats(t *testing.T) {
 	end
 	`
 
-	success, output := interpreter.RunProgram(script)
+	// Use RunProgramWithOptions with ShowProfiling enabled
+	options := &interpreter.RunProgramOptions{
+		ShowProfiling: true,
+	}
+	success, output := interpreter.RunProgramWithOptions(script, options)
 	if !success {
 		t.Errorf("Script should execute successfully, got: %s", output)
 	}

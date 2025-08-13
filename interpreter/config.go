@@ -32,29 +32,35 @@ type Config struct {
 	// IsUnitTest menandakan bahwa interpreter sedang berjalan dalam konteks unit test
 	// Jika true, fungsi main() tidak akan dijalankan secara otomatis
 	IsUnitTest bool
+
+	// MemoryLayout configures memory layout optimizations
+	// If nil, defaults to DefaultMemoryLayoutConfig()
+	MemoryLayout *MemoryLayoutConfig
 }
 
 // DefaultConfig returns a configuration with sensible defaults
 func DefaultConfig() *Config {
 	return &Config{
-		Vars:       make(map[string]Value),
-		Args:       []string{},
-		Stdin:      os.Stdin,
-		Stdout:     os.Stdout,
-		Exit:       os.Exit,
-		IsUnitTest: false,
+		Vars:         make(map[string]Value),
+		Args:         []string{},
+		Stdin:        os.Stdin,
+		Stdout:       os.Stdout,
+		Exit:         os.Exit,
+		IsUnitTest:   false,
+		MemoryLayout: DefaultMemoryLayoutConfig(),
 	}
 }
 
 // TestConfig returns a configuration suitable for testing
 func TestConfig() *Config {
 	return &Config{
-		Vars:       make(map[string]Value),
-		Args:       []string{},
-		Stdin:      nil,
-		Stdout:     io.Discard,
-		Exit:       func(int) {}, // No-op exit function for tests
-		IsUnitTest: true,
+		Vars:         make(map[string]Value),
+		Args:         []string{},
+		Stdin:        nil,
+		Stdout:       io.Discard,
+		Exit:         func(int) {}, // No-op exit function for tests
+		IsUnitTest:   true,
+		MemoryLayout: DefaultMemoryLayoutConfig(),
 	}
 }
 
@@ -88,4 +94,18 @@ func (s *Stats) Reset() {
 // Total returns the total number of operations
 func (s *Stats) Total() int {
 	return s.Ops + s.UserCalls + s.BuiltinCalls
+}
+
+// ExperimentalConfig returns a configuration with experimental memory layout optimizations enabled
+// WARNING: This is experimental and may have stability issues
+func ExperimentalConfig() *Config {
+	return &Config{
+		Vars:         make(map[string]Value),
+		Args:         []string{},
+		Stdin:        os.Stdin,
+		Stdout:       os.Stdout,
+		Exit:         os.Exit,
+		IsUnitTest:   false,
+		MemoryLayout: ExperimentalMemoryLayoutConfig(),
+	}
 }
