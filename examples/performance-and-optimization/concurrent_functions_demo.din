@@ -1,0 +1,140 @@
+// Concurrent Functions Demo
+// Demonstration of concurrent functions usage for parallel processing
+
+print("=== Concurrent Functions Demo ===")
+print()
+
+// Simple functions
+fun square(x):
+    return x * x
+end
+
+fun is_even(x):
+    return x % 2 == 0
+end
+
+fun add(a, b):
+    return a + b
+end
+
+// 1. Concurrent Map Demo with small data
+print("1. Concurrent Map Demo:")
+small_numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+print("Input: " + str(small_numbers))
+squares = concurrent_map(small_numbers, square)
+print("Squares: " + str(squares))
+print()
+
+// 2. Concurrent Filter Demo
+print("2. Concurrent Filter Demo:")
+test_numbers = range(1, 50)
+
+evens = concurrent_filter(test_numbers, is_even)
+print("Even numbers from 1-49: " + str(len(evens)) + " found")
+print("First 10: " + str(slice(evens, 0, 10)))
+print()
+
+// 3. Concurrent Reduce Demo
+print("3. Concurrent Reduce Demo:")
+sum_data = range(1, 100)
+
+total = concurrent_reduce(sum_data, add, 0)
+print("Sum 1+2+...+99 = " + str(total))
+print("Formula: 99*100/2 = " + str(99 * 100 / 2))
+print()
+
+// 4. Demo with larger data
+print("4. Large Data Demo:")
+medium_data = range(1, 100)
+
+// Simple divisibility check
+fun is_divisible_by_3(n):
+    return n % 3 == 0
+end
+
+divisible = concurrent_filter(medium_data, is_divisible_by_3)
+print("Numbers divisible by 3 found: " + str(len(divisible)))
+print("Some examples: " + str(slice(divisible, 0, 10)))
+print()
+
+// 5. Simple pipeline
+print("5. Simple Pipeline:")
+pipeline_data = range(1, 100)
+
+// Filter -> Map -> Reduce
+filtered = concurrent_filter(pipeline_data, is_even)
+squared = concurrent_map(filtered, square)
+sum_result = concurrent_reduce(squared, add, 0)
+
+print("Pipeline: filter(even) -> map(square) -> reduce(sum)")
+print("Result: " + str(sum_result))
+print()
+
+// 6. Simple mathematical operations
+print("6. Mathematical Operations:")
+
+fun simple_math(x):
+    return x * 2 + 1
+end
+
+math_data = range(1, 20)
+math_results = concurrent_map(math_data, simple_math)
+print("f(x) = 2x + 1 for x = 1..19")
+print("Results: " + str(math_results))
+print()
+
+// 7. Reduce with different operations
+print("7. Reduce with Different Operations:")
+
+fun multiply(a, b):
+    return a * b
+end
+
+// Small factorial
+fact_data = range(1, 6)  // 1,2,3,4,5
+factorial = concurrent_reduce(fact_data, multiply, 1)
+print("Factorial 5! = " + str(factorial))
+
+// Sum of squares
+fun add_square(acc, x):
+    return acc + (x * x)
+end
+
+square_data = range(1, 11)
+sum_squares = concurrent_reduce(square_data, add_square, 0)
+print("Sum of squares 1²+2²+...+10² = " + str(sum_squares))
+print()
+
+// 8. Comparison with sequential
+print("8. Sequential vs Concurrent Comparison:")
+comp_data = range(1, 50)
+
+// Sequential
+seq_evens = filter(comp_data, is_even)
+seq_squares = map(seq_evens, square)
+seq_sum = reduce(seq_squares, add, 0)
+
+// Concurrent
+conc_evens = concurrent_filter(comp_data, is_even)
+conc_squares = concurrent_map(conc_evens, square)
+conc_sum = concurrent_reduce(conc_squares, add, 0)
+
+print("Sequential result: " + str(seq_sum))
+print("Concurrent result: " + str(conc_sum))
+print("Results match: " + str(seq_sum == conc_sum))
+print()
+
+print("=== Demo Summary ===")
+print("✓ concurrent_map: Process elements in parallel")
+print("✓ concurrent_filter: Filter data efficiently")
+print("✓ concurrent_reduce: Accurate parallel accumulation")
+print("✓ Pipeline: Consistent concurrent operation combinations")
+print()
+print("Benefits of concurrent programming:")
+print("- Multi-core CPU utilization")
+print("- Higher throughput")
+print("- Better scalability")
+print("- Efficient large data processing")
+print()
+print("Demo successfully demonstrates concurrent functions functionality!")

@@ -40,6 +40,7 @@ type parser struct {
 	pos       Position
 	tok       Token
 	val       string
+	nodePool  *ASTNodePool // Pool for AST nodes to reduce allocations
 }
 
 func (p *parser) next() {
@@ -48,6 +49,9 @@ func (p *parser) next() {
 		p.error("%s", p.val)
 	}
 }
+
+// Note: Node pool cleanup is handled automatically by Go's garbage collector
+// No explicit cleanup needed as sync.Pool manages memory automatically
 
 func (p *parser) error(format string, args ...any) {
 	message := fmt.Sprintf(format, args...)
@@ -333,7 +337,16 @@ func (p *parser) binary(parseFunc func() Expression, operators ...Token) Express
 		pos := p.pos
 		p.next()
 		right := parseFunc()
-		expr = &Binary{pos, expr, op, right}
+		// Use node pool for Binary allocation
+		if binary := p.nodePool.GetBinary(); binary != nil {
+			binary.pos = pos
+			binary.Left = expr
+			binary.Operator = op
+			binary.Right = right
+			expr = binary
+		} else {
+			expr = &Binary{pos, expr, op, right}
+		}
 	}
 	return expr
 }
@@ -495,6 +508,12 @@ func (p *parser) primary() Expression {
 		name := p.val
 		pos := p.pos
 		p.next()
+		// Use node pool for Variable allocation
+		if variable := p.nodePool.GetVariable(); variable != nil {
+			variable.pos = pos
+			variable.Name = name
+			return variable
+		}
 		return &Variable{pos, name}
 	case INT:
 		val := p.val
@@ -504,6 +523,12 @@ func (p *parser) primary() Expression {
 		if err != nil {
 			// Tokenizer should never give us this
 			panic(fmt.Sprintf("tokenizer gave INT token that isn't an int: %s", val))
+		}
+		// Use node pool for Literal allocation
+		if literal := p.nodePool.GetLiteral(); literal != nil {
+			literal.pos = pos
+			literal.Value = n
+			return literal
 		}
 		return &Literal{pos, n}
 	case FLOAT:
@@ -515,23 +540,53 @@ func (p *parser) primary() Expression {
 			// Tokenizer should never give us this
 			panic(fmt.Sprintf("tokenizer gave FLOAT token that isn't a float: %s", val))
 		}
+		// Use node pool for Literal allocation
+		if literal := p.nodePool.GetLiteral(); literal != nil {
+			literal.pos = pos
+			literal.Value = n
+			return literal
+		}
 		return &Literal{pos, n}
 	case STR:
 		val := p.val
 		pos := p.pos
 		p.next()
+		// Use node pool for Literal allocation
+		if literal := p.nodePool.GetLiteral(); literal != nil {
+			literal.pos = pos
+			literal.Value = val
+			return literal
+		}
 		return &Literal{pos, val}
 	case TRUE:
 		pos := p.pos
 		p.next()
+		// Use node pool for Literal allocation
+		if literal := p.nodePool.GetLiteral(); literal != nil {
+			literal.pos = pos
+			literal.Value = true
+			return literal
+		}
 		return &Literal{pos, true}
 	case FALSE:
 		pos := p.pos
 		p.next()
+		// Use node pool for Literal allocation
+		if literal := p.nodePool.GetLiteral(); literal != nil {
+			literal.pos = pos
+			literal.Value = false
+			return literal
+		}
 		return &Literal{pos, false}
 	case NULL:
 		pos := p.pos
 		p.next()
+		// Use node pool for Literal allocation
+		if literal := p.nodePool.GetLiteral(); literal != nil {
+			literal.pos = pos
+			literal.Value = nil
+			return literal
+		}
 		return &Literal{pos, nil}
 	case LBRACKET:
 		return p.list()
@@ -637,7 +692,10 @@ func ParseExpression(input []byte) (e Expression, err error) {
 		}
 	}()
 	t := NewTokenizer(input)
-	p := parser{tokenizer: t}
+	p := parser{
+		tokenizer: t,
+		nodePool:  GetGlobalASTNodePool(),
+	}
 	p.next()
 	return p.expression(), nil
 }
@@ -654,7 +712,10 @@ func ParseProgram(input []byte) (prog *Program, err error) {
 		}
 	}()
 	t := NewTokenizer(input)
-	p := parser{tokenizer: t}
+	p := parser{
+		tokenizer: t,
+		nodePool:  GetGlobalASTNodePool(),
+	}
 	p.next()
 	return p.program(), nil
 }

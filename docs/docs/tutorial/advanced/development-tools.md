@@ -43,6 +43,10 @@ uddin-lang -p script.din
 uddin-lang --analyze script.din
 uddin-lang -a script.din
 
+# Memory optimization (experimental)
+uddin-lang --memory-optimize script.din
+uddin-lang -m script.din
+
 # Show help information
 uddin-lang --help
 uddin-lang -h
@@ -109,6 +113,36 @@ Total time: 3.579ms
 Memory usage: 1.2MB
 ======================
 ```
+
+### Memory Optimization (Experimental)
+
+Enable experimental memory layout optimizations for improved performance:
+
+```bash
+# Run with memory optimization
+uddin-lang --memory-optimize mycode.din
+uddin-lang -m mycode.din
+
+# Combine with profiling to measure optimization effects
+uddin-lang --memory-optimize --profile mycode.din
+```
+
+**⚠️ Important Limitations:**
+- **Experimental feature** - may have stability issues
+- **Not compatible** with concurrent functions (`concurrent_map`, `concurrent_filter`, `concurrent_reduce`)
+- **Not thread-safe** - avoid in multi-threaded environments
+
+**Optimization Features:**
+- Tagged value types for reduced memory overhead
+- Compact environment structures
+- Cache-friendly data layouts
+- Variable lookup caching
+- Expression memoization
+
+**Best Use Cases:**
+- Sequential processing workloads
+- Memory-constrained environments
+- Performance-critical single-threaded applications
 
 ### AST Conversion Tools
 
@@ -181,7 +215,10 @@ uddin-lang --analyze myproject.din
 # 2. Run with profiling to check performance
 uddin-lang --profile myproject.din
 
-# 3. Normal execution
+# 3. Test with memory optimization (if compatible)
+uddin-lang --memory-optimize --profile myproject.din
+
+# 4. Normal execution
 uddin-lang myproject.din
 ```
 
@@ -199,6 +236,13 @@ uddin-lang --analyze examples/15_array_methods_demo.din
 
 # Profile an example
 uddin-lang --profile examples/10_number_theory_demo.din
+
+# Test memory optimization with sequential examples
+uddin-lang --memory-optimize examples/15_array_methods_demo.din
+
+# Compare performance with and without optimization
+uddin-lang --profile examples/10_number_theory_demo.din
+uddin-lang --memory-optimize --profile examples/10_number_theory_demo.din
 ```
 
 ### AST Analysis Workflow
@@ -480,7 +524,18 @@ uddin-lang --version
     uddin-lang --profile mycode.din
     ```
 
-3. **Use Examples**: Learn from existing examples
+3. **Test Memory Optimization**: For sequential workloads, compare with and without optimization
+
+    ```bash
+    # Test compatibility first
+    uddin-lang --analyze mycode.din
+    
+    # Compare performance
+    uddin-lang --profile mycode.din
+    uddin-lang --memory-optimize --profile mycode.din
+    ```
+
+4. **Use Examples**: Learn from existing examples
     ```bash
     uddin-lang --examples
     uddin-lang examples/01_hello_world.din

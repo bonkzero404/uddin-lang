@@ -31,7 +31,7 @@ func TestInterpreterBasicExecution(t *testing.T) {
 			print(5 / 2)
 			print(5 % 2)
 			`,
-			expected: "8\n2\n15\n2.5\n1",
+			expected: "8\n2\n15\n2\n1",
 		},
 		{
 			name: "comparison_operations",

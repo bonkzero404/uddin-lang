@@ -191,12 +191,13 @@ type Position struct {
 // Use NewTokenizer() to create a tokenizer instance, and Next() to get the next
 // token in the input stream.
 type Tokenizer struct {
-	input    []byte   // The source code as a byte array
-	offset   int      // Current offset in the input
-	ch       rune     // Current character being processed
-	errorMsg string   // Error message if an error occurred
-	pos      Position // Current position in the source
-	nextPos  Position // Next position in the source
+	input      []byte      // The source code as a byte array
+	offset     int         // Current offset in the input
+	ch         rune        // Current character being processed
+	errorMsg   string      // Error message if an error occurred
+	pos        Position    // Current position in the source
+	nextPos    Position    // Next position in the source
+	tokenCache *TokenCache // Cache for frequently used tokens
 }
 
 // NewTokenizer creates and initializes a new tokenizer for the given input.
@@ -210,6 +211,7 @@ func NewTokenizer(input []byte) *Tokenizer {
 	t.input = input
 	t.nextPos.Line = 1   // Start at line 1
 	t.nextPos.Column = 1 // Start at column 1
+	t.tokenCache = GetGlobalTokenCache()
 	t.next()             // Read the first character
 	return t
 }
@@ -386,13 +388,25 @@ func (t *Tokenizer) Next() (Position, Token, string) {
 		}
 		name := builder.String()
 
-		// Check if it's a keyword or a regular identifier
-		keywordToken, isKeyword := keywordTokens[name]
-		if !isKeyword {
-			token = NAME
-			value = name
+		// Check cache first for frequently used identifiers
+		if cachedToken, found := t.tokenCache.GetCachedToken(name); found {
+			token = cachedToken
+			if token == NAME {
+				value = name
+			}
 		} else {
-			token = keywordToken
+			// Check if it's a keyword or a regular identifier
+			keywordToken, isKeyword := keywordTokens[name]
+			if !isKeyword {
+				token = NAME
+				value = name
+				// Cache identifier for future use
+				t.tokenCache.SetCachedToken(name, NAME)
+			} else {
+				token = keywordToken
+				// Cache keyword for future use
+				t.tokenCache.SetCachedToken(name, keywordToken)
+			}
 		}
 		return pos, token, value
 	}

@@ -38,10 +38,17 @@ type interpreter struct {
 	// currentPos tracks the current position being executed for better error reporting
 	currentPos Position
 	// Optimization caches
-	memoCache         map[string]Value
+	memoCache map[string]Value
+	// String builder pool for efficient memory allocation
 	stringBuilderPool sync.Pool
-	arrayPool         sync.Pool
-	mapPool           sync.Pool
+	// Array pool for efficient memory allocation
+	arrayPool sync.Pool
+	// Map pool for efficient memory allocation
+	mapPool sync.Pool
+	// Variable lookup cache for performance optimization
+	variableLookupCache *VariableLookupCache
+	// Expression optimizer
+	optimizer *ConstantFolder
 }
 
 // returnResult is used to handle return statements in functions.
@@ -121,6 +128,12 @@ func ensureIntToFloats(l, r Value) (float64, float64) {
 // Returns:
 //   - A boolean Value indicating whether the values are equal
 func evalEqual(pos Position, l, r Value) Value {
+	// Try fast evaluation first for simple types
+	if result, handled := GetFastEvaluator().FastEvalEqual(l, r); handled {
+		return result
+	}
+
+	// Fallback to original deep equality logic
 	switch l := l.(type) {
 	case nil:
 		// nil is only equal to nil
@@ -260,33 +273,13 @@ func evalIn(pos Position, l, r Value) Value {
 // Returns:
 //   - A boolean Value indicating whether l < r
 func evalLess(pos Position, l, r Value) Value {
+	// Try fast evaluation first for simple types
+	if result, handled := GetFastEvaluator().FastEvalLess(l, r); handled {
+		return result
+	}
+
+	// Fallback to original logic for complex types
 	switch l := l.(type) {
-	case int:
-		// Integer comparison
-		if r, ok := r.(int); ok {
-			return Value(l < r)
-		}
-		// Mixed int/float comparison
-		if r, ok := r.(float64); ok {
-			return Value(float64(l) < r)
-		}
-
-	case float64:
-		// Float comparison
-		if r, ok := r.(float64); ok {
-			return Value(l < r)
-		}
-		// Mixed float/int comparison
-		if r, ok := r.(int); ok {
-			return Value(l < float64(r))
-		}
-
-	case string:
-		// String lexicographical comparison
-		if r, ok := r.(string); ok {
-			return Value(l < r)
-		}
-
 	case *[]Value:
 		// Array lexicographical comparison
 		if r, ok := r.(*[]Value); ok {
@@ -310,22 +303,13 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("plus")
 
-	// Fast path for most common cases
-	if li, ok := l.(int); ok {
-		if ri, ok := r.(int); ok {
-			return Value(li + ri)
-		}
-		if rf, ok := r.(float64); ok {
-			return Value(float64(li) + rf)
-		}
-	} else if lf, ok := l.(float64); ok {
-		if rf, ok := r.(float64); ok {
-			return Value(lf + rf)
-		}
-		if ri, ok := r.(int); ok {
-			return Value(lf + float64(ri))
-		}
-	} else if ls, ok := l.(string); ok {
+	// Try fast numeric evaluation first to avoid interface{} boxing
+	if result, handled := GetFastEvaluator().FastEvalPlus(l, r); handled {
+		return result
+	}
+
+	// Handle non-numeric cases
+	if ls, ok := l.(string); ok {
 		if rs, ok := r.(string); ok {
 			// Use string interning for repeated strings
 			result := ls + rs
@@ -366,18 +350,9 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 }
 
 func evalMinus(pos Position, l, r Value) Value {
-	if li, ok := l.(int); ok {
-		if ri, ok := r.(int); ok {
-			return Value(li - ri)
-		} else if rf, ok := r.(float64); ok {
-			return Value(float64(li) - rf)
-		}
-	} else if lf, ok := l.(float64); ok {
-		if rf, ok := r.(float64); ok {
-			return Value(lf - rf)
-		} else if ri, ok := r.(int); ok {
-			return Value(lf - float64(ri))
-		}
+	// Try fast numeric evaluation first
+	if result, handled := GetFastEvaluator().FastEvalMinus(l, r); handled {
+		return result
 	}
 
 	panic(typeError(pos, "- requires two floats or integers, got %T and %T", l, r))
@@ -388,14 +363,13 @@ func evalTimes(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("times")
 
-	// Fast path for numeric operations
+	// Try fast numeric evaluation first for pure numeric operations
+	if result, handled := GetFastEvaluator().FastEvalTimes(l, r); handled {
+		return result
+	}
+
+	// Handle mixed type operations (int * string, int * array, etc.)
 	if li, ok := l.(int); ok {
-		if ri, ok := r.(int); ok {
-			return Value(li * ri)
-		}
-		if rf, ok := r.(float64); ok {
-			return Value(float64(li) * rf)
-		}
 		if rs, ok := r.(string); ok {
 			if li < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
@@ -469,6 +443,12 @@ func evalTimes(pos Position, l, r Value) Value {
 }
 
 func evalDivide(pos Position, l, r Value) Value {
+	// Try fast numeric evaluation first
+	if result, handled := GetFastEvaluator().FastEvalDivide(l, r); handled {
+		return result
+	}
+
+	// Fallback to original logic
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
 		panic(typeError(pos, "/ requires two floats or integers"))
@@ -480,6 +460,12 @@ func evalDivide(pos Position, l, r Value) Value {
 }
 
 func evalModulo(pos Position, l, r Value) Value {
+	// Try fast numeric evaluation first
+	if result, handled := GetFastEvaluator().FastEvalModulo(l, r); handled {
+		return result
+	}
+
+	// Fallback to original logic
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
 		panic(typeError(pos, "modulo operator requires two floats or integers"))
@@ -493,6 +479,12 @@ func evalModulo(pos Position, l, r Value) Value {
 // evalPower evaluates the power operation (exponentiation).
 // It converts operands to floats and uses math.Pow for calculation.
 func evalPower(pos Position, l, r Value) Value {
+	// Try fast numeric evaluation first for simple cases
+	if result, handled := GetFastEvaluator().FastEvalPower(l, r); handled {
+		return result
+	}
+
+	// Fallback to original logic with math.Pow
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
 		panic(typeError(pos, "** requires two floats or integers"))
@@ -621,13 +613,25 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Track function calls for performance monitoring
 	TrackOperation("function_call")
 
-	// Check memoization cache for functions marked with memo
+	// Check optimized memoization cache for functions marked with memo
+	// EXPERIMENTAL: Memoization is experimental and may consume significant memory
 	// Only cache functions that are explicitly memoized and return non-nil values
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized {
-		memoKey := getMemoKey(uf.Name, args)
-		if cached, exists := interp.memoCache[memoKey]; exists {
+		memoKey := OptimizedMemoKey(uf.Name, args)
+		if cached, exists := GetGlobalOptimizedMemoCache().Get(memoKey); exists {
 			return cached
 		}
+	}
+
+	// Handle builtin functions with dispatcher
+	if bf, ok := f.(builtinFunction); ok {
+		// Try builtin dispatcher first for optimized dispatch
+		dispatcher := GetGlobalBuiltinDispatcher()
+		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.Name, interp, pos, args); dispatched {
+			interp.stats.BuiltinCalls++
+			return result
+		}
+		// Fallback to original method if not in dispatcher
 	}
 
 	defer func() {
@@ -635,9 +639,10 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
 				// Cache the result for memoization only if function is marked as memoized and result is not nil
-				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
-					memoKey := getMemoKey(uf.Name, args)
-					interp.memoCache[memoKey] = ret
+	// EXPERIMENTAL: Memoization caching is experimental feature
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
+					memoKey := OptimizedMemoKey(uf.Name, args)
+					GetGlobalOptimizedMemoCache().Set(memoKey, ret)
 				}
 			} else {
 				panic(r)
@@ -650,8 +655,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Cache the result for memoization only if function is marked as memoized and result is not nil
 	// This prevents caching functions with side effects that return nil
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && result != nil {
-		memoKey := getMemoKey(uf.Name, args)
-		interp.memoCache[memoKey] = result
+		memoKey := OptimizedMemoKey(uf.Name, args)
+		GetGlobalOptimizedMemoCache().Set(memoKey, result)
 	}
 
 	return result
@@ -660,6 +665,14 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.currentPos = expr.Position()
 	interp.stats.Ops++
+
+	// Try constant folding optimization first
+	if interp.optimizer != nil {
+		if result, ok := interp.optimizer.FoldConstants(expr); ok {
+			return result
+		}
+	}
+
 	switch e := expr.(type) {
 	case *Binary:
 		if e.Operator == PLUS {
@@ -752,11 +765,20 @@ func (interp *interpreter) pushScope(scope map[string]Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	interp.vars = SmartAppendMapValue(interp.vars, scope)
+	// Invalidate cache when scope changes
+	if interp.variableLookupCache != nil {
+		interp.variableLookupCache.InvalidateScope(len(interp.vars) - 1)
+	}
 }
 
 func (interp *interpreter) popScope() {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
+	scopeLevel := len(interp.vars) - 1
+	// Invalidate cache for the scope being removed
+	if interp.variableLookupCache != nil {
+		interp.variableLookupCache.InvalidateScope(scopeLevel)
+	}
 	interp.vars = interp.vars[:len(interp.vars)-1]
 }
 
@@ -764,11 +786,44 @@ func (interp *interpreter) assign(name string, value Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	interp.vars[len(interp.vars)-1][name] = value
+	// Invalidate cache for this variable since it's been reassigned
+	if interp.variableLookupCache != nil {
+		interp.variableLookupCache.InvalidateVariable(name)
+	}
 }
 
 func (interp *interpreter) lookup(name string) (Value, bool) {
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
+
+	// Use variable lookup cache if enabled
+	if interp.variableLookupCache != nil {
+		// Check cache first
+		if cached, exists := interp.variableLookupCache.cache[name]; exists {
+			// Verify the cached value is still valid for the current scope
+			if cached.ScopeLevel < len(interp.vars) {
+				if value, found := interp.vars[cached.ScopeLevel][name]; found && safeValueEqual(value, cached.Value) {
+					interp.variableLookupCache.hits++
+					return cached.Value, true
+				}
+			}
+			// Cache is stale, remove it
+			interp.variableLookupCache.InvalidateVariable(name)
+		}
+
+		interp.variableLookupCache.misses++
+
+		// Perform regular lookup and cache the result
+		for i := len(interp.vars) - 1; i >= 0; i-- {
+			if value, found := interp.vars[i][name]; found {
+				interp.variableLookupCache.CacheVariable(name, value, i)
+				return value, true
+			}
+		}
+		return nil, false
+	}
+
+	// Fallback to standard lookup
 	for i := len(interp.vars) - 1; i >= 0; i-- {
 		thisVars := interp.vars[i]
 		if v, ok := thisVars[name]; ok {
@@ -1128,6 +1183,13 @@ func (interp *interpreter) execute(prog *Program) {
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
 
+	// Set global memory layout configuration
+	if config.MemoryLayout != nil {
+		SetGlobalMemoryLayoutConfig(config.MemoryLayout)
+	} else {
+		SetGlobalMemoryLayoutConfig(DefaultMemoryLayoutConfig())
+	}
+
 	// Initialize optimization caches
 	interp.memoCache = make(map[string]Value)
 	interp.stringBuilderPool = sync.Pool{
@@ -1140,6 +1202,15 @@ func newInterpreter(config *Config) *interpreter {
 			return make([]Value, 0, 16) // Pre-allocate with capacity 16
 		},
 	}
+	// Initialize variable lookup cache if enabled
+	if IsVariableLookupCacheEnabled() {
+		interp.variableLookupCache = NewVariableLookupCache(GetVariableLookupCacheSize())
+	}
+	// Initialize expression optimizer
+	interp.optimizer = NewConstantFolder(GetGlobalExpressionOptimizer())
+
+	// Initialize builtin dispatcher
+	InitializeBuiltinDispatcher()
 
 	interp.pushScope(make(map[string]Value))
 	for k, v := range builtins {
@@ -1326,6 +1397,7 @@ func (interp *interpreter) getArray() []Value {
 }
 
 // getMemoKey generates a memoization key for function calls
+// EXPERIMENTAL: This function is part of experimental memoization feature
 func getMemoKey(funcName string, args []Value) string {
 	var sb strings.Builder
 	sb.WriteString(funcName)

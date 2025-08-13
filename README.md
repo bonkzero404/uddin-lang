@@ -255,16 +255,50 @@ Monitor execution performance and optimization metrics:
 # User Calls: 1 (3934/s)
 ```
 
+#### Memory Optimization (Experimental)
+
+Enable experimental memory layout optimizations for improved performance:
+
+```bash
+# Run with memory optimization
+./uddinlang --memory-optimize script.din
+./uddinlang -m script.din
+
+# Combine with profiling to see optimization effects
+./uddinlang --memory-optimize --profile script.din
+```
+
+**⚠️ Important Notes:**
+- Memory optimization is **experimental** and may have compatibility issues
+- **Not compatible** with concurrent functions (`concurrent_map`, `concurrent_filter`, `concurrent_reduce`)
+- Includes optimizations for:
+  - Tagged value types for reduced memory overhead
+  - Compact environment structures
+  - Cache-friendly data layouts
+  - Variable lookup caching
+  - Expression memoization
+
+**When to use:**
+- Sequential processing workloads
+- Memory-constrained environments
+- Performance-critical applications without concurrency
+
+**When to avoid:**
+- Programs using concurrent functions
+- Multi-threaded environments
+- Production systems requiring stability
+
 #### Available CLI Commands
 
-| Command       | Short | Description                       |
-| ------------- | ----- | --------------------------------- |
-| `--help`      | `-h`  | Show usage information            |
-| `--version`   | `-v`  | Display version information       |
-| `--examples`  | `-e`  | List all available example files  |
-| `--analyze`   | `-a`  | Syntax analysis without execution |
-| `--profile`   | `-p`  | Enable performance profiling      |
-| `--from_json` |       | Execute code from JSON AST format |
+| Command            | Short | Description                                    |
+| ------------------ | ----- | ---------------------------------------------- |
+| `--help`           | `-h`  | Show usage information                         |
+| `--version`        | `-v`  | Display version information                    |
+| `--examples`       | `-e`  | List all available example files               |
+| `--analyze`        | `-a`  | Syntax analysis without execution              |
+| `--profile`        | `-p`  | Enable performance profiling                   |
+| `--memory-optimize`| `-m`  | Enable experimental memory layout optimization |
+| `--from_json`      |       | Execute code from JSON AST format             |
 
 #### Usage Examples
 
@@ -275,6 +309,10 @@ Monitor execution performance and optimization metrics:
 # Development workflow
 ./uddinlang --analyze script.din    # Check syntax first
 ./uddinlang --profile script.din    # Run with performance monitoring
+
+# Memory optimization (experimental)
+./uddinlang --memory-optimize script.din  # Enable memory layout optimization
+./uddinlang -m script.din                 # Short form
 
 # JSON AST execution
 ./uddinlang --from_json script.json  # Execute from JSON AST format

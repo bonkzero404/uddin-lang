@@ -47,6 +47,7 @@ type Evaluator struct {
 	env   *Environment
 	stats *Stats
 	interp *interpreter
+	optimizer *ConstantFolder
 }
 
 // NewEvaluator creates a new expression evaluator
@@ -55,12 +56,20 @@ func NewEvaluator(env *Environment, stats *Stats, interp *interpreter) *Evaluato
 		env:   env,
 		stats: stats,
 		interp: interp,
+		optimizer: NewConstantFolder(GetGlobalExpressionOptimizer()),
 	}
 }
 
 // Optimized EvaluateExpression with type-specific fast paths
 func (e *Evaluator) EvaluateExpression(expr Expression) Value {
 	e.stats.Ops++
+
+	// Try constant folding optimization first
+	if e.optimizer != nil {
+		if result, ok := e.optimizer.FoldConstants(expr); ok {
+			return result
+		}
+	}
 
 	// Fast path for most common expression types
 	if literal, ok := expr.(*Literal); ok {
@@ -208,6 +217,15 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 	case *userFunction:
 		return e.callUserFunction(fn, node.Position(), args)
 	case builtinFunction:
+		// Try builtin dispatcher first for optimized dispatch
+		dispatcher := GetGlobalBuiltinDispatcher()
+		// Use the actual function name (fn.Name) instead of the formatted name
+		if result, dispatched := dispatcher.DispatchBuiltinFunction(fn.Name, e.interp, node.Position(), args); dispatched {
+			e.stats.BuiltinCalls++
+			return result
+		}
+		
+		// Fallback to original method if not in dispatcher
 		// Create a temporary interpreter for builtin calls
 		interp := &interpreter{
 			vars:       e.env.vars,
@@ -311,6 +329,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 	e.stats.UserCalls++
 
 	// Check memoization cache for functions marked with memo
+	// EXPERIMENTAL: Memoization is experimental and may consume significant memory
 	if fn.Name != "" && fn.Memoized {
 		memoKey := getMemoKey(fn.Name, args)
 		if e.interp.memoCache != nil {
@@ -355,6 +374,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 			if ret, ok := r.(returnResult); ok {
 				result = ret.value
 				// Cache the result for memoized functions
+				// EXPERIMENTAL: Storing result in experimental memoization cache
 				if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
 					memoKey := getMemoKey(fn.Name, args)
 					e.interp.memoCache[memoKey] = result
@@ -380,6 +400,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 	*e.stats = interp.stats // Update stats
 
 	// Cache the result for memoized functions
+	// EXPERIMENTAL: Storing result in experimental memoization cache
 	if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
 		memoKey := getMemoKey(fn.Name, args)
 		e.interp.memoCache[memoKey] = result

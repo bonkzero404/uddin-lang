@@ -1,0 +1,124 @@
+// Basic Concurrent Functions Demo
+// Simple examples of concurrent functions usage
+
+print("=== Basic Concurrent Functions Demo ===")
+print()
+
+// 1. Concurrent Map - Calculate squares
+print("1. Concurrent Map - Calculate squares:")
+numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+fun square(x):
+    return x * x
+end
+
+squares = concurrent_map(numbers, square)
+print("Input: " + str(numbers))
+print("Output: " + str(squares))
+print()
+
+// 2. Concurrent Filter - Find even numbers
+print("2. Concurrent Filter - Find even numbers:")
+big_numbers = range(1, 100)
+
+fun is_even(x):
+    return x % 2 == 0
+end
+
+evens = concurrent_filter(big_numbers, is_even)
+print("Number of even numbers from 1-99: " + str(len(evens)))
+print("First 10 even numbers: " + str(slice(evens, 0, 10)))
+print()
+
+// 3. Concurrent Reduce - Sum numbers
+print("3. Concurrent Reduce - Sum numbers:")
+data = range(1, 1000)
+
+fun add(a, b):
+    return a + b
+end
+
+total = concurrent_reduce(data, add, 0)
+print("Sum 1 + 2 + ... + 999 = " + str(total))
+print("Formula: n*(n-1)/2 = " + str(999 * 998 / 2))
+print()
+
+// 4. Practical example: Process string data
+print("4. Process string data concurrently:")
+words = ["hello", "world", "concurrent", "programming", "uddin", "language"]
+
+fun to_upper_with_length(word):
+    return upper(word) + "(" + str(len(word)) + ")"
+end
+
+processed_words = concurrent_map(words, to_upper_with_length)
+print("Processed words: " + str(processed_words))
+
+fun is_long_word(word):
+    return len(word) > 5
+end
+
+long_words = concurrent_filter(words, is_long_word)
+print("Long words (>5 letters): " + str(long_words))
+print()
+
+// 5. Concurrent with complex mathematical operations
+print("5. Complex mathematical operations:")
+large_numbers = range(1, 500)
+
+fun complex_math(x):
+    result = x
+    i = 0
+    while (i < 10):
+        result = sqrt(result * result + 1)
+        i = i + 1
+    end
+    return result
+end
+
+complex_results = concurrent_map(large_numbers, complex_math)
+print("Processing " + str(len(large_numbers)) + " numbers with complex operations")
+print("First 5 results: " + str(slice(complex_results, 0, 5)))
+print()
+
+// 6. Filter with complex conditions
+print("6. Filter with complex conditions:")
+test_data = range(1, 200)
+
+fun is_special_number(x):
+    // Special number: divisible by 3 and square > 100
+    return (x % 3 == 0) and (x * x > 100)
+end
+
+special_numbers = concurrent_filter(test_data, is_special_number)
+print("Special numbers found: " + str(len(special_numbers)))
+print("Some examples: " + str(slice(special_numbers, 0, 10)))
+print()
+
+// 7. Reduce for accumulation operations
+print("7. Reduce for accumulation operations:")
+values = range(1, 100)
+
+fun multiply(a, b):
+    return a * b
+end
+
+// Calculate factorial from 1 to 10 using concurrent_reduce
+factorial_data = range(1, 11)
+factorial_result = concurrent_reduce(factorial_data, multiply, 1)
+print("Factorial 10! = " + str(factorial_result))
+
+// Calculate sum of squares
+fun add_squares(acc, x):
+    return acc + (x * x)
+end
+
+sum_of_squares = concurrent_reduce(range(1, 21), add_squares, 0)
+print("Sum of squares 1² + 2² + ... + 20² = " + str(sum_of_squares))
+print()
+
+print("=== Demo Complete ===")
+print("Concurrent functions successfully processed data efficiently!")
+print("- concurrent_map: Apply function to each element")
+print("- concurrent_filter: Filter elements based on condition")
+print("- concurrent_reduce: Combine elements into single value")
