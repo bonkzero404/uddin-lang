@@ -301,10 +301,21 @@ func InitializeBuiltinDispatcher() {
 	dispatcher.RegisterBuiltinFunction("read_file", readFileFunc, 1, false)
 	dispatcher.RegisterBuiltinFunction("write_file", writeFileFunc, 2, false)
 	
+	// Functional Programming Functions
+	dispatcher.RegisterBuiltinFunction("map", mapFunc, 2, false)
+	dispatcher.RegisterBuiltinFunction("filter", filterFunc, 2, false)
+	dispatcher.RegisterBuiltinFunction("reduce", reduceFunc, 3, false)
+	
 	// System Functions
 	dispatcher.RegisterBuiltinFunction("import", importFunc, 1, false)
 	dispatcher.RegisterBuiltinFunction("exit", exitFunc, -1, false)
 	dispatcher.RegisterBuiltinFunction("input", inputFunc, -1, false)
+	
+	// Concurrent execution functions
+	dispatcher.RegisterBuiltinFunction("concurrent_map", concurrentMapFunc, 2, false)
+	dispatcher.RegisterBuiltinFunction("concurrent_filter", concurrentFilterFunc, 2, false)
+	dispatcher.RegisterBuiltinFunction("concurrent_reduce", concurrentReduceFunc, 3, false)
+	dispatcher.RegisterBuiltinFunction("parallel_execute", parallelExecuteFunc, -1, false)
 	
 	// Note: Additional functions can be registered as needed
 	// This covers the most commonly used builtin functions with appropriate fast path settings
