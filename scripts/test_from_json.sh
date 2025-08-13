@@ -61,8 +61,8 @@ for file in $(find examples -name "*.din" | sort); do
         echo -n -e "${GREEN}STRUCT-OK${NC} "
         
         # Step 4: Execute the converted .din file
-        # Special handling for persistent HTTP server
-        if [[ "$filename" == "persistent_http_server" ]]; then
+        # Special handling for HTTP servers that may run indefinitely
+        if [[ "$filename" == "persistent_http_server" ]] || [[ "$filename" == "http_response_return_demo" ]]; then
             # Start the server in background and kill it after 3 seconds
             timeout 3s go run main.go "test_${filename}_back.din" >/dev/null 2>&1
             exit_code=$?
