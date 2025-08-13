@@ -31,10 +31,10 @@ var globalOptimizedMemoCache = NewOptimizedMemoCache(10000)
 // Uses FNV-1a hash which is faster than string concatenation
 func FastHash(funcName string, args []Value) uint64 {
 	h := fnv.New64a()
-	
+
 	// Hash function name
 	h.Write([]byte(funcName))
-	
+
 	// Hash each argument based on its type
 	for _, arg := range args {
 		switch v := arg.(type) {
@@ -63,7 +63,7 @@ func FastHash(funcName string, args []Value) uint64 {
 			h.Write([]byte{255}) // complex type marker
 		}
 	}
-	
+
 	return h.Sum64()
 }
 
@@ -71,7 +71,7 @@ func FastHash(funcName string, args []Value) uint64 {
 func (omc *OptimizedMemoCache) Get(key uint64) (Value, bool) {
 	omc.mutex.RLock()
 	defer omc.mutex.RUnlock()
-	
+
 	value, exists := omc.cache[key]
 	return value, exists
 }
@@ -80,7 +80,7 @@ func (omc *OptimizedMemoCache) Get(key uint64) (Value, bool) {
 func (omc *OptimizedMemoCache) Set(key uint64, value Value) {
 	omc.mutex.Lock()
 	defer omc.mutex.Unlock()
-	
+
 	// Check if key already exists
 	if _, exists := omc.cache[key]; !exists {
 		// If cache is full, implement simple LRU-like eviction
@@ -99,7 +99,7 @@ func (omc *OptimizedMemoCache) Set(key uint64, value Value) {
 		}
 		omc.size++
 	}
-	
+
 	omc.cache[key] = value
 }
 
@@ -107,7 +107,7 @@ func (omc *OptimizedMemoCache) Set(key uint64, value Value) {
 func (omc *OptimizedMemoCache) Clear() {
 	omc.mutex.Lock()
 	defer omc.mutex.Unlock()
-	
+
 	omc.cache = make(map[uint64]Value, omc.maxSize/4)
 	omc.size = 0
 }

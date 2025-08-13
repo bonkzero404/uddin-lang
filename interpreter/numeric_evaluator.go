@@ -45,7 +45,7 @@ func (fne *FastNumericEvaluator) FastEvalPlus(l, r Value) (Value, bool) {
 			return Value(float64(li) + rf), true
 		}
 	}
-	
+
 	// Fast path for float + float
 	if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
@@ -57,7 +57,7 @@ func (fne *FastNumericEvaluator) FastEvalPlus(l, r Value) (Value, bool) {
 			return Value(lf + float64(ri)), true
 		}
 	}
-	
+
 	// Not a numeric operation, fallback to regular evaluation
 	return nil, false
 }
@@ -72,7 +72,7 @@ func (fne *FastNumericEvaluator) FastEvalMinus(l, r Value) (Value, bool) {
 			return Value(float64(li) - rf), true
 		}
 	}
-	
+
 	if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
 			return Value(lf - rf), true
@@ -81,7 +81,7 @@ func (fne *FastNumericEvaluator) FastEvalMinus(l, r Value) (Value, bool) {
 			return Value(lf - float64(ri)), true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -95,7 +95,7 @@ func (fne *FastNumericEvaluator) FastEvalTimes(l, r Value) (Value, bool) {
 			return Value(float64(li) * rf), true
 		}
 	}
-	
+
 	if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
 			return Value(lf * rf), true
@@ -104,7 +104,7 @@ func (fne *FastNumericEvaluator) FastEvalTimes(l, r Value) (Value, bool) {
 			return Value(lf * float64(ri)), true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -124,7 +124,7 @@ func (fne *FastNumericEvaluator) FastEvalDivide(l, r Value) (Value, bool) {
 			return Value(float64(li) / rf), true
 		}
 	}
-	
+
 	if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
 			if rf == 0 {
@@ -139,7 +139,7 @@ func (fne *FastNumericEvaluator) FastEvalDivide(l, r Value) (Value, bool) {
 			return Value(lf / float64(ri)), true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -154,7 +154,7 @@ func (fne *FastNumericEvaluator) FastEvalEqual(l, r Value) (Value, bool) {
 			return Value(float64(li) == rf), true
 		}
 	}
-	
+
 	if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
 			return Value(lf == rf), true
@@ -163,21 +163,21 @@ func (fne *FastNumericEvaluator) FastEvalEqual(l, r Value) (Value, bool) {
 			return Value(lf == float64(ri)), true
 		}
 	}
-	
+
 	// Fast path for string comparison
 	if ls, ok := l.(string); ok {
 		if rs, ok := r.(string); ok {
 			return Value(ls == rs), true
 		}
 	}
-	
+
 	// Fast path for bool comparison
 	if lb, ok := l.(bool); ok {
 		if rb, ok := r.(bool); ok {
 			return Value(lb == rb), true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -191,7 +191,7 @@ func (fne *FastNumericEvaluator) FastEvalLess(l, r Value) (Value, bool) {
 			return Value(float64(li) < rf), true
 		}
 	}
-	
+
 	if lf, ok := l.(float64); ok {
 		if rf, ok := r.(float64); ok {
 			return Value(lf < rf), true
@@ -200,14 +200,14 @@ func (fne *FastNumericEvaluator) FastEvalLess(l, r Value) (Value, bool) {
 			return Value(lf < float64(ri)), true
 		}
 	}
-	
+
 	// Fast path for string comparison
 	if ls, ok := l.(string); ok {
 		if rs, ok := r.(string); ok {
 			return Value(ls < rs), true
 		}
 	}
-	
+
 	return nil, false
 }
 

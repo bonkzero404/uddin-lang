@@ -34,10 +34,10 @@ func NewArenaAllocator(blockSize int) *ArenaAllocator {
 func (aa *ArenaAllocator) Allocate(size int) unsafe.Pointer {
 	aa.mutex.Lock()
 	defer aa.mutex.Unlock()
-	
+
 	// Align size to 8 bytes for better performance
 	alignedSize := (size + 7) &^ 7
-	
+
 	// Check if current block has enough space
 	if aa.current == nil || aa.current.offset+alignedSize > aa.current.size {
 		// Need a new block
@@ -45,21 +45,21 @@ func (aa *ArenaAllocator) Allocate(size int) unsafe.Pointer {
 		if alignedSize > newBlockSize {
 			newBlockSize = alignedSize
 		}
-		
+
 		newBlock := &arenaBlock{
 			data:   make([]byte, newBlockSize),
 			offset: 0,
 			size:   newBlockSize,
 		}
-		
+
 		aa.blocks = append(aa.blocks, newBlock)
 		aa.current = newBlock
 	}
-	
+
 	// Allocate from current block
 	ptr := unsafe.Pointer(&aa.current.data[aa.current.offset])
 	aa.current.offset += alignedSize
-	
+
 	return ptr
 }
 
@@ -67,12 +67,12 @@ func (aa *ArenaAllocator) Allocate(size int) unsafe.Pointer {
 func (aa *ArenaAllocator) Reset() {
 	aa.mutex.Lock()
 	defer aa.mutex.Unlock()
-	
+
 	// Reset all blocks
 	for _, block := range aa.blocks {
 		block.offset = 0
 	}
-	
+
 	// Set current to first block if available
 	if len(aa.blocks) > 0 {
 		aa.current = aa.blocks[0]
@@ -85,7 +85,7 @@ func (aa *ArenaAllocator) Reset() {
 func (aa *ArenaAllocator) Size() int {
 	aa.mutex.Lock()
 	defer aa.mutex.Unlock()
-	
+
 	totalSize := 0
 	for _, block := range aa.blocks {
 		totalSize += block.size
@@ -97,7 +97,7 @@ func (aa *ArenaAllocator) Size() int {
 func (aa *ArenaAllocator) UsedSize() int {
 	aa.mutex.Lock()
 	defer aa.mutex.Unlock()
-	
+
 	usedSize := 0
 	for _, block := range aa.blocks {
 		usedSize += block.offset
@@ -164,10 +164,10 @@ func NewArenaString(s string, arena *ArenaAllocator) *ArenaString {
 	if len(s) == 0 {
 		return &ArenaString{data: nil, len: 0}
 	}
-	
+
 	ptr := arena.Allocate(len(s))
 	copy((*[1 << 30]byte)(ptr)[:len(s)], []byte(s))
-	
+
 	return &ArenaString{
 		data: ptr,
 		len:  len(s),
@@ -194,10 +194,10 @@ func NewArenaSlice(capacity int, arena *ArenaAllocator) *ArenaSlice {
 	if capacity == 0 {
 		return &ArenaSlice{data: nil, len: 0, cap: 0}
 	}
-	
+
 	size := capacity * int(unsafe.Sizeof(Value(nil)))
 	ptr := arena.Allocate(size)
-	
+
 	return &ArenaSlice{
 		data: ptr,
 		len:  0,
@@ -210,7 +210,7 @@ func (as *ArenaSlice) Append(value Value) {
 	if as.len >= as.cap {
 		panic("arena slice capacity exceeded")
 	}
-	
+
 	slice := (*[1 << 30]Value)(as.data)[:as.cap]
 	slice[as.len] = value
 	as.len++
@@ -226,9 +226,9 @@ func (as *ArenaSlice) Slice() []Value {
 
 // ExpressionArena provides arena allocation specifically for expression evaluation
 type ExpressionArena struct {
-	arena     *ArenaAllocator
-	strings   []*ArenaString
-	slices    []*ArenaSlice
+	arena      *ArenaAllocator
+	strings    []*ArenaString
+	slices     []*ArenaSlice
 	tempValues []Value
 }
 
@@ -333,12 +333,12 @@ func GetArenaStats() ArenaStats {
 	totalAllocated := aa.Size()
 	totalUsed := aa.UsedSize()
 	blockCount := len(aa.blocks)
-	
+
 	utilization := 0.0
 	if totalAllocated > 0 {
 		utilization = float64(totalUsed) / float64(totalAllocated)
 	}
-	
+
 	return ArenaStats{
 		TotalAllocated: totalAllocated,
 		TotalUsed:      totalUsed,

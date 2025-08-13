@@ -8,12 +8,12 @@ import (
 
 // EnhancedStringInterner provides advanced string interning with LRU eviction
 type EnhancedStringInterner struct {
-	mutex    sync.RWMutex
-	cache    map[string]*list.Element
-	lruList  *list.List
-	maxSize  int
-	current  int
-	hitCount int64
+	mutex     sync.RWMutex
+	cache     map[string]*list.Element
+	lruList   *list.List
+	maxSize   int
+	current   int
+	hitCount  int64
 	missCount int64
 }
 
@@ -36,7 +36,7 @@ func NewEnhancedStringInterner(maxSize int) *EnhancedStringInterner {
 func (esi *EnhancedStringInterner) Intern(s string) string {
 	esi.mutex.Lock()
 	defer esi.mutex.Unlock()
-	
+
 	// Check if string is already interned
 	if elem, exists := esi.cache[s]; exists {
 		// Move to front (most recently used)
@@ -44,9 +44,9 @@ func (esi *EnhancedStringInterner) Intern(s string) string {
 		esi.hitCount++
 		return elem.Value.(*lruEntry).value
 	}
-	
+
 	esi.missCount++
-	
+
 	// Check if we need to evict
 	if esi.current >= esi.maxSize {
 		// Remove least recently used
@@ -58,13 +58,13 @@ func (esi *EnhancedStringInterner) Intern(s string) string {
 			esi.current--
 		}
 	}
-	
+
 	// Add new entry
 	entry := &lruEntry{key: s, value: s}
 	elem := esi.lruList.PushFront(entry)
 	esi.cache[s] = elem
 	esi.current++
-	
+
 	return s
 }
 
@@ -72,7 +72,7 @@ func (esi *EnhancedStringInterner) Intern(s string) string {
 func (esi *EnhancedStringInterner) Contains(s string) bool {
 	esi.mutex.RLock()
 	defer esi.mutex.RUnlock()
-	
+
 	_, exists := esi.cache[s]
 	return exists
 }
@@ -88,12 +88,12 @@ func (esi *EnhancedStringInterner) Size() int {
 func (esi *EnhancedStringInterner) Stats() (hits, misses int64, hitRatio float64) {
 	esi.mutex.RLock()
 	defer esi.mutex.RUnlock()
-	
+
 	total := esi.hitCount + esi.missCount
 	if total > 0 {
 		hitRatio = float64(esi.hitCount) / float64(total)
 	}
-	
+
 	return esi.hitCount, esi.missCount, hitRatio
 }
 
@@ -101,7 +101,7 @@ func (esi *EnhancedStringInterner) Stats() (hits, misses int64, hitRatio float64
 func (esi *EnhancedStringInterner) Clear() {
 	esi.mutex.Lock()
 	defer esi.mutex.Unlock()
-	
+
 	esi.cache = make(map[string]*list.Element, esi.maxSize)
 	esi.lruList = list.New()
 	esi.current = 0
@@ -137,10 +137,10 @@ type SmartStringInterner struct {
 // NewSmartStringInterner creates a new smart string interner
 func NewSmartStringInterner() *SmartStringInterner {
 	return &SmartStringInterner{
-		identifiers: NewEnhancedStringInterner(5000),  // Variable names, function names
-		literals:    NewEnhancedStringInterner(3000),  // String literals
-		operators:   NewEnhancedStringInterner(100),   // Operators, keywords
-		general:     NewEnhancedStringInterner(2000),  // Other strings
+		identifiers: NewEnhancedStringInterner(5000), // Variable names, function names
+		literals:    NewEnhancedStringInterner(3000), // String literals
+		operators:   NewEnhancedStringInterner(100),  // Operators, keywords
+		general:     NewEnhancedStringInterner(2000), // Other strings
 	}
 }
 
@@ -174,7 +174,7 @@ func (ssi *SmartStringInterner) Stats() map[string]interface{} {
 	litHits, litMisses, litRatio := ssi.literals.Stats()
 	opHits, opMisses, opRatio := ssi.operators.Stats()
 	genHits, genMisses, genRatio := ssi.general.Stats()
-	
+
 	return map[string]interface{}{
 		"identifiers": map[string]interface{}{
 			"hits":      idHits,
@@ -302,38 +302,38 @@ func OptimizedStringConcat(strings ...string) string {
 	if len(strings) == 1 {
 		return strings[0]
 	}
-	
+
 	// Calculate total length
 	totalLen := 0
 	for _, s := range strings {
 		totalLen += len(s)
 	}
-	
+
 	// Use pooled byte slice for small concatenations
 	if totalLen <= 1024 {
 		buf := GetByteSlice()
 		defer PutByteSlice(buf)
-		
+
 		if cap(buf) < totalLen {
 			buf = make([]byte, 0, totalLen)
 		}
-		
+
 		for _, s := range strings {
 			buf = append(buf, s...)
 		}
-		
+
 		return InternStringEnhanced(string(buf))
 	}
-	
+
 	// Use string builder for larger concatenations
 	sb := GetStringBuilder()
 	defer PutStringBuilder(sb)
-	
+
 	sb.Grow(totalLen)
 	for _, s := range strings {
 		sb.WriteString(s)
 	}
-	
+
 	return InternStringEnhanced(sb.String())
 }
 
@@ -345,7 +345,7 @@ func FastStringEqual(a, b string) bool {
 		if len(a) <= 16 {
 			return a == b
 		}
-		
+
 		// For larger strings, try interning first
 		if globalEnhancedStringInterner.Contains(a) && globalEnhancedStringInterner.Contains(b) {
 			internedA := globalEnhancedStringInterner.Intern(a)
@@ -354,6 +354,6 @@ func FastStringEqual(a, b string) bool {
 			return &internedA == &internedB
 		}
 	}
-	
+
 	return a == b
 }

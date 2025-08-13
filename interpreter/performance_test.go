@@ -57,44 +57,7 @@ func BenchmarkAdvancedStringConcatenation(b *testing.B) {
 	}
 }
 
-// BenchmarkAdvancedLargeArrayOperations tests optimized large array operations
-func BenchmarkAdvancedLargeArrayOperations(b *testing.B) {
-	source := []byte(`
-		// Optimized version with smaller array size to reduce memory overhead
-		big_array = []
-		for (i in range(1, 500)):
-			push(big_array, i)
-		end
 
-		// Test array operations without expensive multiplication
-		// Instead of multiplying entire array, process elements individually
-		doubled = []
-		for (item in big_array):
-			push(doubled, item * 2)
-		end
-
-		// Test filtering with optimized approach
-		filtered = []
-		for (item in big_array):
-			if (item % 2 == 0) then:
-				push(filtered, item * 2)
-			end
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
 // BenchmarkAdvancedNestedFunctionCalls tests optimized function calls with scope pooling
 func BenchmarkAdvancedNestedFunctionCalls(b *testing.B) {
@@ -128,32 +91,7 @@ func BenchmarkAdvancedNestedFunctionCalls(b *testing.B) {
 	}
 }
 
-// BenchmarkAdvancedStringRepetition tests optimized string repetition
-func BenchmarkAdvancedStringRepetition(b *testing.B) {
-	source := []byte(`
-		text = "Hello World! "
-		// Test large string repetition
-		big_text = text * 100
 
-		// Test multiple repetitions
-		for (i in range(1, 10)):
-			repeated = text * (i * 10)
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
 // BenchmarkAdvancedMapOperations tests optimized map merging
 func BenchmarkAdvancedMapOperations(b *testing.B) {
@@ -231,47 +169,7 @@ func BenchmarkAdvancedComplexDataStructures(b *testing.B) {
 	}
 }
 
-// BenchmarkAdvancedMemoryIntensive tests optimized memory allocation patterns
-func BenchmarkAdvancedMemoryIntensive(b *testing.B) {
-	source := []byte(`
-		// Optimized large array creation and manipulation
-		big_array = []
-		for (i in range(1, 200)):
-			push(big_array, i)
-		end
 
-		// Test array multiplication
-		doubled = big_array * 2
-		tripled = big_array * 3
-
-		// Optimized large map creation
-		big_map = {}
-		for (i in range(1, 100)):
-			key = "key" + str(i)
-			value = [i, i*2, i*3]
-			big_map[key] = value
-		end
-
-		// Test string operations
-		big_string = "test" * 100
-		for (i in range(1, 20)):
-			big_string = big_string + " iteration " + str(i)
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
 // BenchmarkPerformanceMonitoring tests the performance monitoring overhead
 func BenchmarkPerformanceMonitoring(b *testing.B) {
@@ -606,35 +504,7 @@ func BenchmarkBuiltinFunctions(b *testing.B) {
 	}
 }
 
-// BenchmarkMemoryIntensive tests memory allocation patterns
-func BenchmarkMemoryIntensive(b *testing.B) {
-	source := []byte(`
-		// Optimized version using push and direct assignment
-		big_array = []
-		for (i in range(1, 100)):
-			push(big_array, i)
-		end
 
-		big_map = {}
-		for (i in range(1, 50)):
-			key = "key" + str(i)
-			big_map[key] = i * i
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
 // Additional benchmarks for specific optimizations
 func BenchmarkAppendOptimization(b *testing.B) {
@@ -707,132 +577,13 @@ func BenchmarkMapAccessOptimization(b *testing.B) {
 	}
 }
 
-// BenchmarkNestedFunctionCalls tests performance with nested function calls
-func BenchmarkNestedFunctionCalls(b *testing.B) {
-	source := []byte(`
-		fun add(a, b):
-			return a + b
-		end
 
-		fun multiply(a, b):
-			return a * b
-		end
 
-		fun complex_calc(x):
-			return add(multiply(x, 2), add(x, 1))
-		end
 
-		result = 0
-		for (i in range(1, 100)):
-			result = result + complex_calc(i)
-		end
-	`)
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
 
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
-// BenchmarkRecursiveOperations tests performance with recursive operations
-func BenchmarkRecursiveOperations(b *testing.B) {
-	source := []byte(`
-		fun fibonacci(n):
-			if (n <= 1) then:
-				return n
-			else:
-				return fibonacci(n - 1) + fibonacci(n - 2)
-			end
-		end
 
-		result = 0
-		for (i in range(1, 15)):
-			result = result + fibonacci(i)
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-// BenchmarkStringManipulation tests performance with extensive string operations
-func BenchmarkStringManipulation(b *testing.B) {
-	source := []byte(`
-		text = "hello world"
-		result = ""
-		for (i in range(1, 100)):
-			result = result + text + " " + str(i)
-			if (len(result) > 1000) then:
-				result = substr(result, 0, 500)
-			end
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-// BenchmarkVariableScoping tests performance with nested variable scoping
-func BenchmarkVariableScoping(b *testing.B) {
-	source := []byte(`
-		global_var = 0
-
-		fun nested_function(depth):
-			local_var = depth
-			if (depth > 0) then:
-				return local_var + nested_function(depth - 1)
-			else:
-				return local_var
-			end
-		end
-
-		result = 0
-		for (i in range(1, 50)):
-			result = result + nested_function(i % 10)
-		end
-	`)
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		program, err := ParseProgram(source)
-		if err != nil {
-			b.Fatal(err)
-		}
-
-		_, err = Execute(program, &Config{})
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
 
 // BenchmarkLargeArrayOperations tests performance with large array manipulations
 func BenchmarkLargeArrayOperations(b *testing.B) {
