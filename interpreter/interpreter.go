@@ -453,6 +453,12 @@ func evalDivide(pos Position, l, r Value) Value {
 }
 
 func evalModulo(pos Position, l, r Value) Value {
+	// Try fast numeric evaluation first
+	if result, handled := GetFastEvaluator().FastEvalModulo(l, r); handled {
+		return result
+	}
+	
+	// Fallback to original logic
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
 		panic(typeError(pos, "modulo operator requires two floats or integers"))
@@ -466,6 +472,12 @@ func evalModulo(pos Position, l, r Value) Value {
 // evalPower evaluates the power operation (exponentiation).
 // It converts operands to floats and uses math.Pow for calculation.
 func evalPower(pos Position, l, r Value) Value {
+	// Try fast numeric evaluation first for simple cases
+	if result, handled := GetFastEvaluator().FastEvalPower(l, r); handled {
+		return result
+	}
+	
+	// Fallback to original logic with math.Pow
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
 		panic(typeError(pos, "** requires two floats or integers"))

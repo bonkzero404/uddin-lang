@@ -211,6 +211,45 @@ func (fne *FastNumericEvaluator) FastEvalLess(l, r Value) (Value, bool) {
 	return nil, false
 }
 
+// FastEvalModulo provides optimized modulo operation for numeric types
+func (fne *FastNumericEvaluator) FastEvalModulo(l, r Value) (Value, bool) {
+	// Fast path for int % int
+	if li, ok := l.(int); ok {
+		if ri, ok := r.(int); ok {
+			if ri == 0 {
+				return nil, false // Let caller handle division by zero
+			}
+			return Value(li % ri), true
+		}
+	}
+
+	// Modulo operation requires integers
+	return nil, false
+}
+
+// FastEvalPower provides optimized power operation for numeric types
+func (fne *FastNumericEvaluator) FastEvalPower(l, r Value) (Value, bool) {
+	// Fast path for simple integer powers
+	if li, ok := l.(int); ok {
+		if ri, ok := r.(int); ok {
+			// Handle common small power cases efficiently
+			switch ri {
+			case 0:
+				return Value(1), true
+			case 1:
+				return Value(li), true
+			case 2:
+				return Value(li * li), true
+			case 3:
+				return Value(li * li * li), true
+			}
+		}
+	}
+
+	// For complex cases, let the original function handle with math.Pow
+	return nil, false
+}
+
 // GetFastEvaluator returns the global fast evaluator instance
 func GetFastEvaluator() *FastNumericEvaluator {
 	return globalFastEvaluator
