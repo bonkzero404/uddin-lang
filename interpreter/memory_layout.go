@@ -91,7 +91,7 @@ func GetGlobalTaggedValuePool() *TaggedValuePool {
 // This function now creates persistent memory allocations to avoid use-after-free bugs
 func CreateTaggedValue(value Value) *TaggedValue {
 	tv := globalTaggedValuePool.GetTaggedValue()
-	
+
 	switch v := value.(type) {
 	case nil:
 		tv.Type = TaggedNull
@@ -137,7 +137,7 @@ func CreateTaggedValue(value Value) *TaggedValue {
 		tv.Type = TaggedOther
 		tv.Data = 0
 	}
-	
+
 	return tv
 }
 
@@ -204,7 +204,7 @@ type CompactEnvironment struct {
 // CompactScope represents a memory-optimized scope
 type CompactScope struct {
 	variables map[string]*TaggedValue
-	size      int32 // Track size for memory management
+	size      int32   // Track size for memory management
 	_         [4]byte // Padding for alignment
 }
 
@@ -241,14 +241,14 @@ func (ce *CompactEnvironment) Assign(name string, value Value) {
 	if len(ce.vars) == 0 {
 		ce.PushScope()
 	}
-	
+
 	currentScope := &ce.vars[len(ce.vars)-1]
-	
+
 	// Clean up existing value if it exists
 	if existingTV, exists := currentScope.variables[name]; exists {
 		globalTaggedValuePool.PutTaggedValue(existingTV)
 	}
-	
+
 	// Create new tagged value using safe inline approach
 	tv := globalTaggedValuePool.GetTaggedValue()
 	*tv = ce.createTaggedValueInline(value)
@@ -284,7 +284,7 @@ func (ce *CompactEnvironment) GetScopeSize(index int) int32 {
 // This avoids use-after-free bugs when storing by value
 func (ce *CompactEnvironment) createTaggedValueInline(value Value) TaggedValue {
 	var tv TaggedValue
-	
+
 	switch v := value.(type) {
 	case nil:
 		tv.Type = TaggedNull
@@ -328,7 +328,7 @@ func (ce *CompactEnvironment) createTaggedValueInline(value Value) TaggedValue {
 		tv.Type = TaggedOther
 		tv.Data = 0
 	}
-	
+
 	return tv
 }
 
@@ -359,7 +359,7 @@ func (cfa *CacheFriendlyArray) Append(value Value) {
 		cfa.data = newData
 		cfa.capacity = newCapacity
 	}
-	
+
 	// Create tagged value and store inline
 	cfa.data[cfa.size] = cfa.createTaggedValueInline(value)
 	cfa.size++
@@ -400,7 +400,7 @@ func (cfa *CacheFriendlyArray) ToSlice() []Value {
 // This avoids use-after-free bugs when storing by value
 func (cfa *CacheFriendlyArray) createTaggedValueInline(value Value) TaggedValue {
 	var tv TaggedValue
-	
+
 	switch v := value.(type) {
 	case nil:
 		tv.Type = TaggedNull
@@ -444,7 +444,7 @@ func (cfa *CacheFriendlyArray) createTaggedValueInline(value Value) TaggedValue 
 		tv.Type = TaggedOther
 		tv.Data = 0
 	}
-	
+
 	return tv
 }
 
@@ -485,7 +485,7 @@ func simpleHash(s string) uint32 {
 // Set sets a key-value pair in the map
 func (cfm *CacheFriendlyMap) Set(key string, value Value) {
 	hash := simpleHash(key)
-	
+
 	// Look for existing key
 	for i := int32(0); i < cfm.size; i++ {
 		if cfm.entries[i].key == key {
@@ -494,7 +494,7 @@ func (cfm *CacheFriendlyMap) Set(key string, value Value) {
 			return
 		}
 	}
-	
+
 	// Add new entry
 	if cfm.size >= cfm.capacity {
 		// Grow the map
@@ -504,7 +504,7 @@ func (cfm *CacheFriendlyMap) Set(key string, value Value) {
 		cfm.entries = newEntries
 		cfm.capacity = newCapacity
 	}
-	
+
 	cfm.entries[cfm.size] = MapEntry{
 		key:   key,
 		value: cfm.createTaggedValueInline(value),
@@ -545,7 +545,7 @@ func (cfm *CacheFriendlyMap) Size() int32 {
 // This avoids use-after-free bugs when storing by value
 func (cfm *CacheFriendlyMap) createTaggedValueInline(value Value) TaggedValue {
 	var tv TaggedValue
-	
+
 	switch v := value.(type) {
 	case nil:
 		tv.Type = TaggedNull
@@ -590,7 +590,7 @@ func (cfm *CacheFriendlyMap) createTaggedValueInline(value Value) TaggedValue {
 		tv.Type = TaggedOther
 		tv.Data = 0
 	}
-	
+
 	return tv
 }
 
