@@ -38,14 +38,17 @@ type interpreter struct {
 	// currentPos tracks the current position being executed for better error reporting
 	currentPos Position
 	// Optimization caches
-	memoCache         map[string]Value
+	memoCache map[string]Value
+	// String builder pool for efficient memory allocation
 	stringBuilderPool sync.Pool
-	arrayPool         sync.Pool
-	mapPool           sync.Pool
+	// Array pool for efficient memory allocation
+	arrayPool sync.Pool
+	// Map pool for efficient memory allocation
+	mapPool sync.Pool
 	// Variable lookup cache for performance optimization
 	variableLookupCache *VariableLookupCache
 	// Expression optimizer
-	optimizer         *ConstantFolder
+	optimizer *ConstantFolder
 }
 
 // returnResult is used to handle return statements in functions.
@@ -129,7 +132,7 @@ func evalEqual(pos Position, l, r Value) Value {
 	if result, handled := GetFastEvaluator().FastEvalEqual(l, r); handled {
 		return result
 	}
-	
+
 	// Fallback to original deep equality logic
 	switch l := l.(type) {
 	case nil:
@@ -274,7 +277,7 @@ func evalLess(pos Position, l, r Value) Value {
 	if result, handled := GetFastEvaluator().FastEvalLess(l, r); handled {
 		return result
 	}
-	
+
 	// Fallback to original logic for complex types
 	switch l := l.(type) {
 	case *[]Value:
@@ -444,7 +447,7 @@ func evalDivide(pos Position, l, r Value) Value {
 	if result, handled := GetFastEvaluator().FastEvalDivide(l, r); handled {
 		return result
 	}
-	
+
 	// Fallback to original logic
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
@@ -461,7 +464,7 @@ func evalModulo(pos Position, l, r Value) Value {
 	if result, handled := GetFastEvaluator().FastEvalModulo(l, r); handled {
 		return result
 	}
-	
+
 	// Fallback to original logic
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
@@ -480,7 +483,7 @@ func evalPower(pos Position, l, r Value) Value {
 	if result, handled := GetFastEvaluator().FastEvalPower(l, r); handled {
 		return result
 	}
-	
+
 	// Fallback to original logic with math.Pow
 	li, ri := ensureIntToFloats(l, r)
 	if li == 0 && ri == 0 {
@@ -660,7 +663,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.currentPos = expr.Position()
 	interp.stats.Ops++
-	
+
 	// Try constant folding optimization first
 	if interp.optimizer != nil {
 		if result, ok := interp.optimizer.FoldConstants(expr); ok {
@@ -790,7 +793,7 @@ func (interp *interpreter) assign(name string, value Value) {
 func (interp *interpreter) lookup(name string) (Value, bool) {
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
-	
+
 	// Use variable lookup cache if enabled
 	if interp.variableLookupCache != nil {
 		// Check cache first
@@ -805,9 +808,9 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 			// Cache is stale, remove it
 			interp.variableLookupCache.InvalidateVariable(name)
 		}
-		
+
 		interp.variableLookupCache.misses++
-		
+
 		// Perform regular lookup and cache the result
 		for i := len(interp.vars) - 1; i >= 0; i-- {
 			if value, found := interp.vars[i][name]; found {
@@ -817,7 +820,7 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 		}
 		return nil, false
 	}
-	
+
 	// Fallback to standard lookup
 	for i := len(interp.vars) - 1; i >= 0; i-- {
 		thisVars := interp.vars[i]
