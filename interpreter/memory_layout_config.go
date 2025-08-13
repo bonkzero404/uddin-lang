@@ -8,10 +8,14 @@ type MemoryLayoutConfig struct {
 	EnableCompactEnvironment bool
 	// EnableCacheFriendlyStructures enables the use of CacheFriendlyArray and CacheFriendlyMap
 	EnableCacheFriendlyStructures bool
+	// EnableVariableLookupCache enables variable lookup caching for performance
+	EnableVariableLookupCache bool
 	// TaggedValuePoolSize sets the initial size of the TaggedValue pool
 	TaggedValuePoolSize int
 	// MaxStringCacheSize sets the maximum number of strings to cache globally
 	MaxStringCacheSize int
+	// VariableLookupCacheSize sets the maximum size of the variable lookup cache
+	VariableLookupCacheSize int
 }
 
 // DefaultMemoryLayoutConfig returns the default memory layout configuration
@@ -21,8 +25,10 @@ func DefaultMemoryLayoutConfig() *MemoryLayoutConfig {
 		EnableTaggedValues:            false,
 		EnableCompactEnvironment:      false,
 		EnableCacheFriendlyStructures: false,
+		EnableVariableLookupCache:     false,
 		TaggedValuePoolSize:           1000,
 		MaxStringCacheSize:            10000,
+		VariableLookupCacheSize:       500,
 	}
 }
 
@@ -33,8 +39,10 @@ func ExperimentalMemoryLayoutConfig() *MemoryLayoutConfig {
 		EnableTaggedValues:            true,
 		EnableCompactEnvironment:      true,
 		EnableCacheFriendlyStructures: true,
+		EnableVariableLookupCache:     true,
 		TaggedValuePoolSize:           1000,
 		MaxStringCacheSize:            10000,
+		VariableLookupCacheSize:       500,
 	}
 }
 
@@ -64,4 +72,14 @@ func IsCompactEnvironmentEnabled() bool {
 // IsCacheFriendlyStructuresEnabled returns true if cache-friendly structures are enabled
 func IsCacheFriendlyStructuresEnabled() bool {
 	return globalMemoryLayoutConfig.EnableCacheFriendlyStructures
+}
+
+// IsVariableLookupCacheEnabled returns true if variable lookup cache is enabled
+func IsVariableLookupCacheEnabled() bool {
+	return globalMemoryLayoutConfig.EnableVariableLookupCache
+}
+
+// GetVariableLookupCacheSize returns the configured variable lookup cache size
+func GetVariableLookupCacheSize() int {
+	return globalMemoryLayoutConfig.VariableLookupCacheSize
 }
