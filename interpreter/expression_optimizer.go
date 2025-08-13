@@ -6,6 +6,8 @@ import (
 )
 
 // ExpressionOptimizer provides optimization for expressions
+// EXPERIMENTAL: This optimizer is experimental and part of memory optimization features
+// WARNING: Caching behavior may not be suitable for all use cases
 type ExpressionOptimizer struct {
 	constantCache    map[string]Value
 	subexprCache     map[string]Value
@@ -25,6 +27,7 @@ func NewExpressionOptimizer(maxCacheSize int) *ExpressionOptimizer {
 }
 
 // Global expression optimizer
+// EXPERIMENTAL: Global optimizer instance for experimental expression caching
 var globalExpressionOptimizer = NewExpressionOptimizer(1000)
 
 // GetGlobalExpressionOptimizer returns the global expression optimizer

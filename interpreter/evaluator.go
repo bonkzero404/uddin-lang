@@ -329,6 +329,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 	e.stats.UserCalls++
 
 	// Check memoization cache for functions marked with memo
+	// EXPERIMENTAL: Memoization is experimental and may consume significant memory
 	if fn.Name != "" && fn.Memoized {
 		memoKey := getMemoKey(fn.Name, args)
 		if e.interp.memoCache != nil {
@@ -373,6 +374,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 			if ret, ok := r.(returnResult); ok {
 				result = ret.value
 				// Cache the result for memoized functions
+				// EXPERIMENTAL: Storing result in experimental memoization cache
 				if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
 					memoKey := getMemoKey(fn.Name, args)
 					e.interp.memoCache[memoKey] = result
@@ -398,6 +400,7 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 	*e.stats = interp.stats // Update stats
 
 	// Cache the result for memoized functions
+	// EXPERIMENTAL: Storing result in experimental memoization cache
 	if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
 		memoKey := getMemoKey(fn.Name, args)
 		e.interp.memoCache[memoKey] = result

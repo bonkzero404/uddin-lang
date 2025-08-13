@@ -21,6 +21,7 @@ const (
 )
 
 // TaggedValue represents a value with its type tag for memory optimization
+// EXPERIMENTAL: This is an experimental feature for memory optimization
 type TaggedValue struct {
 	Type TaggedValueType
 	_    [7]byte // Padding for alignment
@@ -28,6 +29,7 @@ type TaggedValue struct {
 }
 
 // TaggedValuePool manages a pool of TaggedValue instances
+// EXPERIMENTAL: This pool is part of experimental memory optimization features
 type TaggedValuePool struct {
 	pool sync.Pool
 }
@@ -192,6 +194,8 @@ func (tv *TaggedValue) IsSmallValue() bool {
 }
 
 // CompactEnvironment represents a memory-optimized environment
+// EXPERIMENTAL: This is an experimental replacement for regular Environment
+// WARNING: May not be thread-safe and could have compatibility issues
 type CompactEnvironment struct {
 	vars     []CompactScope
 	args     []string
@@ -605,6 +609,8 @@ func (cfm *CacheFriendlyMap) ToMap() map[string]Value {
 }
 
 // MemoryLayoutOptimizer provides memory layout optimization utilities
+// EXPERIMENTAL: This optimizer is experimental and may have performance implications
+// WARNING: Not suitable for concurrent access without proper synchronization
 type MemoryLayoutOptimizer struct {
 	taggedValuePool *TaggedValuePool
 	stats           MemoryStats

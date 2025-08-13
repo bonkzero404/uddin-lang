@@ -44,13 +44,16 @@ type functionType interface {
 }
 
 // userFunction represents a function defined by the user in the script
+// EXPERIMENTAL: Memoization feature is experimental and not recommended for production
 type userFunction struct {
 	Name       string           // Function name (can be empty for anonymous functions)
 	Parameters []string         // Parameter names
 	Ellipsis   bool             // Whether the last parameter is variadic
 	Body       Block            // Function body statements
 	Closure    map[string]Value // Captured variables from outer scopes
-	Memoized   bool             // EXPERIMENTAL: Whether this function should use memoization (not production-ready)
+	// EXPERIMENTAL: Whether this function should use memoization (not production-ready)
+	// WARNING: Memoization may consume significant memory and is not thread-safe
+	Memoized   bool
 }
 
 // ensureNumArgs checks if the number of arguments matches the required count
@@ -2255,6 +2258,7 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// Check memoization cache
+	// EXPERIMENTAL: Using experimental memoization for fibonacci function
 	memoKey := getMemoKey("fibonacci", args)
 	if cached, exists := interp.memoCache[memoKey]; exists {
 		return cached
@@ -2272,6 +2276,7 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// Store in memoization cache
+	// EXPERIMENTAL: Storing result in experimental memoization cache
 	interp.memoCache[memoKey] = result
 	return result
 }

@@ -1,6 +1,7 @@
 package interpreter
 
 // MemoryLayoutConfig controls the memory layout optimization features
+// EXPERIMENTAL: This configuration is experimental and may have stability issues
 type MemoryLayoutConfig struct {
 	// EnableTaggedValues enables the use of TaggedValue instead of Value
 	EnableTaggedValues bool
@@ -33,7 +34,8 @@ func DefaultMemoryLayoutConfig() *MemoryLayoutConfig {
 }
 
 // ExperimentalMemoryLayoutConfig returns a configuration with all memory layout optimizations enabled
-// This is for testing and experimental use only
+// EXPERIMENTAL: This is for testing and experimental use only - not recommended for production
+// WARNING: Not compatible with concurrent functions and may cause thread safety issues
 func ExperimentalMemoryLayoutConfig() *MemoryLayoutConfig {
 	return &MemoryLayoutConfig{
 		EnableTaggedValues:            true,

@@ -8,6 +8,8 @@ import (
 )
 
 // OptimizedMemoCache provides hash-based memoization to reduce string allocation overhead
+// EXPERIMENTAL: This memoization cache is experimental and part of memory optimization
+// WARNING: May consume significant memory and not suitable for all function types
 type OptimizedMemoCache struct {
 	cache   map[uint64]Value
 	mutex   sync.RWMutex
@@ -25,6 +27,7 @@ func NewOptimizedMemoCache(maxSize int) *OptimizedMemoCache {
 }
 
 // Global optimized memo cache
+// EXPERIMENTAL: Global memoization cache for experimental function caching
 var globalOptimizedMemoCache = NewOptimizedMemoCache(10000)
 
 // FastHash computes a fast hash for memoization keys

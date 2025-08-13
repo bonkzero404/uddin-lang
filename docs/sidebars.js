@@ -61,6 +61,7 @@ const sidebars = {
         'reference/index',
         'reference/syntax',
         'reference/builtin-functions',
+        'reference/memory-optimization',
     ],
 
     // But you can create a sidebar manually

@@ -614,6 +614,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	TrackOperation("function_call")
 
 	// Check optimized memoization cache for functions marked with memo
+	// EXPERIMENTAL: Memoization is experimental and may consume significant memory
 	// Only cache functions that are explicitly memoized and return non-nil values
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized {
 		memoKey := OptimizedMemoKey(uf.Name, args)
@@ -638,7 +639,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
 				// Cache the result for memoization only if function is marked as memoized and result is not nil
-				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
+	// EXPERIMENTAL: Memoization caching is experimental feature
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
 					memoKey := OptimizedMemoKey(uf.Name, args)
 					GetGlobalOptimizedMemoCache().Set(memoKey, ret)
 				}
@@ -1395,6 +1397,7 @@ func (interp *interpreter) getArray() []Value {
 }
 
 // getMemoKey generates a memoization key for function calls
+// EXPERIMENTAL: This function is part of experimental memoization feature
 func getMemoKey(funcName string, args []Value) string {
 	var sb strings.Builder
 	sb.WriteString(funcName)

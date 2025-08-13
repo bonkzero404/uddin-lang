@@ -97,7 +97,9 @@ func (s *Stats) Total() int {
 }
 
 // ExperimentalConfig returns a configuration with experimental memory layout optimizations enabled
-// WARNING: This is experimental and may have stability issues
+// EXPERIMENTAL: This is experimental and may have stability issues
+// WARNING: Not compatible with concurrent functions - use only for sequential processing
+// NOTE: This configuration should not be used in production environments
 func ExperimentalConfig() *Config {
 	return &Config{
 		Vars:         make(map[string]Value),

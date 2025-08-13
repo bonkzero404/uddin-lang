@@ -6,6 +6,8 @@ import (
 )
 
 // VariableLookupCache provides optimized variable lookup with caching
+// EXPERIMENTAL: This cache is part of experimental memory optimization features
+// WARNING: May not be thread-safe and could have compatibility issues
 type VariableLookupCache struct {
 	cache   map[string]*CachedVariable
 	mutex   sync.RWMutex
@@ -30,6 +32,7 @@ func NewVariableLookupCache(maxSize int) *VariableLookupCache {
 }
 
 // Global variable lookup cache
+// EXPERIMENTAL: Global instance for experimental variable lookup caching
 var globalVariableLookupCache = NewVariableLookupCache(500)
 
 // safeValueEqual safely compares two values, handling uncomparable types
@@ -170,6 +173,7 @@ func GetGlobalVariableLookupCache() *VariableLookupCache {
 }
 
 // GlobalVariableCache provides fast access to frequently used global variables
+// EXPERIMENTAL: This cache is experimental and part of memory optimization
 type GlobalVariableCache struct {
 	cache map[string]Value
 	mutex sync.RWMutex
@@ -183,6 +187,7 @@ func NewGlobalVariableCache() *GlobalVariableCache {
 }
 
 // Global instance
+// EXPERIMENTAL: Global cache instance for experimental variable optimization
 var globalVarCache = NewGlobalVariableCache()
 
 // GetGlobalVariable retrieves a global variable from cache
@@ -213,6 +218,7 @@ func GetGlobalVariableCache() *GlobalVariableCache {
 }
 
 // ScopeFlattener optimizes deep scope lookups by flattening variable access
+// EXPERIMENTAL: This flattener is experimental and part of memory optimization
 type ScopeFlattener struct {
 	flattenedVars map[string]Value
 	mutex         sync.RWMutex

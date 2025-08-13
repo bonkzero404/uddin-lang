@@ -26,6 +26,13 @@ Documentation for all built-in functions including:
 - I/O operations
 - Utility functions
 
+### [Memory Optimization](./memory-optimization)
+Experimental memory optimization features including:
+- Tagged value types and compact structures
+- Expression memoization and caching
+- Performance optimization techniques
+- Compatibility guidelines and limitations
+
 ## Language Overview
 
 Uddin is a modern, functional programming language designed for simplicity and expressiveness. Key features include:
