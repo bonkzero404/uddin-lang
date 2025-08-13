@@ -6071,10 +6071,50 @@ func concurrentMapFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "concurrent_map() requires second argument to be a function"))
 	}
 
-	// Use concurrent executor for parallel processing
+	// For small arrays, use sequential processing to avoid overhead
+	if len(*arr) < 100 {
+		result := make([]Value, len(*arr))
+		for i, v := range *arr {
+			result[i] = interp.callFunction(pos, fn, []Value{v})
+		}
+		return Value(&result)
+	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
 	executor := GetGlobalConcurrentExecutor()
 	mapFunc := func(v Value) Value {
-		return interp.callFunction(pos, fn, []Value{v})
+		// Create a new interpreter instance for this goroutine to avoid scope conflicts
+		// Copy the current interpreter's configuration and global scope
+		threadInterp := &interpreter{
+			vars:                make([]map[string]Value, len(interp.vars)),
+			mutex:               sync.RWMutex{},
+			args:                interp.args,
+			stdin:               interp.stdin,
+			stdinReader:         interp.stdinReader,
+			stdout:              interp.stdout,
+			exit:                interp.exit,
+			stats:               Stats{},
+			inUnitTest:          interp.inUnitTest,
+			currentPos:          pos,
+			memoCache:           make(map[string]Value),
+			stringBuilderPool:   sync.Pool{},
+			arrayPool:           sync.Pool{},
+			mapPool:             sync.Pool{},
+			variableLookupCache: nil, // Disable cache for thread safety
+			optimizer:           nil, // Disable optimizer for thread safety
+		}
+		
+		// Deep copy the variable scopes to avoid shared state
+		interp.mutex.RLock()
+		for i, scope := range interp.vars {
+			threadInterp.vars[i] = make(map[string]Value)
+			for k, v := range scope {
+				threadInterp.vars[i][k] = v
+			}
+		}
+		interp.mutex.RUnlock()
+		
+		return threadInterp.callFunction(pos, fn, []Value{v})
 	}
 
 	result, err := executor.ParallelMapOperation(*arr, mapFunc)
@@ -6103,10 +6143,53 @@ func concurrentFilterFunc(interp *interpreter, pos Position, args []Value) Value
 		panic(typeError(pos, "concurrent_filter() requires second argument to be a function"))
 	}
 
-	// Use concurrent executor for parallel processing
+	// For small arrays, use sequential processing to avoid overhead
+	if len(*arr) < 100 {
+		var filtered []Value
+		for _, v := range *arr {
+			result := interp.callFunction(pos, fn, []Value{v})
+			if b, ok := result.(bool); ok && b {
+				filtered = append(filtered, v)
+			}
+		}
+		return Value(&filtered)
+	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
 	executor := GetGlobalConcurrentExecutor()
 	filterFunc := func(v Value) bool {
-		result := interp.callFunction(pos, fn, []Value{v})
+		// Create a new interpreter instance for this goroutine to avoid scope conflicts
+		// Copy the current interpreter's configuration and global scope
+		threadInterp := &interpreter{
+			vars:                make([]map[string]Value, len(interp.vars)),
+			mutex:               sync.RWMutex{},
+			args:                interp.args,
+			stdin:               interp.stdin,
+			stdinReader:         interp.stdinReader,
+			stdout:              interp.stdout,
+			exit:                interp.exit,
+			stats:               Stats{},
+			inUnitTest:          interp.inUnitTest,
+			currentPos:          pos,
+			memoCache:           make(map[string]Value),
+			stringBuilderPool:   sync.Pool{},
+			arrayPool:           sync.Pool{},
+			mapPool:             sync.Pool{},
+			variableLookupCache: nil, // Disable cache for thread safety
+			optimizer:           nil, // Disable optimizer for thread safety
+		}
+		
+		// Deep copy the variable scopes to avoid shared state
+		interp.mutex.RLock()
+		for i, scope := range interp.vars {
+			threadInterp.vars[i] = make(map[string]Value)
+			for k, v := range scope {
+				threadInterp.vars[i][k] = v
+			}
+		}
+		interp.mutex.RUnlock()
+		
+		result := threadInterp.callFunction(pos, fn, []Value{v})
 		if b, ok := result.(bool); ok {
 			return b
 		}
@@ -6144,10 +6227,50 @@ func concurrentReduceFunc(interp *interpreter, pos Position, args []Value) Value
 	}
 	initialValue := args[2]
 
-	// Use concurrent executor for parallel processing
+	// For small arrays, use sequential processing to avoid overhead
+	if len(*arr) < 100 {
+		result := initialValue
+		for _, v := range *arr {
+			result = interp.callFunction(pos, fn, []Value{result, v})
+		}
+		return result
+	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
 	executor := GetGlobalConcurrentExecutor()
 	reduceFunc := func(a, b Value) Value {
-		return interp.callFunction(pos, fn, []Value{a, b})
+		// Create a new interpreter instance for this goroutine to avoid scope conflicts
+		// Copy the current interpreter's configuration and global scope
+		threadInterp := &interpreter{
+			vars:                make([]map[string]Value, len(interp.vars)),
+			mutex:               sync.RWMutex{},
+			args:                interp.args,
+			stdin:               interp.stdin,
+			stdinReader:         interp.stdinReader,
+			stdout:              interp.stdout,
+			exit:                interp.exit,
+			stats:               Stats{},
+			inUnitTest:          interp.inUnitTest,
+			currentPos:          pos,
+			memoCache:           make(map[string]Value),
+			stringBuilderPool:   sync.Pool{},
+			arrayPool:           sync.Pool{},
+			mapPool:             sync.Pool{},
+			variableLookupCache: nil, // Disable cache for thread safety
+			optimizer:           nil, // Disable optimizer for thread safety
+		}
+		
+		// Deep copy the variable scopes to avoid shared state
+		interp.mutex.RLock()
+		for i, scope := range interp.vars {
+			threadInterp.vars[i] = make(map[string]Value)
+			for k, v := range scope {
+				threadInterp.vars[i][k] = v
+			}
+		}
+		interp.mutex.RUnlock()
+		
+		return threadInterp.callFunction(pos, fn, []Value{a, b})
 	}
 
 	result, err := executor.ParallelReduceOperation(*arr, reduceFunc, initialValue)
