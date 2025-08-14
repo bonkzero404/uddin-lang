@@ -1,4 +1,4 @@
-module uddin-lang
+module github.com/bonkzero404/uddin-lang
 
 go 1.23.3
 

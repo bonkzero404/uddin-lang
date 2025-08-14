@@ -42,7 +42,7 @@ git clone https://github.com/bonkzero404/uddin-lang.git
 cd uddin-lang
 
 # Run directly with Go
-go run main.go your_script.din
+go run cmd/uddin-lang/main.go your_script.din
 ```
 
 ## Verify Installation
@@ -54,7 +54,7 @@ Test your installation by checking the version:
 ./uddinlang --version
 
 # If using go run
-go run main.go --version
+go run cmd/uddin-lang/main.go --version
 ```
 
 You should see output similar to:
@@ -133,7 +133,7 @@ end
 ./uddinlang test.din
 
 # If using go run
-go run main.go test.din
+go run cmd/uddin-lang/main.go test.din
 ```
 
 ### Expected Output
@@ -161,6 +161,52 @@ Test the development tools:
 # Show help
 ./uddinlang --help
 ```
+
+## Using Go Run (Development Mode)
+
+For development or when you don't want to build a binary, you can use `go run` directly:
+
+### Basic Usage
+
+```bash
+# Run any .din file
+go run cmd/uddin-lang/main.go examples/basics/hello_world.din
+
+# Run with profiling
+go run cmd/uddin-lang/main.go --profile examples/basics/functional_demo.din
+
+# Analyze syntax without execution
+go run cmd/uddin-lang/main.go --analyze examples/basics/hello_world.din
+
+# Show help
+go run cmd/uddin-lang/main.go --help
+```
+
+### Available Examples
+
+Try running different example files:
+
+```bash
+# Basic examples
+go run cmd/uddin-lang/main.go examples/basics/hello_world.din
+go run cmd/uddin-lang/main.go examples/basics/functional_demo.din
+go run cmd/uddin-lang/main.go examples/basics/loop_control_demo.din
+
+# Data structures
+go run cmd/uddin-lang/main.go examples/data-structures/array_methods_demo.din
+go run cmd/uddin-lang/main.go examples/data-structures/linked_list_demo.din
+
+# Math and calculations
+go run cmd/uddin-lang/main.go examples/math-and-calculations/simple_calculator.din
+go run cmd/uddin-lang/main.go examples/math-and-calculations/geometry_calculator.din
+```
+
+### Development Tips
+
+- Use `go run` during development for faster iteration
+- Build a binary (`go build`) for production or distribution
+- The `go run` approach automatically uses the latest source code
+- No need to rebuild when you make changes to the interpreter
 
 ## Troubleshooting
 

@@ -137,6 +137,8 @@ graph TD
 
 [**🌐 Visit Full Documentation**](https://bonkzero404.github.io/uddin-lang)
 
+[**📚 Go Library Documentation**](LIBRARY.md)
+
 </div>
 
 ---
@@ -145,16 +147,59 @@ graph TD
 
 ### Installation
 
+#### As a Go Library
+
 ```bash
-# Clone the repository
+# Add to your Go project
+go get github.com/bonkzero404/uddin-lang
+```
+
+#### As a CLI Tool
+
+```bash
+# Install globally
+go install github.com/bonkzero404/uddin-lang/cmd/uddin-lang@latest
+
+# Or build from source
 git clone https://github.com/bonkzero404/uddin-lang.git
 cd uddin-lang
+go build -o uddinlang cmd/uddin-lang/main.go
+```
 
-# Build the interpreter
-go build -o uddinlang main.go
+#### Using as Go Library
 
-# Or run directly
-go run main.go
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/bonkzero404/uddin-lang"
+)
+
+func main() {
+    // Create a new engine
+    engine := uddin.New()
+    
+    // Execute code
+    result, err := engine.ExecuteString(`
+        x = 10
+        y = 20
+        return x + y
+    `)
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Println("Result:", result) // Output: Result: 30
+    
+    // Evaluate expressions
+    value, err := engine.EvaluateString("2 + 3 * 4")
+    if err != nil {
+        panic(err)
+    }
+    
+    fmt.Println("Expression result:", value) // Output: Expression result: 14
+}
 ```
 
 ### Your First Program
@@ -183,9 +228,14 @@ end
 Run it:
 
 ```bash
+# If installed globally
+uddin-lang hello.din
+
+# If built from source
 ./uddinlang hello.din
-# or
-go run main.go hello.din
+
+# Or run directly from source
+go run cmd/uddin-lang/main.go hello.din
 ```
 
 ### Explore Examples
@@ -194,20 +244,21 @@ The language comes with comprehensive examples showcasing all features:
 
 ```bash
 # List all available examples
-./uddinlang --examples
+uddin-lang --examples
+# or if built from source: ./uddinlang --examples
 
 # Run specific examples
-./uddinlang examples/12_logical_operators.din     # XOR and logical operations
-./uddinlang examples/13_assignment_operators.din  # Compound assignments (+=, -=, etc.)
-./uddinlang examples/01_hello_world.din          # Basic syntax
-./uddinlang examples/03_math_library.din         # Mathematical functions
+uddin-lang examples/12_logical_operators.din     # XOR and logical operations
+uddin-lang examples/13_assignment_operators.din  # Compound assignments (+=, -=, etc.)
+uddin-lang examples/01_hello_world.din          # Basic syntax
+uddin-lang examples/03_math_library.din         # Mathematical functions
 
 # ✨ New Standard Library Examples
-./uddinlang examples/14_string_manipulation_demo.din  # Advanced string functions
-./uddinlang examples/15_array_methods_demo.din        # Functional array methods
-./uddinlang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
-./uddinlang examples/20_json_handling_demo.din        # JSON parsing and serialization
-./uddinlang examples/21_multiline_strings_demo.din    # Multiline string features
+uddin-lang examples/14_string_manipulation_demo.din  # Advanced string functions
+uddin-lang examples/15_array_methods_demo.din        # Functional array methods
+uddin-lang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
+uddin-lang examples/20_json_handling_demo.din        # JSON parsing and serialization
+uddin-lang examples/21_multiline_strings_demo.din    # Multiline string features
 
 # 🌐 Networking Examples
 ./uddinlang examples/17_http_client_demo.din      # HTTP client operations

@@ -8,8 +8,6 @@
  */
 
 // @ts-check
-
-/** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
     // By default, Docusaurus generates a sidebar from the docs folder structure
     tutorialSidebar: [
@@ -62,6 +60,7 @@ const sidebars = {
         'reference/syntax',
         'reference/builtin-functions',
         'reference/memory-optimization',
+        'reference/library',
     ],
 
     // But you can create a sidebar manually

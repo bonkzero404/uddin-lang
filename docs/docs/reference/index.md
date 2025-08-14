@@ -33,6 +33,14 @@ Experimental memory optimization features including:
 - Performance optimization techniques
 - Compatibility guidelines and limitations
 
+### [Go Library](./library)
+Comprehensive guide to using UDDIN-LANG as a Go library including:
+- Installation and setup
+- Basic usage examples
+- API reference
+- Integration patterns
+- Performance optimization tips
+
 ## Language Overview
 
 Uddin is a modern, functional programming language designed for simplicity and expressiveness. Key features include:
