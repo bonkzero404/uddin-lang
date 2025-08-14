@@ -49,7 +49,7 @@ for file in $(find examples -name "*.din" | sort); do
         echo -n "[$total_files] Testing $file... "
         
         # Step 1: Convert .din to JSON
-        if ! go run main.go "$file" --to_json > "test_${filename}.json" 2>/dev/null; then
+        if ! go run cmd/uddin-lang/main.go "$file" --to_json > "test_${filename}.json" 2>/dev/null; then
             echo -e "${RED}FAILED${NC} (din->json conversion)"
             failed_files=$((failed_files + 1))
             failed_list+=("$file (din->json)")
@@ -57,7 +57,7 @@ for file in $(find examples -name "*.din" | sort); do
         fi
         
         # Step 2: Convert JSON back to .din
-        if ! go run main.go --from_json "test_${filename}.json" > "test_${filename}_back.din" 2>/dev/null; then
+        if ! go run cmd/uddin-lang/main.go --from_json "test_${filename}.json" > "test_${filename}_back.din" 2>/dev/null; then
             echo -e "${RED}FAILED${NC} (json->din conversion)"
             failed_files=$((failed_files + 1))
             failed_list+=("$file (json->din)")
@@ -74,7 +74,7 @@ for file in $(find examples -name "*.din" | sort); do
         if [[ "$filename" == "persistent_http_server" ]] || [[ "$filename" == "http_response_return_demo" ]]; then
             # Start the server in background and kill it after 3 seconds
             start_time=$(date +%s.%N)
-            timeout 3s go run main.go $OPTIMIZED_FLAG "test_${filename}_back.din" >/dev/null 2>&1
+            timeout 3s go run cmd/uddin-lang/main.go $OPTIMIZED_FLAG "test_${filename}_back.din" >/dev/null 2>&1
             exit_code=$?
             end_time=$(date +%s.%N)
             execution_time=$(echo "$end_time - $start_time" | bc -l)
@@ -90,7 +90,7 @@ for file in $(find examples -name "*.din" | sort); do
         else
             # Normal execution for other files
             start_time=$(date +%s.%N)
-            if go run main.go $OPTIMIZED_FLAG "test_${filename}_back.din" >/dev/null 2>&1; then
+            if go run cmd/uddin-lang/main.go $OPTIMIZED_FLAG "test_${filename}_back.din" >/dev/null 2>&1; then
                 end_time=$(date +%s.%N)
                 execution_time=$(echo "$end_time - $start_time" | bc -l)
                 printf "${GREEN}EXEC-OK${NC} [%.3fs]\n" "$execution_time"
