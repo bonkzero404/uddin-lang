@@ -16,9 +16,25 @@ Before installing Uddin-Lang, make sure you have:
 
 ## Installation Methods
 
-### Method 1: Build from Source (Recommended)
+### Method 1: Global Installation with Go Install (Recommended)
 
-This is currently the primary way to install Uddin-Lang:
+The easiest way to install Uddin-Lang globally:
+
+```bash
+# Clone the repository
+git clone https://github.com/bonkzero404/uddin-lang.git
+cd uddin-lang
+
+# Install globally
+go install ./cmd/uddin-lang
+
+# Now you can use uddin-lang from anywhere
+uddin-lang --version
+```
+
+### Method 2: Build from Source
+
+If you prefer to build a local binary:
 
 ```bash
 # Clone the repository
@@ -26,13 +42,13 @@ git clone https://github.com/bonkzero404/uddin-lang.git
 cd uddin-lang
 
 # Build the interpreter
-go build -o uddinlang main.go
+go build -o uddinlang cmd/uddin-lang/main.go
 
 # Make it executable (Linux/macOS)
 chmod +x uddinlang
 ```
 
-### Method 2: Direct Execution with Go
+### Method 3: Direct Execution with Go
 
 If you prefer not to build a binary:
 
@@ -50,7 +66,10 @@ go run cmd/uddin-lang/main.go your_script.din
 Test your installation by checking the version:
 
 ```bash
-# If you built the binary
+# If you used go install (global installation)
+uddin-lang --version
+
+# If you built the binary locally
 ./uddinlang --version
 
 # If using go run
@@ -60,7 +79,7 @@ go run cmd/uddin-lang/main.go --version
 You should see output similar to:
 
 ```
-Uddin-Lang v1.0
+Uddin-Lang v1.0.0
 ```
 
 ## Setting Up Your Environment
@@ -129,7 +148,10 @@ end
 ### Run the test
 
 ```bash
-# If you built the binary
+# If you used go install (global installation)
+uddin-lang test.din
+
+# If you built the binary locally
 ./uddinlang test.din
 
 # If using go run
@@ -149,16 +171,16 @@ Hello, Developer!
 Test the development tools:
 
 ```bash
-# Check syntax analysis
+# If you used go install (global installation)
+uddin-lang --analyze test.din
+uddin-lang --profile test.din
+uddin-lang --examples
+uddin-lang --help
+
+# If you built the binary locally
 ./uddinlang --analyze test.din
-
-# Run with profiling
 ./uddinlang --profile test.din
-
-# List available examples
 ./uddinlang --examples
-
-# Show help
 ./uddinlang --help
 ```
 
@@ -207,6 +229,81 @@ go run cmd/uddin-lang/main.go examples/math-and-calculations/geometry_calculator
 - Build a binary (`go build`) for production or distribution
 - The `go run` approach automatically uses the latest source code
 - No need to rebuild when you make changes to the interpreter
+
+## Using Go Install (Global Installation)
+
+For a more convenient installation that makes `uddin-lang` available globally on your system, you can use `go install`:
+
+### Install from Local Source
+
+If you have cloned the repository:
+
+```bash
+# Navigate to the project directory
+cd uddin-lang
+
+# Install globally using go install
+go install ./cmd/uddin-lang
+```
+
+After installation, you can use `uddin-lang` from anywhere:
+
+```bash
+# Check version
+uddin-lang --version
+# Output: Uddin-Lang v1.0.0
+
+# Run any .din file from anywhere
+uddin-lang /path/to/your/script.din
+
+# Use all CLI features globally
+uddin-lang --help
+uddin-lang --analyze script.din
+uddin-lang --profile script.din
+```
+
+### Install from Repository (Future)
+
+*Note: Direct installation from GitHub repository is planned for future releases:*
+
+```bash
+# This will be available in future releases
+go install github.com/bonkzero404/uddin-lang/cmd/uddin-lang@latest
+```
+
+### Verify Global Installation
+
+To verify that `go install` worked correctly:
+
+```bash
+# Check if uddin-lang is in your PATH
+which uddin-lang
+
+# Test with version command
+uddin-lang --version
+
+# Test with a simple example
+uddin-lang examples/basics/hello_world.din
+```
+
+### Benefits of Go Install
+
+- **Global Access**: Use `uddin-lang` from any directory
+- **No Path Setup**: Automatically installed to `$GOPATH/bin` or `$GOBIN`
+- **Easy Updates**: Simply run `go install` again to update
+- **Clean Installation**: No need to manage binary files manually
+
+### Uninstalling
+
+To remove the globally installed binary:
+
+```bash
+# Find the installation location
+which uddin-lang
+
+# Remove the binary (typically in $GOPATH/bin or $GOBIN)
+rm $(which uddin-lang)
+```
 
 ## Troubleshooting
 
