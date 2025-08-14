@@ -89,7 +89,7 @@ To run any of these examples:
 
 2. **Run an example:**
    ```bash
-   go run main.go examples/basics/hello_world.din
+   go run cmd/uddin-lang/main.go examples/basics/hello_world.din
    ```
 
 ## 📊 Example Statistics
