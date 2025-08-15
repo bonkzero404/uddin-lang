@@ -139,7 +139,7 @@ graph TD
 
 [**🌐 Visit Full Documentation**](https://bonkzero404.github.io/uddin-lang)
 
-[**📚 Go Library Documentation**](LIBRARY.md)
+[**📚 Go Library Documentation**](https://bonkzero404.github.io/uddin-lang/docs/reference/library)
 
 </div>
 
