@@ -17,17 +17,30 @@ UDDIN-LANG provides powerful database integration capabilities with support for 
 
 ### Connection Management
 
-| Function | Description | Example |
-|----------|-------------|----------|
-| `db_connect(driver, host, port, database, username, password)` | Connect to database | `conn = db_connect("postgres", "localhost", 5432, "mydb", "user", "pass")` |
-| `db_close(connection)` | Close database connection | `db_close(conn)` |
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `db_connect(driver, host, port, database, username, password)` | Connect to database | `conn = db_connect("postgres", "localhost", 5432, "mydb", "user", "pass")` | object |
+| `db_connect_with_pool(driver, host, port, database, username, password, pool_size)` | Connect with connection pool | `conn = db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", 10)` | object |
+| `db_configure_pool(connection, max_open, max_idle, max_lifetime)` | Configure connection pool | `db_configure_pool(conn, 20, 10, 3600)` | object |
+| `db_close(connection)` | Close database connection | `db_close(conn)` | void |
 
 ### Query Operations
 
-| Function | Description | Example |
-|----------|-------------|----------|
-| `db_query(connection, query, params...)` | Execute SELECT query | `result = db_query(conn, "SELECT * FROM users WHERE id = $1", 123)` |
-| `db_execute(connection, query, params...)` | Execute INSERT/UPDATE/DELETE | `result = db_execute(conn, "INSERT INTO users (name) VALUES ($1)", "John")` |
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `db_query(connection, query, params...)` | Execute SELECT query | `result = db_query(conn, "SELECT * FROM users WHERE id = $1", 123)` | object |
+| `db_execute(connection, query, params...)` | Execute INSERT/UPDATE/DELETE | `result = db_execute(conn, "INSERT INTO users (name) VALUES ($1)", "John")` | object |
+| `db_execute_batch(connection, queries)` | Execute multiple queries in batch | `result = db_execute_batch(conn, [query1, query2, query3])` | object |
+
+### Asynchronous Operations
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `db_execute_async(connection, query, params...)` | Execute query asynchronously | `async_result = db_execute_async(conn, "SELECT * FROM large_table")` | object |
+| `db_get_async_status(operation_id)` | Get status of async operation | `status = db_get_async_status("op_123")` | object |
+| `db_cancel_async(operation_id)` | Cancel async operation | `cancel_result = db_cancel_async("op_123")` | object |
+| `db_list_async_operations()` | List all async operations | `ops = db_list_async_operations()` | object |
+| `db_cleanup_async_operations()` | Clean up completed async operations | `cleanup_result = db_cleanup_async_operations()` | object |
 
 ### Real-time Streaming
 
@@ -186,6 +199,152 @@ if (result.success) then:
     print("Deleted " + str(result.rows_affected) + " rows")
 else:
     print("Delete failed: " + result.error)
+end
+```
+
+## Advanced Database Operations
+
+### Connection Pooling
+
+Connection pooling improves performance by reusing database connections:
+
+```uddin
+// Connect with connection pool
+conn_result = db_connect_with_pool(
+    "postgres",     // driver
+    "localhost",    // host
+    5432,           // port
+    "myapp",        // database
+    "postgres",     // username
+    "password",     // password
+    10              // pool size
+)
+
+if (conn_result.success) then:
+    conn = conn_result.conn
+    
+    // Configure pool settings
+    pool_config = db_configure_pool(
+        conn,
+        20,    // max_open_connections
+        10,    // max_idle_connections
+        3600   // max_lifetime_seconds
+    )
+    
+    if (pool_config.success) then:
+        print("Pool configured successfully")
+    end
+    
+    // Use connection for queries...
+    
+    db_close(conn)
+end
+```
+
+### Batch Processing
+
+Execute multiple queries efficiently in a single batch:
+
+```uddin
+// Prepare batch operations
+batch_operations = [
+    {
+        "query": "INSERT INTO users (name, email) VALUES ($1, $2)",
+        "params": ["John Doe", "john@example.com"]
+    },
+    {
+        "query": "INSERT INTO users (name, email) VALUES ($1, $2)",
+        "params": ["Jane Smith", "jane@example.com"]
+    },
+    {
+        "query": "UPDATE users SET active = true WHERE id > $1",
+        "params": [0]
+    }
+]
+
+// Execute batch
+batch_result = db_execute_batch(conn, batch_operations)
+
+if (batch_result.success) then:
+    print("Batch executed successfully")
+    print("Operations completed: " + str(batch_result.operations_completed))
+    print("Total rows affected: " + str(batch_result.total_rows_affected))
+else:
+    print("Batch failed: " + batch_result.error)
+    print("Failed at operation: " + str(batch_result.failed_operation_index))
+end
+```
+
+### Asynchronous Operations
+
+Execute long-running queries without blocking:
+
+```uddin
+// Start async operation
+async_result = db_execute_async(conn, 
+    "SELECT * FROM large_table WHERE created_at > $1",
+    "2024-01-01"
+)
+
+if (async_result.success) then:
+    operation_id = async_result.operation_id
+    print("Async operation started: " + operation_id)
+    
+    // Monitor progress
+    while (true):
+        status = db_get_async_status(operation_id)
+        
+        if (status.status == "running") then:
+            print("Operation still running...")
+            sleep(1000)  // Wait 1 second
+        elif (status.status == "completed") then:
+            print("Operation completed!")
+            print("Rows returned: " + str(status.result.count))
+            
+            // Process results
+            for (row in status.result.data):
+                print("Row: " + str(row))
+            end
+            break
+        elif (status.status == "failed") then:
+            print("Operation failed: " + status.error)
+            break
+        elif (status.status == "cancelled") then:
+            print("Operation was cancelled")
+            break
+        end
+    end
+else:
+    print("Failed to start async operation: " + async_result.error)
+end
+```
+
+### Managing Async Operations
+
+```uddin
+// List all async operations
+all_ops = db_list_async_operations()
+
+if (all_ops.success) then:
+    print("Total operations: " + str(all_ops.count))
+    
+    for (op in all_ops.operations):
+        print("Operation " + op.operation_id + ": " + op.status)
+        
+        // Cancel long-running operations if needed
+        if (op.status == "running" and op.duration > 30000) then:
+            cancel_result = db_cancel_async(op.operation_id)
+            if (cancel_result.success) then:
+                print("Cancelled operation: " + op.operation_id)
+            end
+        end
+    end
+end
+
+// Clean up completed operations
+cleanup_result = db_cleanup_async_operations()
+if (cleanup_result.success) then:
+    print("Cleaned up " + str(cleanup_result.cleaned_count) + " operations")
 end
 ```
 

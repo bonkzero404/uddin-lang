@@ -71,8 +71,11 @@ Performance enhancement techniques
 
 ### 🗄️ [Database](https://github.com/bonkzero404/uddin-lang/tree/main/examples/database)
 Database integration and real-time streaming
-- [MySQL Multi-Table Stream Listener](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/mysql_multi_table_stream_listener.din)
-- [PostgreSQL Multi-Table Stream Listener](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/postgres_multi_table_stream_listener.din)
+- [Async Processing Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/async_processing_demo.din)
+- [Batch Processing Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/batch_processing_demo.din)
+- [Connection Pool Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/connection_pooling_demo.din)
+- [MySQL Database Streaming Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/mysql_stream.din)
+- [PostgreSQL Database Streaming Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/postgres_stream.din)
 
 ### 🔧 [Rule Engine](https://github.com/bonkzero404/uddin-lang/tree/main/examples/rule-engine)
 Rule-based programming and pattern matching

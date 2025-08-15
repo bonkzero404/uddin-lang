@@ -372,6 +372,260 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 | `regex_replace(text, pattern, replacement)` | Replace regex matches | `regex_replace("hello world", "world", "universe")` | string |
 | `regex_split(text, pattern)` | Split text by regex pattern | `regex_split("a,b;c", "[,;]")` → `["a", "b", "c"]` | array |
 
+## Database Functions
+
+### Connection Management
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `db_connect(driver, host, port, database, username, password)` | Connect to database | `db_connect("postgres", "localhost", 5432, "mydb", "user", "pass")` | object |
+| `db_connect_with_pool(driver, host, port, database, username, password, pool_config)` | Connect with connection pool | `db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", pool_config)` | object |
+| `db_configure_pool(connection, max_open, max_idle, max_lifetime)` | Configure connection pool | `db_configure_pool(conn, 20, 10, 3600)` | object |
+| `db_close(connection)` | Close database connection | `db_close(conn)` | void |
+
+### Query Operations
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `db_query(connection, query, params...)` | Execute SELECT query | `db_query(conn, "SELECT * FROM users WHERE id = $1", 123)` | object |
+| `db_execute(connection, query, params...)` | Execute INSERT/UPDATE/DELETE | `db_execute(conn, "INSERT INTO users (name) VALUES ($1)", "John")` | object |
+| `db_execute_batch(connection, operations)` | Execute multiple operations in batch | `db_execute_batch(conn, operations_array)` | object |
+
+### Asynchronous Operations
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `db_execute_async(connection, query, params...)` | Execute query asynchronously | `db_execute_async(conn, "SELECT * FROM large_table")` | object |
+| `db_get_async_status(operation_id)` | Get status of async operation | `db_get_async_status("op_123")` | object |
+| `db_cancel_async(operation_id)` | Cancel async operation | `db_cancel_async("op_123")` | object |
+| `db_list_async_operations()` | List all async operations | `db_list_async_operations()` | object |
+| `db_cleanup_async_operations()` | Clean up completed async operations | `db_cleanup_async_operations()` | object |
+
+### Real-time Streaming
+
+| Function | Description | Example | Return Type |
+|----------|-------------|---------|-------------|
+| `stream_tables(connection, table_name, callback)` | Start real-time streaming for single table | `stream_tables(conn, "users", on_change)` | void |
+| `stream_tables(connection, table_names, callback)` | Start real-time streaming for multiple tables | `stream_tables(conn, ["users", "orders"], on_multi_change)` | void |
+| `stream_tables(connection, table_name, callback, columns)` | Stream with column selection | `stream_tables(conn, "users", on_change, ["id", "name"])` | void |
+| `db_stop_stream(streamer_id)` | Stop real-time streaming | `db_stop_stream("streamer_123")` | void |
+
+### Database Function Examples
+
+#### Basic Connection and Query
+```uddin
+// Connect to PostgreSQL
+conn_result = db_connect("postgres", "localhost", 5432, "mydb", "user", "password")
+
+if (conn_result.success) then:
+    conn = conn_result.conn
+    print("Connected to " + conn_result.driver + " database: " + conn_result.database)
+    
+    // Execute a query (PostgreSQL uses $1, $2, etc.)
+    result = db_query(conn, "SELECT * FROM users WHERE age > $1", 18)
+    
+    if (result.success) then:
+        print("Found " + str(result.count) + " users")
+        print("Columns: " + str(result.columns))
+        for (row in result.data):
+            print("User: " + row.name + ", Age: " + str(row.age))
+        end
+    end
+    
+    // Execute an insert (returns rows_affected and last_insert_id)
+    insert_result = db_execute(conn, "INSERT INTO users (name, email) VALUES ($1, $2)", "John", "john@example.com")
+    if (insert_result.success) then:
+        print("Inserted " + str(insert_result.rows_affected) + " rows")
+        print("Last insert ID: " + str(insert_result.last_insert_id))
+    end
+    
+    // Close connection
+    close_result = db_close(conn)
+    if (close_result.success) then:
+        print(close_result.message)
+    end
+end
+
+// Connect to MySQL (uses ? placeholders)
+mysql_result = db_connect("mysql", "localhost", 3306, "mydb", "user", "password")
+if (mysql_result.success) then:
+    mysql_conn = mysql_result.conn
+    
+    // MySQL uses ? for placeholders
+    result = db_query(mysql_conn, "SELECT * FROM users WHERE age > ?", 18)
+    if (result.success) then:
+        print("Found " + str(result.count) + " MySQL users")
+    end
+    
+    db_close(mysql_conn)
+end
+```
+
+#### Batch Operations
+```uddin
+// Prepare batch operations (PostgreSQL example)
+operations = [
+    {"query": "INSERT INTO users (name, email) VALUES ($1, $2)", "args": ["Alice", "alice@example.com"]},
+    {"query": "INSERT INTO users (name, email) VALUES ($1, $2)", "args": ["Bob", "bob@example.com"]},
+    {"query": "UPDATE users SET active = $1 WHERE name = $2", "args": [true, "Alice"]}
+]
+
+// Execute batch
+batch_result = db_execute_batch(conn, operations)
+
+if (batch_result.success) then:
+    print("Batch executed successfully")
+    print("Total affected rows: " + str(batch_result.total_affected))
+    
+    // Check individual results
+    for (i = 0; i < len(batch_result.results); i++):
+        result = batch_result.results[i]
+        if (result.success) then:
+            print("Operation " + str(i) + ": " + str(result.rows_affected) + " rows affected")
+        else:
+            print("Operation " + str(i) + " failed: " + result.error)
+        end
+    end
+else:
+    print("Batch failed: " + batch_result.error)
+end
+
+// MySQL batch example
+mysql_operations = [
+    {"query": "INSERT INTO users (name, email) VALUES (?, ?)", "args": ["Charlie", "charlie@example.com"]},
+    {"query": "INSERT INTO users (name, email) VALUES (?, ?)", "args": ["Diana", "diana@example.com"]}
+]
+
+mysql_batch_result = db_execute_batch(mysql_conn, mysql_operations)
+if (mysql_batch_result.success) then:
+    print("MySQL batch completed: " + str(mysql_batch_result.total_affected) + " total rows")
+end
+```
+
+#### Connection Pooling
+```uddin
+// Create pool configuration
+pool_config = {
+    "max_open": 10,
+    "max_idle": 5,
+    "max_lifetime": 3600
+}
+
+// Connect with connection pool
+pool_conn = db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "password", pool_config)
+
+if (pool_conn.success) then:
+    conn = pool_conn.conn
+    print("Pool created with max_open: " + str(pool_conn.max_open))
+    print("Pool max_idle: " + str(pool_conn.max_idle))
+    
+    // Configure pool settings (can be changed after creation)
+    config_result = db_configure_pool(conn, 20, 10, 7200) // max_open, max_idle, max_lifetime
+    if (config_result.success) then:
+        print("Pool configuration updated")
+    end
+    
+    // Use the pooled connection
+    result = db_query(conn, "SELECT COUNT(*) as total FROM users")
+    if (result.success) then:
+        print("Total users: " + str(result.data[0].total))
+    end
+    
+    close_result = db_close(conn)
+    if (close_result.success) then:
+        print(close_result.message)
+    end
+end
+```
+
+#### Asynchronous Operations
+```uddin
+// Execute query asynchronously
+async_result = db_execute_async(conn, "SELECT * FROM large_table")
+
+if (async_result.success) then:
+    operation_id = async_result.operation_id
+    print("Started async operation: " + operation_id)
+    
+    // Check status periodically
+    while (true):
+        status = db_get_async_status(operation_id)
+        
+        if (status.status == "completed") then:
+            print("Query completed with " + str(status.result.count) + " rows")
+            print("Affected rows: " + str(status.result.rows_affected))
+            print("Last insert ID: " + str(status.result.last_insert_id))
+            break
+        elif (status.status == "failed") then:
+            print("Query failed: " + status.error)
+            break
+        end
+        
+        print("Operation still running...")
+        // Wait before checking again
+        sleep(1000)
+    end
+    
+    // List all operations
+    operations = db_list_async_operations()
+    print("Total async operations: " + str(operations.count))
+    
+    // Cleanup completed operations
+    cleanup_result = db_cleanup_async_operations()
+    if (cleanup_result.success) then:
+        print("Cleaned up " + str(cleanup_result.cleaned_count) + " operations")
+    end
+else:
+    print("Failed to start async operation: " + async_result.error)
+end
+```
+
+#### Real-time Streaming
+```uddin
+// Define callback function
+function on_data_change(event):
+    print("Stream ID: " + event.stream_id)
+    print("Table: " + event.table)
+    print("Operation: " + event.operation) // INSERT, UPDATE, DELETE
+    print("Timestamp: " + event.timestamp)
+    
+    if (event.operation == "INSERT") then:
+        print("New data: " + str(event.new_data))
+    else if (event.operation == "UPDATE") then:
+        print("Old data: " + str(event.old_data))
+        print("New data: " + str(event.new_data))
+    else if (event.operation == "DELETE") then:
+        print("Deleted data: " + str(event.old_data))
+    end
+end
+
+// Define error callback
+function on_stream_error(error):
+    print("Stream error: " + error.message)
+    print("Error code: " + str(error.code))
+end
+
+// Start streaming with callbacks
+stream_result = stream_tables(conn, ["users", "orders"], on_data_change, on_stream_error)
+
+if (stream_result.success) then:
+    stream_id = stream_result.stream_id
+    print("Streaming started with ID: " + stream_id)
+    print("Monitoring tables: " + str(stream_result.tables))
+    
+    // Let it run for some time
+    sleep(30000) // 30 seconds
+    
+    // Stop streaming
+    stop_result = db_stop_stream(stream_id)
+    if (stop_result.success) then:
+        print("Streaming stopped: " + stop_result.message)
+    end
+else:
+    print("Failed to start streaming: " + stream_result.error)
+end
+```
+
 ## System Functions
 
 | Function | Description | Example | Return Type |

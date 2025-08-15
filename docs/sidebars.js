@@ -66,10 +66,10 @@ const sidebars = {
     ],
 
     // Examples sidebar
-    examplesSidebar: [
-        'examples/examples',
-        'examples/database-streaming',
-    ],
+    // examplesSidebar: [
+    //     'examples/examples',
+    //     'examples/database-streaming',
+    // ],
 
     // But you can create a sidebar manually
     /*
