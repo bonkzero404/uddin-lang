@@ -3,12 +3,15 @@ package interpreter
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/go-mysql-org/go-mysql/mysql"
+	"github.com/go-mysql-org/go-mysql/replication"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/lib/pq"
 )
@@ -20,11 +23,21 @@ var (
 	databaseMutex       = sync.RWMutex{}
 )
 
-// DatabaseStreamer represents a real-time database streamer using LISTEN/NOTIFY
+// BinlogStreamer represents a MySQL binlog streamer for CDC
+type BinlogStreamer struct {
+	Syncer   *replication.BinlogSyncer
+	Streamer *replication.BinlogStreamer
+	Config   replication.BinlogSyncerConfig
+	Position mysql.Position
+	Tables   map[string]bool // Tables to monitor
+}
+
+// DatabaseStreamer represents a real-time database streamer using LISTEN/NOTIFY or Binlog
 type DatabaseStreamer struct {
 	ID        string
 	DB        *sql.DB
 	Listener  *pq.Listener
+	Binlog    *BinlogStreamer
 	TableName string
 	Callback  Value // UDDIN-LANG function to call on data change
 	Active    bool
@@ -33,6 +46,8 @@ type DatabaseStreamer struct {
 	Driver    string
 	LastID    int64
 	BinlogPos string // For MySQL binary log position
+	UseBinlog bool   // Whether to use binlog streaming instead of polling
+	ServerID  uint32 // MySQL server ID for binlog replication
 }
 
 // DatabaseConnection represents a database connection object
@@ -44,6 +59,7 @@ type DatabaseConnection struct {
 	Port     int
 	Database string
 	Username string
+	Password string
 }
 
 // dbConnectFunc implements the db_connect() built-in function
@@ -137,6 +153,7 @@ func dbConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 		Port:     port,
 		Database: database,
 		Username: username,
+		Password: password,
 	}
 
 	return Value(map[string]Value{
@@ -502,7 +519,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 			Driver:    "postgres",
 		}
 	} else {
-		// MySQL streamer (no listener needed)
+		// MySQL streamer with optimized CDC
 		streamer = &DatabaseStreamer{
 			ID:        streamerID,
 			DB:        connObj.DB,
@@ -513,6 +530,8 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 			Cancel:    cancel,
 			Driver:    "mysql",
 			LastID:    0,
+			UseBinlog: true, // Enable optimized CDC
+			ServerID:  1001, // Default server ID for binlog replication
 		}
 	}
 
@@ -538,7 +557,12 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 		if connObj.Driver == "postgres" {
 			streamer.setupPostgreSQLMultiTableStreaming(interp, pos, ctx, tableNames)
 		} else {
-			streamer.setupMySQLMultiTableStreaming(interp, pos, ctx, tableNames)
+			// Use optimized CDC for MySQL
+			if streamer.UseBinlog {
+				streamer.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, connObj.Host, connObj.Port, connObj.Username, connObj.Password)
+			} else {
+				streamer.setupMySQLMultiTableStreaming(interp, pos, ctx, tableNames)
+			}
 		}
 	}()
 
@@ -772,147 +796,159 @@ func (ds *DatabaseStreamer) setupPostgreSQLMultiTableStreaming(interp *interpret
 	}
 }
 
-// setupMySQLMultiTableStreaming sets up MySQL CDC using binary log simulation for multiple tables
-func (ds *DatabaseStreamer) setupMySQLMultiTableStreaming(interp *interpreter, pos Position, ctx context.Context, tableNames []string) {
-	// Create change log table for all tables if it doesn't exist
-	changeTableName := "uddin_changes_log"
-	createChangeTableSQL := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			table_name VARCHAR(255) NOT NULL,
-			operation ENUM('INSERT', 'UPDATE', 'DELETE') NOT NULL,
-			data_before JSON,
-			data_after JSON,
-			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			INDEX idx_table_id (table_name, id),
-			INDEX idx_timestamp (timestamp)
-		)
-	`, changeTableName)
+// setupMySQLBinlogStreaming sets up true MySQL binlog streaming like Debezium
+func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos Position, ctx context.Context, tableNames []string, host string, port int, username, password string) {
+	// Initialize binlog configuration
+	cfg := replication.BinlogSyncerConfig{
+		ServerID: ds.ServerID,
+		Flavor:   "mysql",
+		Host:     host,
+		Port:     uint16(port),
+		User:     username,
+		Password: password,
+	}
 
-	if _, err := ds.DB.Exec(createChangeTableSQL); err != nil {
-		log.Printf("Error creating change log table: %v", err)
+	// Create binlog syncer
+	syncer := replication.NewBinlogSyncer(cfg)
+	defer syncer.Close()
+
+	// Get current binlog position
+	binlogPos, err := ds.getCurrentBinlogPosition()
+	if err != nil {
+		log.Printf("Error getting binlog position: %v, starting from latest", err)
+		binlogPos = mysql.Position{Name: "", Pos: 4} // Start from beginning if no position found
+	}
+
+	// Start streaming from the position
+	streamer, err := syncer.StartSync(binlogPos)
+	if err != nil {
+		log.Printf("Error starting binlog sync: %v", err)
 		return
 	}
 
-	// Setup triggers for each table
-	for _, tableName := range tableNames {
-		// Get column list for the table
-		columns, err := ds.getColumnList(tableName)
-		if err != nil {
-			log.Printf("Error getting columns for table %s: %v", tableName, err)
-			continue
-		}
-
-		// Create INSERT trigger
-		insertTriggerSQL := fmt.Sprintf(`
-			CREATE TRIGGER IF NOT EXISTS %s_insert_trigger
-			AFTER INSERT ON %s
-			FOR EACH ROW
-			INSERT INTO %s (table_name, operation, data_after)
-			VALUES ('%s', 'INSERT', JSON_OBJECT(%s))
-		`, tableName, tableName, changeTableName, tableName, ds.buildJSONObjectColumns(columns, "NEW"))
-
-		// Create UPDATE trigger
-		updateTriggerSQL := fmt.Sprintf(`
-			CREATE TRIGGER IF NOT EXISTS %s_update_trigger
-			AFTER UPDATE ON %s
-			FOR EACH ROW
-			INSERT INTO %s (table_name, operation, data_before, data_after)
-			VALUES ('%s', 'UPDATE', JSON_OBJECT(%s), JSON_OBJECT(%s))
-		`, tableName, tableName, changeTableName, tableName, ds.buildJSONObjectColumns(columns, "OLD"), ds.buildJSONObjectColumns(columns, "NEW"))
-
-		// Create DELETE trigger
-		deleteTriggerSQL := fmt.Sprintf(`
-			CREATE TRIGGER IF NOT EXISTS %s_delete_trigger
-			AFTER DELETE ON %s
-			FOR EACH ROW
-			INSERT INTO %s (table_name, operation, data_before)
-			VALUES ('%s', 'DELETE', JSON_OBJECT(%s))
-		`, tableName, tableName, changeTableName, tableName, ds.buildJSONObjectColumns(columns, "OLD"))
-
-		// Execute trigger creation
-		if _, err := ds.DB.Exec(insertTriggerSQL); err != nil {
-			log.Printf("Error creating INSERT trigger for table %s: %v", tableName, err)
-		}
-		if _, err := ds.DB.Exec(updateTriggerSQL); err != nil {
-			log.Printf("Error creating UPDATE trigger for table %s: %v", tableName, err)
-		}
-		if _, err := ds.DB.Exec(deleteTriggerSQL); err != nil {
-			log.Printf("Error creating DELETE trigger for table %s: %v", tableName, err)
-		}
+	// Initialize binlog streamer
+	ds.Binlog = &BinlogStreamer{
+		Syncer:   syncer,
+		Streamer: streamer,
+		Config:   cfg,
+		Position: binlogPos,
+		Tables:   make(map[string]bool),
 	}
 
-	log.Printf("Started MySQL multi-table streaming for tables %v", tableNames)
+	// Mark tables to monitor
+	for _, tableName := range tableNames {
+		ds.Binlog.Tables[tableName] = true
+	}
 
-	// Start polling for changes
-	ds.pollMySQLMultiTableChanges(interp, pos, ctx, changeTableName)
+	log.Printf("Started MySQL binlog streaming for tables %v from position %v", tableNames, binlogPos)
+
+	// Start processing binlog events
+	ds.processBinlogEvents(interp, pos, ctx)
 }
 
-// pollMySQLMultiTableChanges polls the unified change log table for new changes from multiple tables
-func (ds *DatabaseStreamer) pollMySQLMultiTableChanges(interp *interpreter, pos Position, ctx context.Context, changeTableName string) {
+// setupMySQLMultiTableStreaming is deprecated - use setupMySQLBinlogStreaming instead
+// This function is kept for backward compatibility but should not be used
+func (ds *DatabaseStreamer) setupMySQLMultiTableStreaming(interp *interpreter, pos Position, ctx context.Context, tableNames []string) {
+	log.Printf("Warning: setupMySQLMultiTableStreaming is deprecated. Use binlog streaming instead.")
+	// Fallback to binlog streaming
+	ds.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, "", 0, "", "")
+}
+
+// getCurrentBinlogPosition gets the current MySQL binlog position
+func (ds *DatabaseStreamer) getCurrentBinlogPosition() (mysql.Position, error) {
+	var file string
+	var position uint32
+
+	query := "SHOW MASTER STATUS"
+	row := ds.DB.QueryRow(query)
+	err := row.Scan(&file, &position, nil, nil, nil)
+	if err != nil {
+		return mysql.Position{}, err
+	}
+
+	return mysql.Position{Name: file, Pos: position}, nil
+}
+
+// processBinlogEvents processes MySQL binlog events in real-time
+func (ds *DatabaseStreamer) processBinlogEvents(interp *interpreter, pos Position, ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			// Query for new changes from all tables
-			query := fmt.Sprintf(`
-				SELECT id, table_name, operation, data_before, data_after, UNIX_TIMESTAMP(timestamp)
-				FROM %s 
-				WHERE id > ? 
-				ORDER BY id ASC
-			`, changeTableName)
-
-			rows, err := ds.DB.Query(query, ds.LastID)
+			// Get next binlog event
+			ev, err := ds.Binlog.Streamer.GetEvent(ctx)
 			if err != nil {
-				log.Printf("Error polling MySQL multi-table changes: %v", err)
-				time.Sleep(1 * time.Second)
+				log.Printf("Error getting binlog event: %v", err)
 				continue
 			}
 
-			for rows.Next() {
-				var id int64
-				var tableName, operation string
-				var dataBefore, dataAfter sql.NullString
-				var timestamp float64
+			// Update binlog position
+			ds.Binlog.Position.Pos = ev.Header.LogPos
 
-				err := rows.Scan(&id, &tableName, &operation, &dataBefore, &dataAfter, &timestamp)
-				if err != nil {
-					log.Printf("Error scanning MySQL multi-table change: %v", err)
-					continue
-				}
-
-				// Create notification-like structure
-				var data string
-				if operation == "DELETE" && dataBefore.Valid {
-					data = dataBefore.String
-				} else if dataAfter.Valid {
-					data = dataAfter.String
-				} else {
-					data = "{}"
-				}
-
-				// Create a mock notification for compatibility
-				mockNotification := &pq.Notification{
-					Channel: fmt.Sprintf("%s_changes", tableName),
-					Extra:   fmt.Sprintf(`{"table":"%s","operation":"%s","timestamp":%.0f,"data":%s}`, tableName, operation, timestamp, data),
-				}
-
-				// Handle the notification
-				ds.handleNotification(interp, pos, mockNotification)
-
-				// Update last processed ID
-				ds.LastID = id
+			// Process different event types
+			switch e := ev.Event.(type) {
+			case *replication.RowsEvent:
+				// Handle INSERT, UPDATE, DELETE events
+				ds.handleRowsEvent(interp, pos, ev.Header, e)
+			case *replication.RotateEvent:
+				// Handle binlog rotation
+				ds.Binlog.Position.Name = string(e.NextLogName)
+				ds.Binlog.Position.Pos = uint32(e.Position)
+				log.Printf("Binlog rotated to %s:%d", ds.Binlog.Position.Name, ds.Binlog.Position.Pos)
 			}
-			rows.Close()
-
-			// Sleep before next poll
-			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }
 
-// getColumnList retrieves the column names for a given table
+// handleRowsEvent processes MySQL row change events
+func (ds *DatabaseStreamer) handleRowsEvent(interp *interpreter, pos Position, header *replication.EventHeader, e *replication.RowsEvent) {
+	tableName := string(e.Table.Table)
+
+	// Check if we're monitoring this table
+	if !ds.Binlog.Tables[tableName] {
+		return
+	}
+
+	// Determine operation type
+	var operation string
+	switch header.EventType {
+	case replication.WRITE_ROWS_EVENTv1, replication.WRITE_ROWS_EVENTv2:
+		operation = "INSERT"
+	case replication.UPDATE_ROWS_EVENTv1, replication.UPDATE_ROWS_EVENTv2:
+		operation = "UPDATE"
+	case replication.DELETE_ROWS_EVENTv1, replication.DELETE_ROWS_EVENTv2:
+		operation = "DELETE"
+	default:
+		return
+	}
+
+	// Process each row in the event
+	for i, row := range e.Rows {
+		var oldData, newData map[string]interface{}
+
+		if operation == "UPDATE" {
+			// For UPDATE, rows come in pairs: [old_row, new_row]
+			if i%2 == 0 {
+				oldData = ds.rowToMap(e.Table, row)
+			} else {
+				newData = ds.rowToMap(e.Table, row)
+				oldData = ds.rowToMap(e.Table, e.Rows[i-1])
+
+				// Call callback for UPDATE
+				ds.callBinlogCallback(interp, pos, tableName, operation, oldData, newData)
+			}
+		} else if operation == "INSERT" {
+			newData = ds.rowToMap(e.Table, row)
+			ds.callBinlogCallback(interp, pos, tableName, operation, nil, newData)
+		} else if operation == "DELETE" {
+			oldData = ds.rowToMap(e.Table, row)
+			ds.callBinlogCallback(interp, pos, tableName, operation, oldData, nil)
+		}
+	}
+}
+
+// getColumnList retrieves the column names for a given table (used by binlog streaming)
 func (ds *DatabaseStreamer) getColumnList(tableName string) ([]string, error) {
 	query := "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ? AND TABLE_SCHEMA = DATABASE() ORDER BY ORDINAL_POSITION"
 	rows, err := ds.DB.Query(query, tableName)
@@ -933,11 +969,70 @@ func (ds *DatabaseStreamer) getColumnList(tableName string) ([]string, error) {
 	return columns, nil
 }
 
-// buildJSONObjectColumns builds the column list for JSON_OBJECT function
-func (ds *DatabaseStreamer) buildJSONObjectColumns(columns []string, prefix string) string {
-	var parts []string
-	for _, col := range columns {
-		parts = append(parts, fmt.Sprintf("'%s', %s.%s", col, prefix, col))
+// rowToMap converts a binlog row to a map
+func (ds *DatabaseStreamer) rowToMap(table *replication.TableMapEvent, row []interface{}) map[string]interface{} {
+	result := make(map[string]interface{})
+
+	// Get column information
+	columns, err := ds.getColumnList(string(table.Table))
+	if err != nil {
+		log.Printf("Error getting columns for table %s: %v", string(table.Table), err)
+		return result
 	}
-	return strings.Join(parts, ", ")
+
+	// Map row values to column names
+	for i, value := range row {
+		if i < len(columns) {
+			result[columns[i]] = value
+		}
+	}
+
+	return result
+}
+
+// callBinlogCallback calls the UDDIN callback function for binlog events
+func (ds *DatabaseStreamer) callBinlogCallback(interp *interpreter, pos Position, tableName, operation string, oldData, newData map[string]interface{}) {
+	// Create payload similar to the polling version
+	payload := map[string]interface{}{
+		"table":     tableName,
+		"operation": operation,
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+
+	if newData != nil {
+		payload["new_data"] = newData
+	}
+	if oldData != nil {
+		payload["old_data"] = oldData
+	}
+
+	// Convert to JSON
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("Error marshaling binlog payload: %v", err)
+		return
+	}
+
+	// Call the callback function using the same pattern as handleNotification
+	ds.Mutex.RLock()
+	callback := ds.Callback
+	ds.Mutex.RUnlock()
+
+	if fn, ok := callback.(functionType); ok {
+		// Create arguments for callback: channel and payload as separate parameters
+		channelName := fmt.Sprintf("%s_changes", tableName)
+		callbackArgs := []Value{channelName, string(payloadJSON)}
+
+		// Call the callback function
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("Binlog stream callback error: %v", r)
+				}
+			}()
+			fn.call(interp, pos, callbackArgs)
+		}()
+	} else {
+		log.Printf("Invalid callback function for binlog streamer %s", ds.ID)
+	}
 }

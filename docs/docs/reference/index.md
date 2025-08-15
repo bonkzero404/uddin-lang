@@ -33,6 +33,16 @@ Experimental memory optimization features including:
 - Performance optimization techniques
 - Compatibility guidelines and limitations
 
+### [Database Streaming](./database-streaming)
+Reference guide for real-time database streaming capabilities including:
+- Stream functions and parameters
+- Connection management
+- Event handling patterns
+- Multi-table streaming
+- Performance considerations
+
+
+
 ### [Go Library](./library)
 Comprehensive guide to using UDDIN-LANG as a Go library including:
 - Installation and setup

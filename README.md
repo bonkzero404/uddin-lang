@@ -44,6 +44,7 @@ UDDIN-LANG is a specialized rule engine platform designed to bridge the gap betw
 -   💰 **Financial Logic** - Complex financial calculations and risk management
 -   🎯 **Recommendation Systems** - Intelligent content and product recommendations
 -   📋 **Data Validation** - Complex validation rules with custom logic
+-   🔄 **Real-time Data Processing** - Change Data Capture (CDC) for live database monitoring and event-driven architectures
 
 ### 🚀 Beyond Simple Rules
 
@@ -119,7 +120,8 @@ graph TD
 -   ✅ **Multiline Strings** with backticks for raw text (perfect for JSON, SQL, HTML)
 -   ✅ **JSON Support** with built-in parsing and serialization functions
 -   ✨ **Extended Standard Library** with advanced string manipulation, functional array methods, and new data structures (Set, Stack, Queue)
--   🌐 **Comprehensive Networking** with HTTP client, TCP/UDP sockets, and network utilities
+   🌐 **Comprehensive Networking** with HTTP client, TCP/UDP sockets, and network utilities
+   🗄️ **Database Integration & CDC** with real-time Change Data Capture for PostgreSQL and MySQL binlog streaming
 
 ### 🛠️ Developer Tools
 
@@ -264,6 +266,10 @@ uddin-lang examples/21_multiline_strings_demo.din    # Multiline string features
 ./uddinlang examples/17_http_client_demo.din      # HTTP client operations
 ./uddinlang examples/18_networking_demo.din       # TCP/UDP networking and utilities
 ./uddinlang examples/19_persistent_http_server.din # Persistent HTTP server with main function
+
+# 🗄️ Database & CDC Examples
+./uddinlang examples/database/postgres_multi_table_stream_listener.din  # PostgreSQL CDC streaming
+./uddinlang examples/database/mysql_multi_table_stream_listener.din     # MySQL binlog CDC streaming
 ```
 
 ### 🛠️ CLI Features & Development Tools
@@ -485,6 +491,72 @@ multiline_comment   = "/*" { any_character } "*/"
 | 8          | `xor`                        | Left          | Logical XOR (exclusive or)                   |
 | 9          | `or`                         | Left          | Logical OR                                   |
 | 10         | `=` `+=` `-=` `*=` `/=` `%=` | Right         | Assignment and compound assignment           |
+
+---
+
+## 🗄️ Database Integration & Change Data Capture (CDC)
+
+UDDIN-LANG provides powerful real-time database integration capabilities with built-in Change Data Capture (CDC) support for monitoring database changes and building event-driven applications.
+
+### 🔄 Supported CDC Sources
+
+- **PostgreSQL** - LISTEN/NOTIFY based real-time streaming
+- **MySQL** - Binary log (binlog) streaming for high-performance CDC
+- **Oracle** - Planned support for Oracle CDC
+- **MongoDB** - Planned support for MongoDB Change Streams
+
+### 🚀 Key CDC Features
+
+- **Real-time Event Streaming** - Instant notification of data changes
+- **Multi-table Monitoring** - Monitor multiple tables simultaneously
+- **Event Filtering** - Filter events by operation type (INSERT, UPDATE, DELETE)
+- **Low Latency** - Optimized for high-performance streaming
+- **Automatic Reconnection** - Built-in resilience and error handling
+
+### 📝 Quick CDC Example
+
+```go
+// PostgreSQL CDC Example
+fun main():
+    // Configure CDC connection
+    config = {
+        "host": "localhost",
+        "port": 5432,
+        "database": "mydb",
+        "username": "user",
+        "password": "pass"
+    }
+    
+    // Start streaming changes from multiple tables
+    stream_tables(["users", "orders", "products"], config, fun(event):
+        print("Database change detected:")
+        print("Table: " + event.table)
+        print("Operation: " + event.operation)
+        print("Data: " + json_stringify(event.data))
+        
+        // Process the change event
+        if (event.table == "orders" and event.operation == "INSERT") then:
+            // Trigger order processing workflow
+            process_new_order(event.data)
+        end
+    end)
+end
+```
+
+### 🎯 CDC Use Cases
+
+- **Real-time Analytics** - Stream data changes to analytics dashboards
+- **Event-driven Microservices** - Trigger business processes from data changes
+- **Data Synchronization** - Keep multiple systems in sync
+- **Audit Logging** - Track all data modifications for compliance
+- **Cache Invalidation** - Update caches when underlying data changes
+- **Search Index Updates** - Keep search indexes synchronized with database
+
+### 📚 Learn More
+
+For detailed CDC implementation guides, configuration options, and advanced examples:
+
+[**📖 Read CDC Documentation →**](https://bonkzero404.github.io/uddin-lang/docs/tutorial/advanced/database-integration)
 
 ---
 
