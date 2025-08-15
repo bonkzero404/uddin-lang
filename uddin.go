@@ -51,7 +51,7 @@ func (e *Engine) SetArgs(args []string) {
 }
 
 // SetVariable sets a variable in the engine's global scope.
-func (e *Engine) SetVariable(name string, value interface{}) {
+func (e *Engine) SetVariable(name string, value any) {
 	if e.config.Vars == nil {
 		e.config.Vars = make(map[string]interpreter.Value)
 	}
@@ -59,7 +59,7 @@ func (e *Engine) SetVariable(name string, value interface{}) {
 }
 
 // SetVariables sets multiple variables in the engine's global scope.
-func (e *Engine) SetVariables(vars map[string]interface{}) {
+func (e *Engine) SetVariables(vars map[string]any) {
 	if e.config.Vars == nil {
 		e.config.Vars = make(map[string]interpreter.Value)
 	}

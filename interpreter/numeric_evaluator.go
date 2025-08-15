@@ -5,7 +5,7 @@ import (
 )
 
 // FastNumericEvaluator provides specialized evaluation for numeric operations
-// to reduce interface{} boxing/unboxing and heap allocations
+// to reduce any boxing/unboxing and heap allocations
 type FastNumericEvaluator struct {
 	intPool   sync.Pool
 	floatPool sync.Pool
@@ -32,7 +32,7 @@ func NewFastNumericEvaluator() *FastNumericEvaluator {
 // Global instance for reuse
 var globalFastEvaluator = NewFastNumericEvaluator()
 
-// FastEvalPlus provides optimized addition without interface{} boxing for common cases
+// FastEvalPlus provides optimized addition without any boxing for common cases
 func (fne *FastNumericEvaluator) FastEvalPlus(l, r Value) (Value, bool) {
 	// Fast path for int + int
 	if li, ok := l.(int); ok {

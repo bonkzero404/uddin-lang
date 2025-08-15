@@ -24,14 +24,14 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     // Create a new engine
     engine := uddin.New()
-    
+
     // Execute UDDIN-LANG code
     stats, err := engine.ExecuteString(`
         x = 10
@@ -39,11 +39,11 @@ func main() {
         result = x + y
         print("Result: " + str(result))
     `)
-    
+
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Printf("Executed %d operations\n", stats.Total())
 }
 ```
@@ -56,19 +56,19 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Evaluate a mathematical expression
     result, stats, err := engine.EvaluateString("(5 + 3) * 2")
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Printf("Result: %v (executed %d operations)\n", result, stats.Total())
     // Output: Result: 16 (executed 5 operations)
 }
@@ -82,23 +82,23 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Set individual variables
     engine.SetVariable("name", "John")
     engine.SetVariable("age", 30)
-    
+
     // Or set multiple variables at once
-    engine.SetVariables(map[string]interface{}{
+    engine.SetVariables(map[string]any{
         "city": "New York",
         "active": true,
     })
-    
+
     // Use the variables in UDDIN-LANG code
     _, err := engine.ExecuteString(`
         print("Name: " + name)
@@ -106,7 +106,7 @@ func main() {
         print("City: " + city)
         print("Active: " + str(active))
     `)
-    
+
     if err != nil {
         log.Fatal(err)
     }
@@ -123,31 +123,31 @@ import (
     "fmt"
     "log"
     "strings"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Capture output
     var output bytes.Buffer
     engine.SetStdout(&output)
-    
+
     // Provide input
     input := strings.NewReader("Hello from input\n")
     engine.SetStdin(input)
-    
+
     _, err := engine.ExecuteString(`
         print("Enter your name: ")
         name = read()
         print("Hello, " + name)
     `)
-    
+
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Printf("Captured output:\n%s", output.String())
 }
 ```
@@ -159,13 +159,13 @@ package main
 
 import (
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Define and call functions
     _, err := engine.ExecuteString(`
         fun factorial(n):
@@ -174,11 +174,11 @@ func main() {
             end
             return n * factorial(n - 1)
         end
-        
+
         result = factorial(5)
         print("5! = " + str(result))
     `)
-    
+
     if err != nil {
         log.Fatal(err)
     }
@@ -193,19 +193,19 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // This will cause a syntax error
     _, err := engine.ExecuteString("x = ")
     if err != nil {
         fmt.Printf("Syntax error: %v\n", err)
     }
-    
+
     // This will cause a runtime error
     _, err = engine.ExecuteString("print(undefined_variable)")
     if err != nil {
@@ -222,33 +222,33 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Parse the program first
     program, err := engine.ParseProgram([]byte(`
         fun greet(name):
             return "Hello, " + name + "!"
         end
-        
+
         message = greet("World")
         print(message)
     `))
-    
+
     if err != nil {
         log.Fatal("Parse error:", err)
     }
-    
+
     // Execute the parsed program
     stats, err := engine.ExecuteProgram(program)
     if err != nil {
         log.Fatal("Execution error:", err)
     }
-    
+
     fmt.Printf("Program executed successfully with %d operations\n", stats.Total())
 }
 ```
@@ -260,16 +260,16 @@ package main
 
 import (
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Enable memory optimizations for better performance
     engine.EnableMemoryOptimization()
-    
+
     // Execute memory-intensive operations
     _, err := engine.ExecuteString(`
         // Process large arrays
@@ -280,7 +280,7 @@ func main() {
         end
         print("Sum: " + str(sum))
     `)
-    
+
     if err != nil {
         log.Fatal(err)
     }
@@ -295,37 +295,37 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
     engine := uddin.New()
-    
+
     // Enable unit test mode (prevents automatic main() execution)
     engine.SetUnitTestMode(true)
-    
+
     // Define functions without executing main
     _, err := engine.ExecuteString(`
         fun add(a, b):
             return a + b
         end
-        
+
         fun main():
             print("This won't be executed automatically")
         end
     `)
-    
+
     if err != nil {
         log.Fatal(err)
     }
-    
+
     // Manually test the add function
     result, _, err := engine.EvaluateString("add(5, 3)")
     if err != nil {
         log.Fatal(err)
     }
-    
+
     fmt.Printf("add(5, 3) = %v\n", result) // Output: add(5, 3) = 8
 }
 ```
@@ -340,7 +340,7 @@ package main
 import (
     "fmt"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
@@ -351,13 +351,13 @@ func main() {
         log.Fatal(err)
     }
     fmt.Printf("Result: %v\n", result) // Output: Result: 52
-    
+
     // Quick program execution
     _, err = uddin.ExecuteString(`print("Hello from UDDIN-LANG!")`)
     if err != nil {
         log.Fatal(err)
     }
-    
+
     // Quick file execution
     _, err = uddin.ExecuteFile("script.din")
     if err != nil {
@@ -380,8 +380,8 @@ func main() {
 - `SetUnitTestMode(isUnitTest bool)` - Set unit test mode
 
 #### Variable Management
-- `SetVariable(name string, value interface{})` - Set a single variable
-- `SetVariables(vars map[string]interface{})` - Set multiple variables
+- `SetVariable(name string, value any)` - Set a single variable
+- `SetVariables(vars map[string]any)` - Set multiple variables
 
 #### Parsing
 - `ParseExpression(source []byte) (Expression, error)` - Parse an expression
@@ -463,17 +463,17 @@ import (
     "encoding/json"
     "net/http"
     "log"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
 type EvalRequest struct {
     Expression string            `json:"expression"`
-    Variables  map[string]interface{} `json:"variables,omitempty"`
+    Variables  map[string]any `json:"variables,omitempty"`
 }
 
 type EvalResponse struct {
-    Result interface{} `json:"result"`
+    Result any `json:"result"`
     Error  string     `json:"error,omitempty"`
     Stats  *uddin.Stats `json:"stats"`
 }
@@ -484,25 +484,25 @@ func evalHandler(w http.ResponseWriter, r *http.Request) {
         http.Error(w, err.Error(), http.StatusBadRequest)
         return
     }
-    
+
     engine := uddin.New()
     engine.SetUnitTestMode(true)
-    
+
     if req.Variables != nil {
         engine.SetVariables(req.Variables)
     }
-    
+
     result, stats, err := engine.EvaluateString(req.Expression)
-    
+
     resp := EvalResponse{
         Result: result,
         Stats:  stats,
     }
-    
+
     if err != nil {
         resp.Error = err.Error()
     }
-    
+
     w.Header().Set("Content-Type", "application/json")
     json.NewEncoder(w).Encode(resp)
 }
@@ -524,7 +524,7 @@ import (
     "fmt"
     "log"
     "os"
-    
+
     "github.com/bonkzero404/uddin-lang"
 )
 
@@ -535,15 +535,15 @@ func main() {
         profile = flag.Bool("profile", false, "Show execution statistics")
     )
     flag.Parse()
-    
+
     engine := uddin.New()
-    
+
     if *file != "" {
         stats, err := engine.ExecuteFile(*file)
         if err != nil {
             log.Fatal(err)
         }
-        
+
         if *profile {
             uddin.PrintStats(*stats, os.Stderr)
         }
@@ -552,9 +552,9 @@ func main() {
         if err != nil {
             log.Fatal(err)
         }
-        
+
         fmt.Printf("Result: %v\n", result)
-        
+
         if *profile {
             uddin.PrintStats(*stats, os.Stderr)
         }
@@ -599,8 +599,8 @@ engine.SetVariable("score", 95)
 engine.SetVariable("active", true)
 
 // Set multiple variables at once
-engine.SetVariables(map[string]interface{}{
-    "config": map[string]interface{}{
+engine.SetVariables(map[string]any{
+    "config": map[string]any{
         "timeout": 30,
         "retries": 3,
     },

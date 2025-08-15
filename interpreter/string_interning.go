@@ -169,32 +169,32 @@ func (ssi *SmartStringInterner) InternByType(s string, stringType StringType) st
 }
 
 // Stats returns combined statistics
-func (ssi *SmartStringInterner) Stats() map[string]interface{} {
+func (ssi *SmartStringInterner) Stats() map[string]any {
 	idHits, idMisses, idRatio := ssi.identifiers.Stats()
 	litHits, litMisses, litRatio := ssi.literals.Stats()
 	opHits, opMisses, opRatio := ssi.operators.Stats()
 	genHits, genMisses, genRatio := ssi.general.Stats()
 
-	return map[string]interface{}{
-		"identifiers": map[string]interface{}{
+	return map[string]any{
+		"identifiers": map[string]any{
 			"hits":      idHits,
 			"misses":    idMisses,
 			"hit_ratio": idRatio,
 			"size":      ssi.identifiers.Size(),
 		},
-		"literals": map[string]interface{}{
+		"literals": map[string]any{
 			"hits":      litHits,
 			"misses":    litMisses,
 			"hit_ratio": litRatio,
 			"size":      ssi.literals.Size(),
 		},
-		"operators": map[string]interface{}{
+		"operators": map[string]any{
 			"hits":      opHits,
 			"misses":    opMisses,
 			"hit_ratio": opRatio,
 			"size":      ssi.operators.Size(),
 		},
-		"general": map[string]interface{}{
+		"general": map[string]any{
 			"hits":      genHits,
 			"misses":    genMisses,
 			"hit_ratio": genRatio,
@@ -222,7 +222,7 @@ func InternOperator(s string) string {
 }
 
 // GetSmartInternerStats returns statistics from the global smart interner
-func GetSmartInternerStats() map[string]interface{} {
+func GetSmartInternerStats() map[string]any {
 	return globalSmartStringInterner.Stats()
 }
 

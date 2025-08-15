@@ -21,10 +21,10 @@ func main() {
 	engine.SetVariable("debug_mode", true)
 
 	// Set multiple variables at once
-	vars := map[string]interface{}{
+	vars := map[string]any{
 		"x": 10,
 		"y": 20,
-		"config": map[string]interface{}{
+		"config": map[string]any{
 			"timeout": 30,
 			"retries": 3,
 		},

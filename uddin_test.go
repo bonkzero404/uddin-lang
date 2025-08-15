@@ -33,8 +33,8 @@ func TestEngine_ExecuteString(t *testing.T) {
 			expected: "8",
 		},
 		{
-			name:     "variable_assignment",
-			source:   `x = 10
+			name: "variable_assignment",
+			source: `x = 10
 print(x * 2)`,
 			expected: "20",
 		},
@@ -73,7 +73,7 @@ func TestEngine_EvaluateString(t *testing.T) {
 	tests := []struct {
 		name     string
 		source   string
-		expected interface{}
+		expected any
 	}{
 		{
 			name:     "integer",
@@ -155,9 +155,9 @@ func TestEngine_SetVariables(t *testing.T) {
 	engine.SetUnitTestMode(true)
 
 	// Set multiple variables
-	vars := map[string]interface{}{
-		"name": "UDDIN",
-		"age":  25,
+	vars := map[string]any{
+		"name":   "UDDIN",
+		"age":    25,
 		"active": true,
 	}
 	engine.SetVariables(vars)

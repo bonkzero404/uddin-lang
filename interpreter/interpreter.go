@@ -303,7 +303,7 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("plus")
 
-	// Try fast numeric evaluation first to avoid interface{} boxing
+	// Try fast numeric evaluation first to avoid any boxing
 	if result, handled := GetFastEvaluator().FastEvalPlus(l, r); handled {
 		return result
 	}
@@ -639,8 +639,8 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
 				// Cache the result for memoization only if function is marked as memoized and result is not nil
-	// EXPERIMENTAL: Memoization caching is experimental feature
-	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
+				// EXPERIMENTAL: Memoization caching is experimental feature
+				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
 					memoKey := OptimizedMemoKey(uf.Name, args)
 					GetGlobalOptimizedMemoCache().Set(memoKey, ret)
 				}

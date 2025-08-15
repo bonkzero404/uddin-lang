@@ -12,7 +12,7 @@ import (
 type Task struct {
 	ID   int
 	Code string
-	Vars map[string]interface{}
+	Vars map[string]any
 }
 
 // Result represents the result of a task execution
@@ -68,10 +68,10 @@ func (w *Worker) ExecuteTask(task Task) Result {
 
 // WorkerPool manages a pool of workers
 type WorkerPool struct {
-	workers   []*Worker
-	taskChan  chan Task
+	workers    []*Worker
+	taskChan   chan Task
 	resultChan chan Result
-	wg        sync.WaitGroup
+	wg         sync.WaitGroup
 }
 
 // NewWorkerPool creates a new worker pool
@@ -156,9 +156,9 @@ func concurrentExecutionExample() {
 			Code: "arr = [1, 2, 3, 4, 5]\nsum = 0\nfor (item in arr): sum = sum + item end\nprint(\"Task 4 - Array sum:\", sum)",
 		},
 		{
-			ID: 5,
+			ID:   5,
 			Code: "name = vars[\"name\"]\nage = vars[\"age\"]\nprint(\"Task 5 - Hello\", name, \"age\", age)",
-			Vars: map[string]interface{}{
+			Vars: map[string]any{
 				"name": "Alice",
 				"age":  30,
 			},
@@ -219,7 +219,7 @@ func raceConditionExample() {
 			engine := uddin.New()
 
 			// Set variables including the goroutine ID
-			engine.SetVariables(map[string]interface{}{
+			engine.SetVariables(map[string]any{
 				"goroutine_id": id,
 				"counter":      sharedCounter,
 			})

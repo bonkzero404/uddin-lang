@@ -38,7 +38,7 @@ type TaggedValuePool struct {
 func NewTaggedValuePool() *TaggedValuePool {
 	return &TaggedValuePool{
 		pool: sync.Pool{
-			New: func() interface{} {
+			New: func() any {
 				return &TaggedValue{}
 			},
 		},
@@ -199,8 +199,8 @@ func (tv *TaggedValue) IsSmallValue() bool {
 type CompactEnvironment struct {
 	vars     []CompactScope
 	args     []string
-	stdin    interface{}
-	stdout   interface{}
+	stdin    any
+	stdout   any
 	exit     func(int)
 	unittest bool
 }

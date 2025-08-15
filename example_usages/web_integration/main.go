@@ -12,18 +12,18 @@ import (
 
 // ScriptRequest represents a request to execute UDDIN-LANG code
 type ScriptRequest struct {
-	Code      string                 `json:"code"`
-	Variables map[string]interface{} `json:"variables,omitempty"`
+	Code      string         `json:"code"`
+	Variables map[string]any `json:"variables,omitempty"`
 }
 
 // ScriptResponse represents the response from script execution
 type ScriptResponse struct {
-	Success bool                   `json:"success"`
-	Result  interface{}            `json:"result,omitempty"`
-	Output  string                 `json:"output,omitempty"`
-	Stats   *uddin.Stats           `json:"stats,omitempty"`
-	Error   string                 `json:"error,omitempty"`
-	AST     string                 `json:"ast,omitempty"`
+	Success bool         `json:"success"`
+	Result  any          `json:"result,omitempty"`
+	Output  string       `json:"output,omitempty"`
+	Stats   *uddin.Stats `json:"stats,omitempty"`
+	Error   string       `json:"error,omitempty"`
+	AST     string       `json:"ast,omitempty"`
 }
 
 // WebServer demonstrates UDDIN-LANG integration with web services
@@ -204,7 +204,7 @@ func (ws *WebServer) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "healthy",
+		"status":  "healthy",
 		"service": "uddin-lang-api",
 	})
 }
