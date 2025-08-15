@@ -65,68 +65,17 @@ db_execute(mysql_conn, "SET GLOBAL binlog_format = 'ROW'")
 db_execute(mysql_conn, "SET GLOBAL binlog_row_image = 'FULL'")
 
 print("MySQL binlog configuration enabled")
-
 // Define callback function to handle real-time binlog events from multiple tables
 fun onMultiTableStreamData(channel, payload):
-    // Parse the JSON payload from binlog event
-    change_data = json_parse(payload)
-    
-    table = change_data["table"]
-    operation = change_data["operation"]
-    timestamp = change_data["timestamp"]
-    
-    print("=== MySQL Binlog Event Received ===")
-    print("Table: " + table)
-    print("Operation: " + operation)
-    print("Timestamp: " + timestamp)
-    
-    if operation == "INSERT" {
-        new_data = change_data["new_data"]
-        print("New Record:")
-        print(json_stringify(new_data, true))
-        
-        if table == "users" {
-            print("👤 New user created: " + new_data["name"] + " (" + new_data["email"] + ")")
-        } else if table == "orders" {
-            print("🛒 New order created: " + new_data["product_name"] + " - $" + str(new_data["amount"]))
-        } else if table == "products" {
-            print("📦 New product added: " + new_data["name"] + " - $" + str(new_data["price"]))
-        }
-        
-    } else if operation == "UPDATE" {
-        old_data = change_data["old_data"]
-        new_data = change_data["new_data"]
-        print("Updated Record:")
-        print("Old: " + json_stringify(old_data, true))
-        print("New: " + json_stringify(new_data, true))
-        
-        if table == "users" {
-            print("👤 User updated: " + old_data["name"] + " → " + new_data["name"])
-        } else if table == "orders" {
-            print("🛒 Order updated: Status " + old_data["status"] + " → " + new_data["status"])
-        } else if table == "products" {
-            print("📦 Product updated: Stock " + str(old_data["stock"]) + " → " + str(new_data["stock"]))
-        }
-        
-    } else if operation == "DELETE" {
-        old_data = change_data["old_data"]
-        print("Deleted Record:")
-        print(json_stringify(old_data, true))
-        
-        if table == "users" {
-            print("🗑️ User deleted: " + old_data["name"] + " (" + old_data["email"] + ")")
-        } else if table == "orders" {
-            print("🗑️ Order deleted: " + old_data["product_name"])
-        } else if table == "products" {
-            print("🗑️ Product deleted: " + old_data["name"])
-        }
-    }
-    
-    print("================================")
-    print("")
+    print("=== MySQL Multi-Table Stream Data Received ===")
+    print("Channel: " + channel)
+    print("Payload: " + payload)
+    print("Time: " + str(time_now()))
+    print("=============================================")
 end
 
 // Start MySQL binlog streaming for multiple tables
+print("[DEBUG] About to start streaming setup...")
 print("Starting MySQL binlog streaming for multiple tables...")
 print("Tables: users, orders, products")
 print("This implementation reads directly from MySQL binary logs")
@@ -152,7 +101,9 @@ print("Press Ctrl+C to stop streaming")
 print("")
 
 // Start the multi-table binlog stream (this will block and listen for changes)
+print("[DEBUG] About to call stream_tables...")
 stream_tables(mysql_conn, ["users", "orders", "products"], onMultiTableStreamData)
+print("[DEBUG] stream_tables returned (this should not be reached)")
 
 // Note: The stream_tables function will:
 // 1. Connect to MySQL binlog replication stream
