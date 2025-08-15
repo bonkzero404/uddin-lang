@@ -32,6 +32,12 @@ type BinlogStreamer struct {
 	Tables   map[string]bool // Tables to monitor
 }
 
+// TableColumnConfig represents column configuration for a specific table
+type TableColumnConfig struct {
+	Table   string   `json:"table"`
+	Columns []string `json:"columns"`
+}
+
 // DatabaseStreamer represents a real-time database streamer using LISTEN/NOTIFY or Binlog
 type DatabaseStreamer struct {
 	ID        string
@@ -48,6 +54,7 @@ type DatabaseStreamer struct {
 	BinlogPos string // For MySQL binary log position
 	UseBinlog bool   // Whether to use binlog streaming instead of polling
 	ServerID  uint32 // MySQL server ID for binlog replication
+	TableColumns map[string][]string // Selected columns per table (empty means all columns)
 }
 
 // DatabaseConnection represents a database connection object
@@ -307,23 +314,78 @@ func dbExecuteFunc(interp *interpreter, pos Position, args []Value) Value {
 
 // streamTablesFunc implements the stream_tables() built-in function for real-time streaming
 // stream_tables(connection, table_name, callback) -> nil
+// stream_tables(connection, table_name, callback, columns) -> nil (with column selection)
+// stream_tables(connection, [table_names], callback) -> nil (multi-table)
+// stream_tables(connection, [table_names], callback, columns) -> nil (multi-table with column selection)
 // Example: stream_tables(conn, "messages", onDataChange)
+// Example: stream_tables(conn, "messages", onDataChange, ["id", "name", "email"])
 // Uses PostgreSQL LISTEN/NOTIFY for real-time streaming without polling
 func streamTablesFunc(interp *interpreter, pos Position, args []Value) Value {
+	// Check argument count (3 or 4 arguments supported)
+	if len(args) < 3 || len(args) > 4 {
+		panic(typeError(pos, "stream_tables() requires 3 or 4 arguments: connection, table_name(s), callback, [table_columns]"))
+	}
+
 	// Check if this is multi-table streaming
-	if len(args) == 3 {
+	if len(args) >= 3 {
 		// Check if second argument is an array of table names
 		if tableArrayPtr, ok := args[1].(*[]Value); ok {
-			return streamTablesMultiFunc(interp, pos, args[0], *tableArrayPtr, args[2])
+			// Multi-table streaming
+			var tableColumns interface{}
+			if len(args) == 4 {
+				// Fourth argument can be:
+				// 1. Array of strings (backward compatibility)
+				// 2. Array of table-column config objects
+				if columnArrayPtr, ok := args[3].(*[]Value); ok {
+					// Check if it's array of strings or objects
+					if len(*columnArrayPtr) > 0 {
+						if _, isString := (*columnArrayPtr)[0].(string); isString {
+							// Backward compatibility: array of strings
+							var columns []string
+							for i, colVal := range *columnArrayPtr {
+								if colName, ok := colVal.(string); ok {
+									columns = append(columns, colName)
+								} else {
+									panic(typeError(pos, fmt.Sprintf("stream_tables() column array element %d must be a string", i)))
+								}
+							}
+							tableColumns = columns
+						} else {
+							// New format: array of table-column config objects
+							tableColumns = *columnArrayPtr
+						}
+					}
+				} else {
+					panic(typeError(pos, "stream_tables() fourth argument must be an array"))
+				}
+			}
+			return streamTablesMultiFunc(interp, pos, args[0], *tableArrayPtr, args[2], tableColumns)
 		}
 	}
+	// Single table streaming
 	return streamTablesSingleFunc(interp, pos, args)
 }
 
 // streamTablesSingleFunc handles single table streaming
 func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Value {
-	if len(args) != 3 {
-		panic(typeError(pos, "stream_tables() requires 3 arguments: connection, table_name, callback"))
+	if len(args) < 3 || len(args) > 4 {
+		panic(typeError(pos, "stream_tables() requires 3 or 4 arguments: connection, table_name, callback, [columns]"))
+	}
+
+	// Extract column selection if provided
+	var columns []string
+	if len(args) == 4 {
+		if columnArrayPtr, ok := args[3].(*[]Value); ok {
+			for i, colVal := range *columnArrayPtr {
+				if colName, ok := colVal.(string); ok {
+					columns = append(columns, colName)
+				} else {
+					panic(typeError(pos, fmt.Sprintf("stream_tables() column array element %d must be a string", i)))
+				}
+			}
+		} else {
+			panic(typeError(pos, "stream_tables() fourth argument must be an array of column names"))
+		}
 	}
 
 	// Get connection
@@ -347,24 +409,46 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 	// Generate streamer ID
 	streamerID := fmt.Sprintf("streamer_%s_%d", connObj.ID, time.Now().UnixNano())
 
-	// Create PostgreSQL listener
-	// For simplicity, we'll create a new connection for listening
-	// In production, you might want to reuse the existing connection
-	listener := pq.NewListener(fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
-		connObj.Host, connObj.Port, connObj.Username, connObj.Database), 10*time.Second, time.Minute, nil)
-
 	// Create context for cancellation
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Create streamer
-	streamer := &DatabaseStreamer{
-		ID:        streamerID,
-		DB:        connObj.DB,
-		Listener:  listener,
-		TableName: tableName,
-		Callback:  callback,
-		Active:    true,
-		Cancel:    cancel,
+	// Create streamer based on database type
+	var streamer *DatabaseStreamer
+	if connObj.Driver == "postgres" {
+		// Create PostgreSQL listener
+		listener := pq.NewListener(fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable",
+			connObj.Host, connObj.Port, connObj.Username, connObj.Database), 10*time.Second, time.Minute, nil)
+
+		streamer = &DatabaseStreamer{
+			ID:        streamerID,
+			DB:        connObj.DB,
+			Listener:  listener,
+			TableName: tableName,
+			Callback:  callback,
+			Active:    true,
+			Cancel:    cancel,
+			Driver:    "postgres",
+			TableColumns: make(map[string][]string),
+		}
+	} else {
+		// MySQL - use binlog streaming
+		streamer = &DatabaseStreamer{
+			ID:        streamerID,
+			DB:        connObj.DB,
+			TableName: tableName,
+			Callback:  callback,
+			Active:    true,
+			Cancel:    cancel,
+			Driver:    "mysql",
+			UseBinlog: true,
+			ServerID:  uint32(time.Now().Unix() % 1000000), // Generate unique server ID
+			TableColumns: make(map[string][]string),
+		}
+	}
+	
+	// Set columns for the single table
+	if len(columns) > 0 {
+		streamer.TableColumns[tableName] = columns
 	}
 
 	// Store streamer
@@ -372,7 +456,7 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 	databaseStreamers[streamerID] = streamer
 	databaseMutex.Unlock()
 
-	// Setup database trigger and notification
+	// Setup database streaming based on driver
 	go func() {
 		defer func() {
 			// Mark streamer as inactive when goroutine exits
@@ -380,81 +464,103 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 			streamer.Active = false
 			streamer.Mutex.Unlock()
 
-			// Close listener
+			// Close listener for PostgreSQL
 			if streamer.Listener != nil {
 				streamer.Listener.Close()
 			}
 		}()
 
-		// Create notification channel name
-		channelName := fmt.Sprintf("%s_changes", tableName)
+		if connObj.Driver == "postgres" {
+			// PostgreSQL streaming using LISTEN/NOTIFY
+			// Create notification channel name
+			channelName := fmt.Sprintf("%s_changes", tableName)
 
-		// Setup trigger function if it doesn't exist
-		setupTriggerSQL := fmt.Sprintf(`
-			CREATE OR REPLACE FUNCTION notify_%s_change()
-			RETURNS TRIGGER AS $$
-			BEGIN
-				PERFORM pg_notify('%s',
-					json_build_object(
-						'table', TG_TABLE_NAME,
-						'operation', TG_OP,
-						'timestamp', extract(epoch from now()),
-						'data', CASE
-							WHEN TG_OP = 'DELETE' THEN row_to_json(OLD)
-							ELSE row_to_json(NEW)
-						END
-					)::text
-				);
-				RETURN CASE TG_OP
-					WHEN 'DELETE' THEN OLD
-					ELSE NEW
-				END;
-			END;
-			$$ LANGUAGE plpgsql;
-		`, tableName, channelName)
-
-		// Create trigger
-		triggerSQL := fmt.Sprintf(`
-			DROP TRIGGER IF EXISTS %s_notify ON %s;
-			CREATE TRIGGER %s_notify
-				AFTER INSERT OR UPDATE OR DELETE ON %s
-				FOR EACH ROW EXECUTE FUNCTION notify_%s_change();
-		`, tableName, tableName, tableName, tableName, tableName)
-
-		// Execute setup queries
-		if _, err := streamer.DB.Exec(setupTriggerSQL); err != nil {
-			log.Printf("Error setting up trigger function: %v", err)
-			return
-		}
-
-		if _, err := streamer.DB.Exec(triggerSQL); err != nil {
-			log.Printf("Error setting up trigger: %v", err)
-			return
-		}
-
-		// Listen to the channel
-		if err := streamer.Listener.Listen(channelName); err != nil {
-			log.Printf("Error starting listener: %v", err)
-			return
-		}
-
-		log.Printf("Started streaming for table '%s' on channel '%s'", tableName, channelName)
-
-		// Listen for notifications
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case notification := <-streamer.Listener.Notify:
-				if notification != nil {
-					// Call the callback function with the notification data
-					streamer.handleNotification(interp, pos, notification)
+			// Build column selection for trigger function
+			var dataExpression string
+			if len(columns) > 0 {
+				// Create JSON object with only selected columns
+				columnSelections := make([]string, len(columns))
+				for i, col := range columns {
+					columnSelections[i] = fmt.Sprintf("'%s', CASE WHEN TG_OP = 'DELETE' THEN OLD.%s ELSE NEW.%s END", col, col, col)
 				}
-			case <-time.After(90 * time.Second):
-				// Ping to keep connection alive
-				go func() {
-					streamer.Listener.Ping()
-				}()
+				dataExpression = fmt.Sprintf("json_build_object(%s)", strings.Join(columnSelections, ", "))
+			} else {
+				// Include all columns (default behavior)
+				dataExpression = "CASE WHEN TG_OP = 'DELETE' THEN row_to_json(OLD) ELSE row_to_json(NEW) END"
+			}
+
+			// Setup trigger function if it doesn't exist
+			setupTriggerSQL := fmt.Sprintf(`
+				CREATE OR REPLACE FUNCTION notify_%s_change()
+				RETURNS TRIGGER AS $$
+				BEGIN
+					PERFORM pg_notify('%s',
+						json_build_object(
+							'table', TG_TABLE_NAME,
+							'operation', TG_OP,
+							'timestamp', extract(epoch from now()),
+							'data', %s
+						)::text
+					);
+					RETURN CASE TG_OP
+						WHEN 'DELETE' THEN OLD
+						ELSE NEW
+					END;
+				END;
+				$$ LANGUAGE plpgsql;
+			`, tableName, channelName, dataExpression)
+
+			// Create trigger
+			triggerSQL := fmt.Sprintf(`
+				DROP TRIGGER IF EXISTS %s_notify ON %s;
+				CREATE TRIGGER %s_notify
+					AFTER INSERT OR UPDATE OR DELETE ON %s
+					FOR EACH ROW EXECUTE FUNCTION notify_%s_change();
+			`, tableName, tableName, tableName, tableName, tableName)
+
+			// Execute setup queries
+			if _, err := streamer.DB.Exec(setupTriggerSQL); err != nil {
+				log.Printf("Error setting up trigger function: %v", err)
+				return
+			}
+
+			if _, err := streamer.DB.Exec(triggerSQL); err != nil {
+				log.Printf("Error setting up trigger: %v", err)
+				return
+			}
+
+			// Listen to the channel
+			if err := streamer.Listener.Listen(channelName); err != nil {
+				log.Printf("Error starting listener: %v", err)
+				return
+			}
+
+			log.Printf("Started streaming for table '%s' on channel '%s'", tableName, channelName)
+
+			// Listen for notifications
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case notification := <-streamer.Listener.Notify:
+					if notification != nil {
+						// Call the callback function with the notification data
+						streamer.handleNotification(interp, pos, notification)
+					}
+				case <-time.After(90 * time.Second):
+					// Ping to keep connection alive
+					go func() {
+						streamer.Listener.Ping()
+					}()
+				}
+			}
+		} else {
+			// MySQL streaming using binlog
+			tableNames := []string{tableName}
+			if streamer.UseBinlog {
+				streamer.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, connObj.Host, connObj.Port, connObj.Username, connObj.Password)
+			} else {
+				streamer.setupMySQLMultiTableStreaming(interp, pos, ctx, tableNames)
 			}
 		}
 	}()
@@ -469,7 +575,9 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 
 // streamTablesMultiFunc implements multi-table streaming
 // stream_tables(connection, ["table1", "table2"], callback) -> nil
-func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tableArray []Value, callback Value) Value {
+// stream_tables(connection, ["table1", "table2"], callback, ["col1", "col2"]) -> nil (with column selection)
+// stream_tables(connection, ["table1", "table2"], callback, [{"table": "table1", "columns": ["col1", "col2"]}]) -> nil (with table-column mapping)
+func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tableArray []Value, callback Value, tableColumns interface{}) Value {
 	// Get connection
 	connObj, ok := connArg.(*DatabaseConnection)
 	if !ok {
@@ -495,6 +603,54 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 		panic(typeError(pos, "stream_tables() requires at least one table name"))
 	}
 
+	// Parse table-column configuration
+	tableColumnMap := make(map[string][]string)
+	if tableColumns != nil {
+		// Try to parse as array of TableColumnConfig objects
+		if configArray, ok := tableColumns.([]Value); ok {
+			for _, configVal := range configArray {
+				if configMap, ok := configVal.(map[string]Value); ok {
+					// Parse table name
+					tableVal, hasTable := configMap["table"]
+					columnsVal, hasColumns := configMap["columns"]
+					if !hasTable || !hasColumns {
+						continue
+					}
+					tableName, ok := tableVal.(string)
+					if !ok {
+						continue
+					}
+					// Parse columns array - handle both []Value and *[]Value
+					var columnsArray []Value
+					columnsFound := false
+					
+					if arr, isSlice := columnsVal.([]Value); isSlice {
+						columnsArray = arr
+						columnsFound = true
+					} else if columnsPtr, isPtr := columnsVal.(*[]Value); isPtr {
+						columnsArray = *columnsPtr
+						columnsFound = true
+					}
+					
+					if columnsFound {
+						var columns []string
+						for _, colVal := range columnsArray {
+							if colStr, isString := colVal.(string); isString {
+								columns = append(columns, colStr)
+							}
+						}
+						tableColumnMap[tableName] = columns
+					}
+				}
+			}
+		} else if columnsArray, ok := tableColumns.([]string); ok {
+			// Backward compatibility: apply same columns to all tables
+			for _, tableName := range tableNames {
+				tableColumnMap[tableName] = columnsArray
+			}
+		}
+	}
+
 	// Generate streamer ID for multi-table
 	streamerID := fmt.Sprintf("multi_streamer_%s_%d", connObj.ID, time.Now().UnixNano())
 
@@ -517,6 +673,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 			Active:    true,
 			Cancel:    cancel,
 			Driver:    "postgres",
+			TableColumns: tableColumnMap,
 		}
 	} else {
 		// MySQL streamer with optimized CDC
@@ -532,6 +689,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 			LastID:    0,
 			UseBinlog: true, // Enable optimized CDC
 			ServerID:  1001, // Default server ID for binlog replication
+			TableColumns: tableColumnMap,
 		}
 	}
 
@@ -723,21 +881,55 @@ func (ds *DatabaseStreamer) setupPostgreSQLMultiTableStreaming(interp *interpret
 	for _, tableName := range tableNames {
 		channelName := fmt.Sprintf("%s_changes", tableName)
 
+		// Build column selection for trigger function
+		var newDataExpression, oldDataExpression string
+		tableColumns := ds.TableColumns[tableName]
+		if len(tableColumns) > 0 {
+			// Create JSON object with only selected columns for NEW data
+			newColumnSelections := make([]string, len(tableColumns))
+			oldColumnSelections := make([]string, len(tableColumns))
+			for i, col := range tableColumns {
+				newColumnSelections[i] = fmt.Sprintf("'%s', NEW.%s", col, col)
+				oldColumnSelections[i] = fmt.Sprintf("'%s', OLD.%s", col, col)
+			}
+			newDataExpression = fmt.Sprintf("json_build_object(%s)", strings.Join(newColumnSelections, ", "))
+			oldDataExpression = fmt.Sprintf("json_build_object(%s)", strings.Join(oldColumnSelections, ", "))
+		} else {
+			// Include all columns (default behavior)
+			newDataExpression = "row_to_json(NEW)"
+			oldDataExpression = "row_to_json(OLD)"
+		}
+
 		// Setup trigger function if it doesn't exist
 		setupTriggerSQL := fmt.Sprintf(`
 			CREATE OR REPLACE FUNCTION notify_%s_change()
 			RETURNS TRIGGER AS $$
 			BEGIN
 				PERFORM pg_notify('%s',
-					json_build_object(
-						'table', TG_TABLE_NAME,
-						'operation', TG_OP,
-						'timestamp', extract(epoch from now()),
-						'data', CASE
-							WHEN TG_OP = 'DELETE' THEN row_to_json(OLD)
-							ELSE row_to_json(NEW)
-						END
-					)::text
+					CASE TG_OP
+						WHEN 'INSERT' THEN
+							json_build_object(
+								'table', TG_TABLE_NAME,
+								'operation', TG_OP,
+								'timestamp', extract(epoch from now()),
+								'new_data', %s
+							)::text
+						WHEN 'UPDATE' THEN
+							json_build_object(
+								'table', TG_TABLE_NAME,
+								'operation', TG_OP,
+								'timestamp', extract(epoch from now()),
+								'old_data', %s,
+								'new_data', %s
+							)::text
+						WHEN 'DELETE' THEN
+							json_build_object(
+								'table', TG_TABLE_NAME,
+								'operation', TG_OP,
+								'timestamp', extract(epoch from now()),
+								'old_data', %s
+							)::text
+				END
 				);
 				RETURN CASE TG_OP
 					WHEN 'DELETE' THEN OLD
@@ -745,7 +937,7 @@ func (ds *DatabaseStreamer) setupPostgreSQLMultiTableStreaming(interp *interpret
 				END;
 			END;
 			$$ LANGUAGE plpgsql;
-		`, tableName, channelName)
+		`, tableName, channelName, newDataExpression, oldDataExpression, newDataExpression, oldDataExpression)
 
 		// Create trigger
 		triggerSQL := fmt.Sprintf(`
@@ -808,12 +1000,10 @@ func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos P
 
 	// Create binlog syncer
 	syncer := replication.NewBinlogSyncer(cfg)
-	defer syncer.Close()
 
 	// Get current binlog position
 	binlogPos, err := ds.getCurrentBinlogPosition()
 	if err != nil {
-		log.Printf("Error getting binlog position: %v, starting from latest", err)
 		binlogPos = mysql.Position{Name: "", Pos: 4} // Start from beginning if no position found
 	}
 
@@ -821,6 +1011,7 @@ func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos P
 	streamer, err := syncer.StartSync(binlogPos)
 	if err != nil {
 		log.Printf("Error starting binlog sync: %v", err)
+		syncer.Close()
 		return
 	}
 
@@ -838,7 +1029,13 @@ func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos P
 		ds.Binlog.Tables[tableName] = true
 	}
 
-	log.Printf("Started MySQL binlog streaming for tables %v from position %v", tableNames, binlogPos)
+	// Setup cleanup when context is done
+	go func() {
+		<-ctx.Done()
+		if ds.Binlog != nil && ds.Binlog.Syncer != nil {
+			ds.Binlog.Syncer.Close()
+		}
+	}()
 
 	// Start processing binlog events
 	ds.processBinlogEvents(interp, pos, ctx)
@@ -856,12 +1053,20 @@ func (ds *DatabaseStreamer) setupMySQLMultiTableStreaming(interp *interpreter, p
 func (ds *DatabaseStreamer) getCurrentBinlogPosition() (mysql.Position, error) {
 	var file string
 	var position uint32
+	var binlogDoDB, binlogIgnoreDB, executedGtidSet interface{}
 
-	query := "SHOW MASTER STATUS"
+	// Try modern MySQL syntax first (MySQL 8.0+)
+	query := "SHOW BINARY LOG STATUS"
 	row := ds.DB.QueryRow(query)
-	err := row.Scan(&file, &position, nil, nil, nil)
+	err := row.Scan(&file, &position, &binlogDoDB, &binlogIgnoreDB, &executedGtidSet)
 	if err != nil {
-		return mysql.Position{}, err
+		// Fallback to older syntax for MySQL 5.7 and below
+		query = "SHOW MASTER STATUS"
+		row = ds.DB.QueryRow(query)
+		err = row.Scan(&file, &position, &binlogDoDB, &binlogIgnoreDB, &executedGtidSet)
+		if err != nil {
+			return mysql.Position{}, err
+		}
 	}
 
 	return mysql.Position{Name: file, Pos: position}, nil
@@ -869,6 +1074,10 @@ func (ds *DatabaseStreamer) getCurrentBinlogPosition() (mysql.Position, error) {
 
 // processBinlogEvents processes MySQL binlog events in real-time
 func (ds *DatabaseStreamer) processBinlogEvents(interp *interpreter, pos Position, ctx context.Context) {
+	errorCount := 0
+	maxErrors := 10
+	backoffDuration := time.Second
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -877,9 +1086,31 @@ func (ds *DatabaseStreamer) processBinlogEvents(interp *interpreter, pos Positio
 			// Get next binlog event
 			ev, err := ds.Binlog.Streamer.GetEvent(ctx)
 			if err != nil {
-				log.Printf("Error getting binlog event: %v", err)
+				errorCount++
+				log.Printf("Error getting binlog event (%d/%d): %v", errorCount, maxErrors, err)
+				
+				// If too many consecutive errors, exit
+				if errorCount >= maxErrors {
+					log.Printf("Too many consecutive errors, stopping binlog streaming")
+					return
+				}
+				
+				// Exponential backoff
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(backoffDuration):
+					backoffDuration = backoffDuration * 2
+					if backoffDuration > 30*time.Second {
+						backoffDuration = 30 * time.Second
+					}
+				}
 				continue
 			}
+
+			// Reset error count on successful event
+			errorCount = 0
+			backoffDuration = time.Second
 
 			// Update binlog position
 			ds.Binlog.Position.Pos = ev.Header.LogPos
@@ -980,10 +1211,24 @@ func (ds *DatabaseStreamer) rowToMap(table *replication.TableMapEvent, row []any
 		return result
 	}
 
+	// Create a set of selected columns for quick lookup
+	var selectedColumns map[string]bool
+	tableColumns := ds.TableColumns[string(table.Table)]
+	if len(tableColumns) > 0 {
+		selectedColumns = make(map[string]bool)
+		for _, col := range tableColumns {
+			selectedColumns[col] = true
+		}
+	}
+
 	// Map row values to column names
 	for i, value := range row {
 		if i < len(columns) {
-			result[columns[i]] = value
+			columnName := columns[i]
+			// Only include column if it's selected (or if no columns are specified)
+			if len(tableColumns) == 0 || selectedColumns[columnName] {
+				result[columnName] = value
+			}
 		}
 	}
 

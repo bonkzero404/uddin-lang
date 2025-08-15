@@ -1,0 +1,100 @@
+// MySQL Per-Table Column Selection Streaming Example
+// Example of streaming with different column selection for each MySQL table
+// using binlog-based streaming with new table-column mapping format
+
+// Connect to MySQL database
+connResult = db_connect("mysql", "localhost", 3306, "testdb", "root", "password")
+
+if (not connResult.success) then:
+    print("❌ Failed to connect to MySQL database: " + connResult.error)
+    exit(1)
+end
+
+mysql_conn = connResult.conn
+print("✅ Successfully connected to MySQL database!")
+print("[DEBUG] Driver: " + connResult.driver)
+print("[DEBUG] Connection ID: " + connResult.id)
+print("")
+
+// Create tables if they don't exist
+print("📋 Creating tables if they don't exist...")
+
+// Create users table
+usersTableSQL = `
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    password VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`
+
+// Create orders table
+ordersTableSQL = `
+CREATE TABLE IF NOT EXISTS orders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT,
+    total DECIMAL(10,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+)`
+
+// Create products table
+productsTableSQL = `
+CREATE TABLE IF NOT EXISTS products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    stock INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`
+
+// Execute table creation
+db_execute(mysql_conn, usersTableSQL)
+db_execute(mysql_conn, ordersTableSQL)
+db_execute(mysql_conn, productsTableSQL)
+
+print("✅ Tables created successfully!")
+print("")
+
+// Per-table column configuration (array of objects format)
+table_columns = [
+    {"table": "users", "columns": ["id", "name", "email"]},
+    {"table": "orders", "columns": ["id", "user_id", "total", "status"]},
+    // {"table": "products", "columns": ["id", "name", "price"]}
+]
+
+// Callback function to handle data changes
+fun on_data_change(channel, payload):
+    print("=== Data Change Detected ===")
+    print("Channel: " + channel)
+
+    // Parse JSON payload
+    data = json_parse(payload)
+
+    print("Table: " + data.table)
+    print("Operation: " + data.operation)
+    print("Timestamp: " + str(data.timestamp))
+
+    if (data.operation == "UPDATE") then:
+        print("Old Data:")
+        print(data.old_data)  // Only selected columns for this table
+        print("New Data:")
+        print(data.new_data)  // Only selected columns for this table
+    else if (data.operation == "INSERT") then:
+        print("New Data:")
+        print(data.new_data)  // Only selected columns for this table
+    else:
+        print("Deleted Data:")
+        print(data.old_data)  // Only selected columns for this table
+    end
+    print("================================")
+    print("")
+end
+
+// Streaming with new format: array of table-column objects
+streamResult = stream_tables(mysql_conn, ["users", "orders", "producrs"], on_data_change, table_columns)
+

@@ -627,7 +627,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	if bf, ok := f.(builtinFunction); ok {
 		// Try builtin dispatcher first for optimized dispatch
 		dispatcher := GetGlobalBuiltinDispatcher()
-		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.Name, interp, pos, args); dispatched {
+		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.name(), interp, pos, args); dispatched {
 			interp.stats.BuiltinCalls++
 			return result
 		}

@@ -1,0 +1,112 @@
+// PostgreSQL Per-Table Column Selection Streaming Example
+// Example of streaming with different column selection for each PostgreSQL table
+// using trigger-based streaming with new table-column mapping format
+
+// Connect to PostgreSQL database
+connResult = db_connect("postgres", "localhost", 5432, "testdb", "postgres", "password")
+
+if (not connResult.success) then:
+    print("❌ Failed to connect to PostgreSQL database: " + connResult.error)
+    exit(1)
+end
+
+postgres_conn = connResult.conn
+print("✅ Successfully connected to PostgreSQL database!")
+print("")
+
+// Create tables if they don't exist
+print("📋 Creating tables if they don't exist...")
+
+// Create employees table
+employeesTableSQL = `
+CREATE TABLE IF NOT EXISTS employees (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    email VARCHAR(150) UNIQUE NOT NULL,
+    department VARCHAR(100),
+    salary DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`
+
+// Create projects table
+projectsTableSQL = `
+CREATE TABLE IF NOT EXISTS projects (
+    id SERIAL PRIMARY KEY,
+    project_name VARCHAR(200) NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    status VARCHAR(50) DEFAULT 'active',
+    budget DECIMAL(12,2),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`
+
+// Create tasks table
+tasksTableSQL = `
+CREATE TABLE IF NOT EXISTS tasks (
+    id SERIAL PRIMARY KEY,
+    task_name VARCHAR(200) NOT NULL,
+    employee_id INTEGER REFERENCES employees(id),
+    project_id INTEGER REFERENCES projects(id),
+    priority VARCHAR(20) DEFAULT 'medium',
+    completed BOOLEAN DEFAULT FALSE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)`
+
+// Execute table creation
+db_execute(postgres_conn, employeesTableSQL)
+db_execute(postgres_conn, projectsTableSQL)
+db_execute(postgres_conn, tasksTableSQL)
+
+print("✅ Tables created successfully!")
+print("")
+
+// Table-column mapping definition with new format
+// Each table can have different columns to be streamed
+table_columns = [
+    {
+        "table": "employees",
+        "columns": ["id", "first_name", "last_name", "email", "department"]
+    },
+    {
+        "table": "projects",
+        "columns": ["id", "project_name", "start_date", "end_date", "status", "budget"]
+    },
+    {
+        "table": "tasks",
+        "columns": ["id", "task_name", "employee_id", "project_id", "priority", "completed"]
+    }
+]
+
+// Callback function to handle data changes
+fun on_data_change(channel, payload):
+    print("=== Data Change Detected ===")
+    print("Channel: " + channel)
+
+    // Parse JSON payload
+    data = json_parse(payload)
+
+    print("Table: " + data.table)
+    print("Operation: " + data.operation)
+    print("Timestamp: " + str(data.timestamp))
+
+    if (data.operation == "UPDATE") then:
+        print("Old Data:")
+        print(data.old_data)  // Only selected columns for this table
+        print("New Data:")
+        print(data.new_data)  // Only selected columns for this table
+    else if (data.operation == "INSERT") then:
+        print("New Data:")
+        print(data.new_data)  // Only selected columns for this table
+    else:
+        print("Deleted Data:")
+        print(data.old_data)  // Only selected columns for this table
+    end
+    print("================================")
+    print("")
+end
+
+// Start streaming with per-table column selection configuration
+stream_tables(postgres_conn, ["employees", "projects", "tasks"], on_data_change, table_columns)
