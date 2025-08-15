@@ -55,7 +55,7 @@ Unlike traditional rule engines that limit you to simple if-then logic, UDDIN-LA
 -   **Developer Friendly** - Familiar syntax with powerful debugging capabilities
 -   **Enterprise Ready** - Built for scale and performance
 
-### �️ Build Rule Platforms
+### 🛠 Build Rule Platforms
 
 UDDIN-LANG serves as the foundation for building sophisticated rule management platforms:
 
@@ -181,7 +181,7 @@ import (
 func main() {
     // Create a new engine
     engine := uddin.New()
-    
+
     // Execute code
     result, err := engine.ExecuteString(`
         x = 10
@@ -191,15 +191,15 @@ func main() {
     if err != nil {
         panic(err)
     }
-    
+
     fmt.Println("Result:", result) // Output: Result: 30
-    
+
     // Evaluate expressions
     value, err := engine.EvaluateString("2 + 3 * 4")
     if err != nil {
         panic(err)
     }
-    
+
     fmt.Println("Expression result:", value) // Output: Expression result: 14
 }
 ```
@@ -526,14 +526,14 @@ fun main():
         "username": "user",
         "password": "pass"
     }
-    
+
     // Start streaming changes from multiple tables
     stream_tables(["users", "orders", "products"], config, fun(event):
         print("Database change detected:")
         print("Table: " + event.table)
         print("Operation: " + event.operation)
         print("Data: " + json_stringify(event.data))
-        
+
         // Process the change event
         if (event.table == "orders" and event.operation == "INSERT") then:
             // Trigger order processing workflow
