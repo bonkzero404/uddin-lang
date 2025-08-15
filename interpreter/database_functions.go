@@ -187,7 +187,7 @@ func dbQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// Prepare parameters
-	params := make([]interface{}, len(args)-2)
+	params := make([]any, len(args)-2)
 	for i, arg := range args[2:] {
 		params[i] = arg
 	}
@@ -217,8 +217,8 @@ func dbQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 	var results []Value
 	for rows.Next() {
 		// Create slice to hold column values
-		values := make([]interface{}, len(columns))
-		valuePtrs := make([]interface{}, len(columns))
+		values := make([]any, len(columns))
+		valuePtrs := make([]any, len(columns))
 		for i := range values {
 			valuePtrs[i] = &values[i]
 		}
@@ -280,7 +280,7 @@ func dbExecuteFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// Prepare parameters
-	params := make([]interface{}, len(args)-2)
+	params := make([]any, len(args)-2)
 	for i, arg := range args[2:] {
 		params[i] = arg
 	}
@@ -696,7 +696,7 @@ func dbCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 }
 
 // Helper function to convert SQL values to UDDIN-LANG values
-func convertSQLValue(value interface{}) Value {
+func convertSQLValue(value any) Value {
 	switch v := value.(type) {
 	case []byte:
 		return Value(string(v))
@@ -720,10 +720,8 @@ func convertSQLValue(value interface{}) Value {
 // setupPostgreSQLMultiTableStreaming sets up PostgreSQL LISTEN/NOTIFY for multiple tables
 func (ds *DatabaseStreamer) setupPostgreSQLMultiTableStreaming(interp *interpreter, pos Position, ctx context.Context, tableNames []string) {
 	// Setup triggers for each table
-	var channelNames []string
 	for _, tableName := range tableNames {
 		channelName := fmt.Sprintf("%s_changes", tableName)
-		channelNames = append(channelNames, channelName)
 
 		// Setup trigger function if it doesn't exist
 		setupTriggerSQL := fmt.Sprintf(`
@@ -925,12 +923,14 @@ func (ds *DatabaseStreamer) handleRowsEvent(interp *interpreter, pos Position, h
 
 	// Process each row in the event
 	for i, row := range e.Rows {
-		var oldData, newData map[string]interface{}
+		var oldData, newData map[string]any
 
-		if operation == "UPDATE" {
+		switch operation {
+		case "UPDATE":
 			// For UPDATE, rows come in pairs: [old_row, new_row]
 			if i%2 == 0 {
-				oldData = ds.rowToMap(e.Table, row)
+				// Skip the old row, it will be processed with the new row
+				continue
 			} else {
 				newData = ds.rowToMap(e.Table, row)
 				oldData = ds.rowToMap(e.Table, e.Rows[i-1])
@@ -938,10 +938,10 @@ func (ds *DatabaseStreamer) handleRowsEvent(interp *interpreter, pos Position, h
 				// Call callback for UPDATE
 				ds.callBinlogCallback(interp, pos, tableName, operation, oldData, newData)
 			}
-		} else if operation == "INSERT" {
+		case "INSERT":
 			newData = ds.rowToMap(e.Table, row)
 			ds.callBinlogCallback(interp, pos, tableName, operation, nil, newData)
-		} else if operation == "DELETE" {
+		case "DELETE":
 			oldData = ds.rowToMap(e.Table, row)
 			ds.callBinlogCallback(interp, pos, tableName, operation, oldData, nil)
 		}
@@ -970,8 +970,8 @@ func (ds *DatabaseStreamer) getColumnList(tableName string) ([]string, error) {
 }
 
 // rowToMap converts a binlog row to a map
-func (ds *DatabaseStreamer) rowToMap(table *replication.TableMapEvent, row []interface{}) map[string]interface{} {
-	result := make(map[string]interface{})
+func (ds *DatabaseStreamer) rowToMap(table *replication.TableMapEvent, row []any) map[string]any {
+	result := make(map[string]any)
 
 	// Get column information
 	columns, err := ds.getColumnList(string(table.Table))
@@ -991,9 +991,9 @@ func (ds *DatabaseStreamer) rowToMap(table *replication.TableMapEvent, row []int
 }
 
 // callBinlogCallback calls the UDDIN callback function for binlog events
-func (ds *DatabaseStreamer) callBinlogCallback(interp *interpreter, pos Position, tableName, operation string, oldData, newData map[string]interface{}) {
+func (ds *DatabaseStreamer) callBinlogCallback(interp *interpreter, pos Position, tableName, operation string, oldData, newData map[string]any) {
 	// Create payload similar to the polling version
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"table":     tableName,
 		"operation": operation,
 		"timestamp": time.Now().Format(time.RFC3339),
