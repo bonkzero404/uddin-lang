@@ -1297,7 +1297,7 @@ func Execute(prog *Program, config *Config) (stats *Stats, err error) {
 				errorMsg := r.(error).Error()
 				// Convert technical error messages to user-friendly ones
 				if strings.Contains(errorMsg, "nil pointer dereference") || strings.Contains(errorMsg, "invalid memory address") {
-					err = runtimeError(currentPos, "an error occurred while accessing data - this might be caused by undefined variables or invalid operations")
+					err = runtimeError(currentPos, "memory access error: attempting to access invalid or uninitialized data")
 				} else if strings.Contains(errorMsg, "index out of range") {
 					err = runtimeError(currentPos, "array or string index is out of bounds")
 				} else if strings.Contains(errorMsg, "slice bounds out of range") {
