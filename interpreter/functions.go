@@ -365,6 +365,14 @@ var builtins = map[string]builtinFunction{
 	"net_resolve": {netResolveFunc, "net_resolve"},
 	"net_ping":    {netPingFunc, "net_ping"},
 
+	// Database Functions
+	"db_connect":     {dbConnectFunc, "db_connect"},
+	"db_query":       {dbQueryFunc, "db_query"},
+	"db_execute":     {dbExecuteFunc, "db_execute"},
+	"stream_tables":      {streamTablesFunc, "stream_tables"},
+	"db_stop_stream": {dbStopStreamFunc, "db_stop_stream"},
+	"db_close":       {dbCloseFunc, "db_close"},
+
 	// Regular Expression Functions
 	"is_regex_match": {isregexFunc, "is_regex_match"},
 	"regex_match":    {regexMatchFunc, "regex_match"},
@@ -376,6 +384,7 @@ var builtins = map[string]builtinFunction{
 	// Date/Time Functions - Advanced Operations
 	"date_now":        {datenowFunc, "date_now"},
 	"time_now":        {timenowFunc, "time_now"},
+	"sleep":           {sleepFunc, "sleep"},
 	"date_format":     {dateformatFunc, "date_format"},
 	"date_parse":      {dateParseFunc, "date_parse"},
 	"date_format_new": {dateFormatEnhancedFunc, "date_format_new"},
@@ -6053,6 +6062,31 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	eventStore = filteredEvents
 	return Value(count) // int, not int64
+}
+
+// sleepFunc implements the sleep() built-in function
+// Pauses execution for the specified number of milliseconds
+// Parameters:
+//   - milliseconds: The number of milliseconds to sleep (int)
+//
+// Returns null
+// Example: sleep(1000) -> sleeps for 1 second
+func sleepFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 1 {
+		panic(typeError(pos, "sleep() requires exactly 1 argument, got %d", len(args)))
+	}
+
+	milliseconds, ok := args[0].(int)
+	if !ok {
+		panic(typeError(pos, "sleep() requires an integer argument (milliseconds)"))
+	}
+
+	if milliseconds < 0 {
+		panic(typeError(pos, "sleep() requires a non-negative integer"))
+	}
+
+	time.Sleep(time.Duration(milliseconds) * time.Millisecond)
+	return Value(nil)
 }
 
 // Concurrent execution functions

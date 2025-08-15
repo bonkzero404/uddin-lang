@@ -317,6 +317,14 @@ func InitializeBuiltinDispatcher() {
 	dispatcher.RegisterBuiltinFunction("concurrent_reduce", concurrentReduceFunc, 3, false)
 	dispatcher.RegisterBuiltinFunction("parallel_execute", parallelExecuteFunc, -1, false)
 	
+	// Database Functions
+	dispatcher.RegisterBuiltinFunction("db_connect", dbConnectFunc, 6, false)
+	dispatcher.RegisterBuiltinFunction("db_query", dbQueryFunc, -1, false)
+	dispatcher.RegisterBuiltinFunction("db_execute", dbExecuteFunc, -1, false)
+	dispatcher.RegisterBuiltinFunction("stream_tables", streamTablesFunc, 3, false)
+	dispatcher.RegisterBuiltinFunction("db_stop_stream", dbStopStreamFunc, 1, false)
+	dispatcher.RegisterBuiltinFunction("db_close", dbCloseFunc, 1, false)
+	
 	// Note: Additional functions can be registered as needed
 	// This covers the most commonly used builtin functions with appropriate fast path settings
 }

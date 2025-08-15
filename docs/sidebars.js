@@ -48,10 +48,11 @@ const sidebars = {
                 'tutorial/advanced/networking',
                 'tutorial/advanced/regex-and-datetime',
                 'tutorial/advanced/xml-and-knowledge-systems',
+                'tutorial/advanced/database-integration',
                 'tutorial/advanced/error-handling-and-debugging',
                 'tutorial/advanced/development-tools',
             ],
-        }
+        },
     ],
 
     // Reference sidebar
@@ -59,8 +60,15 @@ const sidebars = {
         'reference/index',
         'reference/syntax',
         'reference/builtin-functions',
+        'reference/database-streaming',
         'reference/memory-optimization',
         'reference/library',
+    ],
+
+    // Examples sidebar
+    examplesSidebar: [
+        'examples/examples',
+        'examples/database-streaming',
     ],
 
     // But you can create a sidebar manually

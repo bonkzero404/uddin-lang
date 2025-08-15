@@ -1,0 +1,106 @@
+// MySQL Multi-Table Real-time Streaming Example
+// This example demonstrates how to use stream_tables with multiple MySQL tables
+// using trigger-based CDC (Change Data Capture) approach
+
+// Connect to MySQL database
+print("Connecting to MySQL database...")
+connResult = db_connect(
+     "mysql",
+     "localhost",
+     3306,
+     "testdb",
+     "root",
+     "janitrapanji"
+ )
+
+if (not connResult.success) then:
+    print("❌ Failed to connect to MySQL database: " + connResult.error)
+    exit(1)
+end
+
+mysql_conn = connResult.conn
+print("✅ Successfully connected to MySQL database!")
+print("")
+
+// Create test tables if they don't exist
+db_execute(mysql_conn, `
+    CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+`)
+
+db_execute(mysql_conn, `
+    CREATE TABLE IF NOT EXISTS orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        product_name VARCHAR(200) NOT NULL,
+        amount DECIMAL(10,2) NOT NULL,
+        status ENUM('pending', 'completed', 'cancelled') DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+`)
+
+db_execute(mysql_conn, `
+    CREATE TABLE IF NOT EXISTS products (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        price DECIMAL(10,2) NOT NULL,
+        stock INT DEFAULT 0,
+        category VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+`)
+
+print("MySQL tables 'users', 'orders', and 'products' created successfully")
+
+// Define callback function to handle real-time data changes from multiple tables
+fun onMultiTableStreamData(channel, payload):
+    print("=== MySQL Multi-Table Stream Data Received ===")
+    print("Channel: " + channel)
+    print("Payload: " + payload)
+    print("Time: " + str(time_now()))
+    print("=============================================")
+end
+
+// Start streaming multiple tables
+// This will create MySQL triggers for all tables and start polling for changes
+print("Starting MySQL real-time streaming for multiple tables...")
+print("Tables: users, orders, products")
+print("MySQL CDC uses trigger-based approach with unified change log table")
+print("Polling interval: 500ms")
+print("")
+print("To test the multi-table stream, run these commands in another MySQL client:")
+print("")
+print("-- Test users table")
+print("INSERT INTO users (name, email) VALUES ('Alice Smith', 'alice@example.com');")
+print("UPDATE users SET name = 'Alice Johnson' WHERE email = 'alice@example.com';")
+print("")
+print("-- Test products table")
+print("INSERT INTO products (name, price, stock, category) VALUES ('Laptop', 999.99, 10, 'Electronics');")
+print("UPDATE products SET stock = 8 WHERE name = 'Laptop';")
+print("")
+print("-- Test orders table (make sure user_id exists)")
+print("INSERT INTO orders (user_id, product_name, amount) VALUES (1, 'Laptop', 999.99);")
+print("UPDATE orders SET status = 'completed' WHERE id = 1;")
+print("")
+print("Press Ctrl+C to stop streaming")
+print("")
+
+// Start the multi-table stream (this will block and listen for changes)
+stream_tables(mysql_conn, ["users", "orders", "products"], onMultiTableStreamData)
+
+// Note: The stream_tables function will:
+// 1. Create a unified change log table 'uddin_changes_log' if it doesn't exist
+// 2. Create INSERT, UPDATE, DELETE triggers on all specified tables
+// 3. Start polling the unified change log table every 500ms for new changes
+// 4. Call onMultiTableStreamData function whenever changes are detected from any table
+// 5. The callback will receive data with table name to identify the source
+
+// Clean up (this won't be reached due to blocking nature)
+db_close(mysql_conn)

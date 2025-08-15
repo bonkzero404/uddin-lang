@@ -69,6 +69,11 @@ Performance enhancement techniques
 - [Memoization Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/performance-and-optimization/memoization_demo.din)
 - [Memoization Verification Test](https://github.com/bonkzero404/uddin-lang/blob/main/examples/performance-and-optimization/memoization_verification_test.din)
 
+### 🗄️ [Database](https://github.com/bonkzero404/uddin-lang/tree/main/examples/database)
+Database integration and real-time streaming
+- [MySQL Multi-Table Stream Listener](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/mysql_multi_table_stream_listener.din)
+- [PostgreSQL Multi-Table Stream Listener](https://github.com/bonkzero404/uddin-lang/blob/main/examples/database/postgres_multi_table_stream_listener.din)
+
 ### 🔧 [Rule Engine](https://github.com/bonkzero404/uddin-lang/tree/main/examples/rule-engine)
 Rule-based programming and pattern matching
 - [Rule Engine CEP Demo](https://github.com/bonkzero404/uddin-lang/blob/main/examples/rule-engine/rule_engine_cep_demo.din)
@@ -102,9 +107,10 @@ To run any of these examples:
 | **File and Data Handling** | 5 | File I/O and data processing |
 | **Networking and HTTP** | 4 | Network programming and web services |
 | **Performance and Optimization** | 2 | Performance enhancement techniques |
+| **Database** | 2 | Database integration and real-time streaming |
 | **Rule Engine** | 5 | Rule-based programming and pattern matching |
 
-**Total Examples:** 44 files across 7 categories
+**Total Examples:** 46 files across 8 categories
 
 ## 🔍 Browse Examples
 
