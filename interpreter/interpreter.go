@@ -820,6 +820,23 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 				return value, true
 			}
 		}
+		
+		// Check builtin dispatcher for functions not in environment
+		dispatcher := GetGlobalBuiltinDispatcher()
+		if _, exists := dispatcher.dispatchTable[name]; exists {
+			// Create a builtin function wrapper for dispatcher functions
+			builtinFunc := builtinFunction{
+				Name: name,
+				Function: func(interp *interpreter, pos Position, args []Value) Value {
+					if result, dispatched := dispatcher.DispatchBuiltinFunction(name, interp, pos, args); dispatched {
+						return result
+					}
+					panic(nameError(pos, "builtin function '%s' not found in dispatcher", name))
+				},
+			}
+			return builtinFunc, true
+		}
+		
 		return nil, false
 	}
 
@@ -830,6 +847,23 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 			return v, true
 		}
 	}
+	
+	// Check builtin dispatcher for functions not in environment
+	dispatcher := GetGlobalBuiltinDispatcher()
+	if _, exists := dispatcher.dispatchTable[name]; exists {
+		// Create a builtin function wrapper for dispatcher functions
+		builtinFunc := builtinFunction{
+			Name: name,
+			Function: func(interp *interpreter, pos Position, args []Value) Value {
+				if result, dispatched := dispatcher.DispatchBuiltinFunction(name, interp, pos, args); dispatched {
+					return result
+				}
+				panic(nameError(pos, "builtin function '%s' not found in dispatcher", name))
+			},
+		}
+		return builtinFunc, true
+	}
+	
 	return nil, false
 }
 

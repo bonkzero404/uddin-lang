@@ -1,0 +1,197 @@
+print("=== UDDIN-LANG Batch Processing Demo ===")
+
+
+conn_result = db_connect("postgres", "localhost", 5432, "postgres", "postgres", "password")
+
+if (conn_result["success"] == false) then:
+    print("Failed to connect to database: " + conn_result["error"])
+    exit(1)
+end
+
+print("Connected to PostgreSQL database successfully!")
+conn = conn_result["conn"]
+
+
+create_result = db_execute(conn, "DROP TABLE IF EXISTS batch_test")
+create_result = db_execute(conn, "CREATE TABLE batch_test (id SERIAL PRIMARY KEY, name VARCHAR(100), age INTEGER, email VARCHAR(100))")
+
+if (create_result["success"] == false) then:
+    print("Failed to create table: " + create_result["error"])
+    db_close(conn)
+    exit(1)
+end
+
+print("Test table created successfully!")
+
+print("\n=== Testing Batch Insert Operations ===")
+
+batch_operations = [
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Alice Johnson", 28, "alice@example.com"]
+    },
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Bob Smith", 35, "bob@example.com"]
+    },
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Charlie Brown", 42, "charlie@example.com"]
+    },
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Diana Prince", 30, "diana@example.com"]
+    },
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Eve Wilson", 25, "eve@example.com"]
+    }
+]
+
+
+batch_result = db_execute_batch(conn, batch_operations)
+
+if (batch_result["success"] == true) then:
+    print("Batch insert successful!")
+    print("Total operations: " + str(batch_result["operations_count"]))
+    print("Total rows affected: " + str(batch_result["total_rows_affected"]))
+else:
+    print("Batch insert failed: " + batch_result["error"])
+end
+
+
+query_result = db_query(conn, "SELECT COUNT(*) as count FROM batch_test")
+if (query_result["success"] == true) then:
+    rows = query_result["data"]
+    if (len(rows) > 0) then:
+        count = rows[0]["count"]
+        print("Records in table: " + str(count))
+    end
+end
+
+print("\n=== Testing Batch Update Operations ===")
+
+update_operations = [
+    {
+        "query": "UPDATE batch_test SET age = ? WHERE name = ?",
+        "args": [29, "Alice Johnson"]
+    },
+    {
+        "query": "UPDATE batch_test SET email = ? WHERE name = ?",
+        "args": ["bob.smith@newdomain.com", "Bob Smith"]
+    },
+    {
+        "query": "UPDATE batch_test SET age = ?, email = ? WHERE name = ?",
+        "args": [43, "charlie.brown@updated.com", "Charlie Brown"]
+    }
+]
+
+
+update_result = db_execute_batch(conn, update_operations)
+
+if (update_result["success"] == true) then:
+    print("Batch update successful!")
+    print("Total operations: " + str(update_result["operations_count"]))
+    print("Total rows affected: " + str(update_result["total_rows_affected"]))
+    
+    results = update_result["results"]
+    i = 0
+    while (i < len(results)):
+        result = results[i]
+        print("Operation " + str(i + 1) + ": " + str(result["rows_affected"]) + " rows affected")
+        i = i + 1
+    end
+else:
+    print("Batch update failed: " + update_result["error"])
+end
+
+print("\n=== Testing Mixed Batch Operations ===")
+
+mixed_operations = [
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Frank Miller", 38, "frank@example.com"]
+    },
+    {
+        "query": "UPDATE batch_test SET age = ? WHERE name = ?",
+        "args": [26, "Eve Wilson"]
+    },
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Grace Lee", 32, "grace@example.com"]
+    }
+]
+
+
+mixed_result = db_execute_batch(conn, mixed_operations)
+
+if (mixed_result["success"] == true) then:
+    print("Mixed batch operations successful!")
+    print("Total operations: " + str(mixed_result["operations_count"]))
+    print("Total rows affected: " + str(mixed_result["total_rows_affected"]))
+else:
+    print("Mixed batch operations failed: " + mixed_result["error"])
+end
+
+
+final_query = db_query(conn, "SELECT COUNT(*) as count FROM batch_test")
+if (final_query["success"] == true) then:
+    rows = final_query["data"]
+    if (len(rows) > 0) then:
+        count = rows[0]["count"]
+        print("\nFinal record count: " + str(count))
+    end
+end
+
+print("\n=== Testing Error Handling ===")
+
+invalid_operations = [
+    {
+        "query": "INSERT INTO batch_test (name, age, email) VALUES (?, ?, ?)",
+        "args": ["Valid User", 25, "valid@example.com"]
+    },
+    {
+        "query": "INSERT INTO nonexistent_table (name) VALUES (?)",
+        "args": ["Invalid User"]
+    }
+]
+
+
+invalid_result = db_execute_batch(conn, invalid_operations)
+
+if (invalid_result["success"] == false) then:
+    print("Error handling working correctly - batch rolled back")
+    print("Error: " + invalid_result["error"])
+else:
+    print("Unexpected: Invalid batch succeeded")
+end
+
+
+rollback_query = db_query(conn, "SELECT COUNT(*) as count FROM batch_test")
+if (rollback_query["success"] == true) then:
+    rows = rollback_query["data"]
+    if (len(rows) > 0) then:
+        count = rows[0]["count"]
+        print("Record count after rollback: " + str(count) + " (should be same as before)")
+    end
+end
+
+
+cleanup_result = db_execute(conn, "DROP TABLE batch_test")
+if (cleanup_result["success"] == true) then:
+    print("\nTest table cleaned up successfully!")
+end
+
+
+close_result = db_close(conn)
+if (close_result["success"] == true) then:
+    print("Database connection closed successfully!")
+end
+
+print("\n=== Batch Processing Demo Completed ===")
+print("\nBenefits of Batch Processing:")
+print("1. Reduced network round-trips")
+print("2. Improved transaction consistency")
+print("3. Better performance for bulk operations")
+print("4. Automatic rollback on errors")
+print("5. Detailed operation-level results")

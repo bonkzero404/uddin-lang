@@ -319,11 +319,21 @@ func InitializeBuiltinDispatcher() {
 	
 	// Database Functions
 	dispatcher.RegisterBuiltinFunction("db_connect", dbConnectFunc, 6, false)
+	dispatcher.RegisterBuiltinFunction("db_connect_with_pool", dbConnectWithPoolFunc, 7, false)
+	dispatcher.RegisterBuiltinFunction("db_configure_pool", dbConfigurePoolFunc, 4, false)
 	dispatcher.RegisterBuiltinFunction("db_query", dbQueryFunc, -1, false)
 	dispatcher.RegisterBuiltinFunction("db_execute", dbExecuteFunc, -1, false)
+	dispatcher.RegisterBuiltinFunction("db_execute_batch", dbExecuteBatchFunc, -1, false)
 	dispatcher.RegisterBuiltinFunction("stream_tables", streamTablesFunc, 3, false)
 	dispatcher.RegisterBuiltinFunction("db_stop_stream", dbStopStreamFunc, 1, false)
 	dispatcher.RegisterBuiltinFunction("db_close", dbCloseFunc, 1, false)
+	
+	// Async processing functions
+	dispatcher.RegisterBuiltinFunction("db_execute_async", dbExecuteAsyncFunc, -1, false)
+	dispatcher.RegisterBuiltinFunction("db_get_async_status", dbGetAsyncStatusFunc, 1, false)
+	dispatcher.RegisterBuiltinFunction("db_cancel_async", dbCancelAsyncFunc, 1, false)
+	dispatcher.RegisterBuiltinFunction("db_list_async_operations", dbListAsyncOperationsFunc, 0, false)
+	dispatcher.RegisterBuiltinFunction("db_cleanup_async_operations", dbCleanupAsyncOperationsFunc, 0, false)
 	
 	// Note: Additional functions can be registered as needed
 	// This covers the most commonly used builtin functions with appropriate fast path settings

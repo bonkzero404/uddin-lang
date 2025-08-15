@@ -1,0 +1,125 @@
+// Simple Connection Pooling Demo
+// This example demonstrates basic connection pooling functionality
+
+print("=== Simple Connection Pooling Demo ===")
+
+// Connect to PostgreSQL using the standard db_connect function
+// The connection pooling is now built into the standard connection
+conn_result = db_connect(
+    "postgres",     // driver
+    "localhost",    // host
+    5432,           // port
+    "testdb",       // database
+    "postgres",     // username
+    "password"      // password
+)
+
+if (conn_result["success"] == true) then:
+    print("Connected to PostgreSQL with built-in connection pooling!")
+    print("Connection ID: " + conn_result["id"])
+    print("")
+    
+    conn = conn_result["conn"]
+    
+    // Create test table
+    create_result = db_execute(conn, "CREATE TABLE IF NOT EXISTS pool_test (id SERIAL PRIMARY KEY, name VARCHAR(100), value INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+    
+    if (create_result["success"] == true) then:
+        print("Test table created successfully")
+        
+        // Perform multiple operations to demonstrate pooling benefits
+        print("\nPerforming batch operations to test connection pooling...")
+        
+        // Insert multiple records
+        i = 1
+        while (i <= 20):
+            insert_result = db_execute(conn,
+                "INSERT INTO pool_test (name, value) VALUES ($1, $2)",
+                "Test Record " + str(i),
+                i * 5
+            )
+            
+            if (insert_result["success"] == false) then:
+                print("Insert failed for record " + str(i) + ": " + insert_result["error"])
+            else:
+                print("Inserted record " + str(i))
+            end
+            
+            i = i + 1
+        end
+        
+        print("Inserted 20 records successfully")
+        
+        // Query data to test read performance
+        query_result = db_query(conn, "SELECT COUNT(*) as total FROM pool_test")
+        
+        if (query_result["success"] == true) then:
+            total_records = query_result["data"][0]["total"]
+            print("Total records in table: " + str(total_records))
+        else:
+            print("Query failed: " + query_result["error"])
+        end
+        
+        // Demonstrate multiple operations
+        print("\nTesting multiple read operations...")
+        
+        // Simulate multiple operations that benefit from connection pooling
+        batch = 1
+        while (batch <= 3):
+            print("Running batch " + str(batch) + "...")
+            
+            // Multiple queries in quick succession
+            op = 1
+            while (op <= 3):
+                result = db_query(conn, 
+                    "SELECT * FROM pool_test WHERE value > $1 LIMIT 2",
+                    batch * 5
+                )
+                
+                if (result["success"] == false) then:
+                    print("Batch " + str(batch) + " operation " + str(op) + " failed")
+                else:
+                    print("Batch " + str(batch) + " operation " + str(op) + " completed - found " + str(len(result["data"])) + " records")
+                end
+                
+                op = op + 1
+            end
+            
+            print("Batch " + str(batch) + " completed")
+            batch = batch + 1
+        end
+        
+        print("\nAll operations completed successfully!")
+        print("Connection pooling helped manage these operations efficiently!")
+        
+        // Clean up test data
+        cleanup_result = db_execute(conn, "DROP TABLE IF EXISTS pool_test")
+        if (cleanup_result["success"] == true) then:
+            print("\nTest table cleaned up successfully")
+        end
+        
+    else:
+        print("Failed to create test table: " + create_result["error"])
+    end
+    
+    // Close connection
+    close_result = db_close(conn)
+    if (close_result["success"] == true) then:
+        print("\nConnection closed successfully")
+        print(close_result["message"])
+    else:
+        print("Failed to close connection: " + close_result["error"])
+    end
+    
+else:
+    print("Failed to connect to database: " + conn_result["error"])
+end
+
+print("\n=== Connection Pooling Benefits ===")
+print("1. Reduced connection overhead - reuses existing connections")
+print("2. Better resource management - limits max connections")
+print("3. Improved performance - faster connection acquisition")
+print("4. Automatic cleanup - handles connection lifecycle")
+print("5. Built-in configuration - uses optimized default settings")
+
+print("\n=== Demo completed ===")

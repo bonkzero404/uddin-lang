@@ -16,11 +16,76 @@ import (
 	"github.com/lib/pq"
 )
 
+// ConnectionPoolConfig holds configuration for database connection pool
+type ConnectionPoolConfig struct {
+	MaxOpenConns    int           // Maximum number of open connections
+	MaxIdleConns    int           // Maximum number of idle connections
+	ConnMaxLifetime time.Duration // Maximum lifetime of a connection
+	ConnMaxIdleTime time.Duration // Maximum idle time of a connection
+}
+
+// ConnectionPool manages a pool of database connections
+type ConnectionPool struct {
+	DB     *sql.DB
+	Config ConnectionPoolConfig
+	DSN    string
+	Driver string
+	Mutex  sync.RWMutex
+}
+
+// NewConnectionPool creates a new connection pool
+func NewConnectionPool(driver, dsn string, config ConnectionPoolConfig) (*ConnectionPool, error) {
+	db, err := sql.Open(driver, dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	// Configure connection pool
+	db.SetMaxOpenConns(config.MaxOpenConns)
+	db.SetMaxIdleConns(config.MaxIdleConns)
+	db.SetConnMaxLifetime(config.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(config.ConnMaxIdleTime)
+
+	// Test connection
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, err
+	}
+
+	return &ConnectionPool{
+		DB:     db,
+		Config: config,
+		DSN:    dsn,
+		Driver: driver,
+	}, nil
+}
+
+// GetConnection returns the underlying database connection
+func (cp *ConnectionPool) GetConnection() *sql.DB {
+	cp.Mutex.RLock()
+	defer cp.Mutex.RUnlock()
+	return cp.DB
+}
+
+// Close closes the connection pool
+func (cp *ConnectionPool) Close() error {
+	cp.Mutex.Lock()
+	defer cp.Mutex.Unlock()
+	return cp.DB.Close()
+}
+
 // Database connection pool and listener management
 var (
-	databaseConnections = make(map[string]*sql.DB)
+	databaseConnections = make(map[string]*ConnectionPool)
 	databaseStreamers   = make(map[string]*DatabaseStreamer)
 	databaseMutex       = sync.RWMutex{}
+	// Default connection pool configuration
+	defaultPoolConfig = ConnectionPoolConfig{
+		MaxOpenConns:    25,
+		MaxIdleConns:    5,
+		ConnMaxLifetime: 5 * time.Minute,
+		ConnMaxIdleTime: 1 * time.Minute,
+	}
 )
 
 // BinlogStreamer represents a MySQL binlog streamer for CDC
@@ -123,8 +188,8 @@ func dbConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 			username, password, host, port, database)
 	}
 
-	// Open database connection
-	db, err := sql.Open(driver, dsn)
+	// Create connection pool
+	pool, err := NewConnectionPool(driver, dsn, defaultPoolConfig)
 	if err != nil {
 		return Value(map[string]Value{
 			"success": false,
@@ -133,28 +198,18 @@ func dbConnectFunc(interp *interpreter, pos Position, args []Value) Value {
 		})
 	}
 
-	// Test connection
-	if err := db.Ping(); err != nil {
-		db.Close()
-		return Value(map[string]Value{
-			"success": false,
-			"error":   fmt.Sprintf("Failed to ping database: %v", err),
-			"conn":    Value(nil),
-		})
-	}
-
 	// Generate connection ID
 	connID := fmt.Sprintf("%s_%s_%d_%s_%d", driver, host, port, database, time.Now().UnixNano())
 
-	// Store connection
+	// Store connection pool
 	databaseMutex.Lock()
-	databaseConnections[connID] = db
+	databaseConnections[connID] = pool
 	databaseMutex.Unlock()
 
 	// Create connection object
 	connObj := &DatabaseConnection{
 		ID:       connID,
-		DB:       db,
+		DB:       pool.GetConnection(),
 		Driver:   driver,
 		Host:     host,
 		Port:     port,
@@ -265,6 +320,210 @@ func dbQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 		"count":   len(results),
 		"columns": columns,
 	})
+}
+
+// BatchOperation represents a single operation in a batch
+type BatchOperation struct {
+	Query string
+	Args  []Value
+}
+
+// BatchResult represents the result of a batch operation
+type BatchResult struct {
+	Success      bool
+	RowsAffected int64
+	Error        string
+	OperationID  int
+}
+
+// dbExecuteBatchFunc implements the db_execute_batch() built-in function
+// db_execute_batch(connection, operations_array) -> batch_result_object
+// Example: result = db_execute_batch(conn, [{"query": "INSERT INTO users (name) VALUES (?)", "args": ["John"]}, {"query": "UPDATE users SET age = ? WHERE name = ?", "args": [25, "John"]}])
+func dbExecuteBatchFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 2 {
+		panic(typeError(pos, "db_execute_batch() requires 2 arguments: connection and operations array"))
+	}
+
+	connArg := args[0]
+	operationsArg := args[1]
+
+	// Extract connection
+	conn, ok := connArg.(*DatabaseConnection)
+	if !ok {
+		panic(typeError(pos, "db_execute_batch() requires first argument to be a database connection"))
+	}
+
+	// Extract operations array
+	var operationsArray []Value
+	if arr, ok := operationsArg.(*[]Value); ok {
+		operationsArray = *arr
+	} else if arr, ok := operationsArg.([]Value); ok {
+		operationsArray = arr
+	} else {
+		panic(typeError(pos, "db_execute_batch() requires second argument to be an array of operations"))
+	}
+
+	if len(operationsArray) == 0 {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "No operations provided",
+			"results": []Value{},
+		})
+	}
+
+	// Parse operations
+	var operations []BatchOperation
+	for i, opValue := range operationsArray {
+		opMap, ok := opValue.(map[string]Value)
+		if !ok {
+			return Value(map[string]Value{
+				"success": false,
+				"error":   fmt.Sprintf("Operation %d must be an object with 'query' and 'args' fields", i),
+				"results": []Value{},
+			})
+		}
+
+		queryValue, hasQuery := opMap["query"]
+		if !hasQuery {
+			return Value(map[string]Value{
+				"success": false,
+				"error":   fmt.Sprintf("Operation %d missing 'query' field", i),
+				"results": []Value{},
+			})
+		}
+
+		query, ok := queryValue.(string)
+		if !ok {
+			return Value(map[string]Value{
+				"success": false,
+				"error":   fmt.Sprintf("Operation %d 'query' field must be a string", i),
+				"results": []Value{},
+			})
+		}
+
+		var opArgs []Value
+		if argsValue, hasArgs := opMap["args"]; hasArgs {
+			if argsArray, ok := argsValue.(*[]Value); ok {
+				opArgs = *argsArray
+			} else if argsArray, ok := argsValue.([]Value); ok {
+				opArgs = argsArray
+			} else {
+				return Value(map[string]Value{
+					"success": false,
+					"error":   fmt.Sprintf("Operation %d 'args' field must be an array", i),
+					"results": []Value{},
+				})
+			}
+		}
+
+		operations = append(operations, BatchOperation{
+			Query: query,
+			Args:  opArgs,
+		})
+	}
+
+	// Execute batch operations
+	results := make([]Value, len(operations))
+	allSuccess := true
+	totalRowsAffected := int64(0)
+
+	// Begin transaction for batch operations
+	tx, err := conn.DB.Begin()
+	if err != nil {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   fmt.Sprintf("Failed to begin transaction: %v", err),
+			"results": []Value{},
+		})
+	}
+
+	defer func() {
+		if allSuccess {
+			tx.Commit()
+		} else {
+			tx.Rollback()
+		}
+	}()
+
+	// Execute each operation in the transaction
+	for i, op := range operations {
+		// Convert UDDIN-LANG values to Go interface{} values
+		var sqlArgs []interface{}
+		for _, arg := range op.Args {
+			sqlArgs = append(sqlArgs, convertToSQLArg(arg))
+		}
+
+		// Convert placeholders for PostgreSQL
+		convertedQuery := convertPlaceholders(op.Query, conn.Driver)
+
+		// Execute the query
+		result, err := tx.Exec(convertedQuery, sqlArgs...)
+		if err != nil {
+			allSuccess = false
+			results[i] = Value(map[string]Value{
+				"success":       false,
+				"error":         err.Error(),
+				"rows_affected": int64(0),
+				"operation_id":  i,
+			})
+			continue
+		}
+
+		rowsAffected, _ := result.RowsAffected()
+		totalRowsAffected += rowsAffected
+
+		results[i] = Value(map[string]Value{
+			"success":       true,
+			"error":         "",
+			"rows_affected": rowsAffected,
+			"operation_id":  i,
+		})
+	}
+
+	return Value(map[string]Value{
+		"success":             allSuccess,
+		"total_rows_affected": totalRowsAffected,
+		"operations_count":    len(operations),
+		"results":             Value(&results),
+		"error":               "",
+	})
+}
+
+// convertToSQLArg converts UDDIN-LANG Value to SQL argument
+func convertToSQLArg(value Value) interface{} {
+	switch v := value.(type) {
+	case string:
+		return v
+	case int:
+		return v
+	case float64:
+		return v
+	case bool:
+		return v
+	case nil:
+		return nil
+	default:
+		return fmt.Sprintf("%v", v)
+	}
+}
+
+// convertPlaceholders converts MySQL-style ? placeholders to PostgreSQL-style $1, $2, etc.
+func convertPlaceholders(query string, driver string) string {
+	if driver != "postgres" {
+		return query
+	}
+	
+	result := ""
+	placeholderCount := 1
+	for _, char := range query {
+		if char == '?' {
+			result += fmt.Sprintf("$%d", placeholderCount)
+			placeholderCount++
+		} else {
+			result += string(char)
+		}
+	}
+	return result
 }
 
 // dbExecuteFunc implements the db_execute() built-in function
@@ -834,12 +1093,22 @@ func dbCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "db_close() requires first argument to be a database connection"))
 	}
 
-	// Close database connection
+	// Close connection pool
 	databaseMutex.Lock()
-	delete(databaseConnections, connObj.ID)
+	pool, exists := databaseConnections[connObj.ID]
+	if exists {
+		delete(databaseConnections, connObj.ID)
+	}
 	databaseMutex.Unlock()
 
-	err := connObj.DB.Close()
+	if !exists {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Connection not found",
+		})
+	}
+
+	err := pool.Close()
 	if err != nil {
 		return Value(map[string]Value{
 			"success": false,
@@ -849,7 +1118,157 @@ func dbCloseFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	return Value(map[string]Value{
 		"success": true,
-		"message": "Connection closed successfully",
+		"message": "Connection pool closed successfully",
+	})
+}
+
+// dbConfigurePoolFunc implements the db_configure_pool() built-in function
+// db_configure_pool(max_open, max_idle, max_lifetime_minutes, max_idle_minutes) -> config_object
+// Example: config = db_configure_pool(50, 10, 10, 2)
+func dbConfigurePoolFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 4 {
+		panic(typeError(pos, "db_configure_pool() requires 4 arguments: max_open, max_idle, max_lifetime_minutes, max_idle_minutes"))
+	}
+
+	maxOpen, ok := args[0].(int)
+	if !ok {
+		panic(typeError(pos, "db_configure_pool() requires first argument to be an integer (max_open)"))
+	}
+
+	maxIdle, ok := args[1].(int)
+	if !ok {
+		panic(typeError(pos, "db_configure_pool() requires second argument to be an integer (max_idle)"))
+	}
+
+	maxLifetimeMin, ok := args[2].(int)
+	if !ok {
+		panic(typeError(pos, "db_configure_pool() requires third argument to be an integer (max_lifetime_minutes)"))
+	}
+
+	maxIdleMin, ok := args[3].(int)
+	if !ok {
+		panic(typeError(pos, "db_configure_pool() requires fourth argument to be an integer (max_idle_minutes)"))
+	}
+
+	config := ConnectionPoolConfig{
+		MaxOpenConns:    maxOpen,
+		MaxIdleConns:    maxIdle,
+		ConnMaxLifetime: time.Duration(maxLifetimeMin) * time.Minute,
+		ConnMaxIdleTime: time.Duration(maxIdleMin) * time.Minute,
+	}
+
+	return Value(map[string]Value{
+		"max_open":         maxOpen,
+		"max_idle":         maxIdle,
+		"max_lifetime_min": maxLifetimeMin,
+		"max_idle_min":     maxIdleMin,
+		"config":           &config,
+	})
+}
+
+// dbConnectWithPoolFunc implements the db_connect_with_pool() built-in function
+// db_connect_with_pool(driver, host, port, database, username, password, pool_config) -> connection_object
+// Example: conn = db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", config)
+func dbConnectWithPoolFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 7 {
+		panic(typeError(pos, "db_connect_with_pool() requires 7 arguments: driver, host, port, database, username, password, pool_config"))
+	}
+
+	driver, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires first argument to be a string (driver)"))
+	}
+
+	host, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires second argument to be a string (host)"))
+	}
+
+	port, ok := args[2].(int)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires third argument to be an integer (port)"))
+	}
+
+	database, ok := args[3].(string)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires fourth argument to be a string (database)"))
+	}
+
+	username, ok := args[4].(string)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires fifth argument to be a string (username)"))
+	}
+
+	password, ok := args[5].(string)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires sixth argument to be a string (password)"))
+	}
+
+	poolConfig, ok := args[6].(*ConnectionPoolConfig)
+	if !ok {
+		panic(typeError(pos, "db_connect_with_pool() requires seventh argument to be a pool configuration"))
+	}
+
+	// Validate driver
+	if driver != "postgres" && driver != "mysql" {
+		panic(typeError(pos, "db_connect_with_pool() supports only 'postgres' and 'mysql' drivers"))
+	}
+
+	// Build connection string
+	var dsn string
+	switch driver {
+	case "postgres":
+		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable",
+			host, port, username, password, database)
+	case "mysql":
+		dsn = fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?parseTime=true",
+			username, password, host, port, database)
+	}
+
+	// Create connection pool with custom configuration
+	pool, err := NewConnectionPool(driver, dsn, *poolConfig)
+	if err != nil {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   err.Error(),
+			"conn":    Value(nil),
+		})
+	}
+
+	// Generate connection ID
+	connID := fmt.Sprintf("%s_%s_%d_%s_%d", driver, host, port, database, time.Now().UnixNano())
+
+	// Store connection pool
+	databaseMutex.Lock()
+	databaseConnections[connID] = pool
+	databaseMutex.Unlock()
+
+	// Create connection object
+	connObj := &DatabaseConnection{
+		ID:       connID,
+		DB:       pool.GetConnection(),
+		Driver:   driver,
+		Host:     host,
+		Port:     port,
+		Database: database,
+		Username: username,
+		Password: password,
+	}
+
+	return Value(map[string]Value{
+		"success":  true,
+		"conn":     connObj,
+		"id":       connID,
+		"driver":   driver,
+		"host":     host,
+		"port":     port,
+		"database": database,
+		"pool_config": map[string]Value{
+			"max_open":         poolConfig.MaxOpenConns,
+			"max_idle":         poolConfig.MaxIdleConns,
+			"max_lifetime_min": int(poolConfig.ConnMaxLifetime.Minutes()),
+			"max_idle_min":     int(poolConfig.ConnMaxIdleTime.Minutes()),
+		},
 	})
 }
 
@@ -1280,4 +1699,480 @@ func (ds *DatabaseStreamer) callBinlogCallback(interp *interpreter, pos Position
 	} else {
 		log.Printf("Invalid callback function for binlog streamer %s", ds.ID)
 	}
+}
+
+// Async Processing Implementation
+type AsyncOperation struct {
+	ID          string
+	Query       string
+	Args        []Value
+	Connection  *DatabaseConnection
+	Callback    Value // Optional callback function
+	StartTime   time.Time
+	Status      string // "pending", "running", "completed", "failed"
+	Result      Value
+	Error       string
+	Cancel      context.CancelFunc
+	Mutex       sync.RWMutex
+}
+
+type AsyncManager struct {
+	Operations map[string]*AsyncOperation
+	Mutex      sync.RWMutex
+	WorkerPool chan struct{} // Semaphore for limiting concurrent operations
+}
+
+var (
+	asyncManager = &AsyncManager{
+		Operations: make(map[string]*AsyncOperation),
+		WorkerPool: make(chan struct{}, 10), // Max 10 concurrent async operations
+	}
+)
+
+// dbExecuteAsyncFunc executes a database query asynchronously
+func dbExecuteAsyncFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) < 2 {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "db_execute_async requires at least 2 arguments: connection and query",
+		})
+	}
+
+	// Extract connection
+	connArg := args[0]
+	connMap, ok := connArg.(map[string]Value)
+	if !ok {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Invalid connection argument",
+		})
+	}
+
+	connValue, exists := connMap["conn"]
+	if !exists {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Connection object not found",
+		})
+	}
+
+	conn, ok := connValue.(*DatabaseConnection)
+	if !ok {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Invalid connection object",
+		})
+	}
+
+	// Extract query
+	query, ok := args[1].(string)
+	if !ok {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Query must be a string",
+		})
+	}
+
+	// Extract optional arguments
+	var queryArgs []Value
+	var callback Value
+	if len(args) > 2 {
+		if len(args) == 3 {
+			// Could be args array or callback function
+			if argsArray, ok := args[2].(*[]Value); ok {
+				queryArgs = *argsArray
+			} else if IsFunction(args[2]) {
+				callback = args[2]
+			} else {
+				return Value(map[string]Value{
+					"success": false,
+					"error":   "Third argument must be an array of arguments or a callback function",
+				})
+			}
+		} else if len(args) == 4 {
+			// Both args and callback
+			if argsArray, ok := args[2].(*[]Value); ok {
+				queryArgs = *argsArray
+			} else {
+				return Value(map[string]Value{
+					"success": false,
+					"error":   "Third argument must be an array of arguments",
+				})
+			}
+			if IsFunction(args[3]) {
+				callback = args[3]
+			} else {
+				return Value(map[string]Value{
+					"success": false,
+					"error":   "Fourth argument must be a callback function",
+				})
+			}
+		}
+	}
+
+	// Generate unique operation ID
+	operationID := fmt.Sprintf("async_%d_%d", time.Now().UnixNano(), len(asyncManager.Operations))
+
+	// Create async operation
+	ctx, cancel := context.WithCancel(context.Background())
+	operation := &AsyncOperation{
+		ID:         operationID,
+		Query:      query,
+		Args:       queryArgs,
+		Connection: conn,
+		Callback:   callback,
+		StartTime:  time.Now(),
+		Status:     "pending",
+		Cancel:     cancel,
+	}
+
+	// Add to manager
+	asyncManager.Mutex.Lock()
+	asyncManager.Operations[operationID] = operation
+	asyncManager.Mutex.Unlock()
+
+	// Start async execution
+	go executeAsyncOperation(interp, pos, operation, ctx)
+
+	return Value(map[string]Value{
+		"success":      true,
+		"operation_id": operationID,
+		"status":       "pending",
+	})
+}
+
+// executeAsyncOperation runs the database operation in a goroutine
+func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation, ctx context.Context) {
+	// Acquire worker slot
+	asyncManager.WorkerPool <- struct{}{}
+	defer func() { <-asyncManager.WorkerPool }()
+
+	// Update status to running
+	op.Mutex.Lock()
+	op.Status = "running"
+	op.Mutex.Unlock()
+
+	defer func() {
+		if r := recover(); r != nil {
+			op.Mutex.Lock()
+			op.Status = "failed"
+			op.Error = fmt.Sprintf("Panic during execution: %v", r)
+			op.Mutex.Unlock()
+			log.Printf("Async operation %s panicked: %v", op.ID, r)
+		}
+	}()
+
+	// Check if operation was cancelled
+	select {
+	case <-ctx.Done():
+		op.Mutex.Lock()
+		op.Status = "cancelled"
+		op.Error = "Operation was cancelled"
+		op.Mutex.Unlock()
+		return
+	default:
+	}
+
+	// Convert query placeholders if needed
+	convertedQuery := convertPlaceholders(op.Query, op.Connection.Driver)
+
+	// Convert UDDIN-LANG values to Go interface{} values
+	sqlArgs := make([]interface{}, len(op.Args))
+	for i, arg := range op.Args {
+		sqlArgs[i] = convertToSQLArg(arg)
+	}
+
+	// Determine if this is a SELECT query or an execute query
+	queryUpper := strings.ToUpper(strings.TrimSpace(convertedQuery))
+	isSelect := strings.HasPrefix(queryUpper, "SELECT") || strings.HasPrefix(queryUpper, "WITH")
+
+	var result Value
+	if isSelect {
+		// Execute as query (SELECT)
+		rows, err := op.Connection.DB.QueryContext(ctx, convertedQuery, sqlArgs...)
+		if err != nil {
+			op.Mutex.Lock()
+			op.Status = "failed"
+			op.Error = err.Error()
+			op.Mutex.Unlock()
+			
+			// Call callback with error if provided
+			if op.Callback != nil && IsFunction(op.Callback) {
+				go callAsyncCallback(interp, pos, op.Callback, Value(map[string]Value{
+					"success": false,
+					"error":   err.Error(),
+					"operation_id": op.ID,
+				}))
+			}
+			return
+		}
+		defer rows.Close()
+
+		// Process results
+		columns, err := rows.Columns()
+		if err != nil {
+			op.Mutex.Lock()
+			op.Status = "failed"
+			op.Error = err.Error()
+			op.Mutex.Unlock()
+			return
+		}
+
+		var results []Value
+		for rows.Next() {
+			// Check for cancellation
+			select {
+			case <-ctx.Done():
+				op.Mutex.Lock()
+				op.Status = "cancelled"
+				op.Error = "Operation was cancelled"
+				op.Mutex.Unlock()
+				return
+			default:
+			}
+
+			values := make([]interface{}, len(columns))
+			valuePtrs := make([]interface{}, len(columns))
+			for i := range columns {
+				valuePtrs[i] = &values[i]
+			}
+
+			if err := rows.Scan(valuePtrs...); err != nil {
+				op.Mutex.Lock()
+				op.Status = "failed"
+				op.Error = err.Error()
+				op.Mutex.Unlock()
+				return
+			}
+
+			row := make(map[string]Value)
+			for i, col := range columns {
+				row[col] = convertSQLValue(values[i])
+			}
+			results = append(results, Value(row))
+		}
+
+		if err := rows.Err(); err != nil {
+			op.Mutex.Lock()
+			op.Status = "failed"
+			op.Error = err.Error()
+			op.Mutex.Unlock()
+			return
+		}
+
+		// Operation completed successfully
+		result = Value(map[string]Value{
+			"success": true,
+			"data":    Value(&results),
+			"count":   len(results),
+			"operation_id": op.ID,
+		})
+	} else {
+		// Execute as command (INSERT, UPDATE, DELETE)
+		execResult, err := op.Connection.DB.ExecContext(ctx, convertedQuery, sqlArgs...)
+		if err != nil {
+			op.Mutex.Lock()
+			op.Status = "failed"
+			op.Error = err.Error()
+			op.Mutex.Unlock()
+			
+			// Call callback with error if provided
+			if op.Callback != nil && IsFunction(op.Callback) {
+				go callAsyncCallback(interp, pos, op.Callback, Value(map[string]Value{
+					"success": false,
+					"error":   err.Error(),
+					"operation_id": op.ID,
+				}))
+			}
+			return
+		}
+
+		rowsAffected, _ := execResult.RowsAffected()
+		lastInsertId, _ := execResult.LastInsertId()
+
+		// Operation completed successfully
+		result = Value(map[string]Value{
+			"success": true,
+			"rows_affected": rowsAffected,
+			"last_insert_id": lastInsertId,
+			"operation_id": op.ID,
+		})
+	}
+
+	op.Mutex.Lock()
+	op.Status = "completed"
+	op.Result = result
+	op.Mutex.Unlock()
+
+	// Call callback if provided
+	if op.Callback != nil && IsFunction(op.Callback) {
+		go callAsyncCallback(interp, pos, op.Callback, result)
+	}
+}
+
+// callAsyncCallback calls the callback function for async operations
+func callAsyncCallback(interp *interpreter, pos Position, callback Value, result Value) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("Async callback error: %v", r)
+		}
+	}()
+
+	if fn, ok := callback.(functionType); ok {
+		fn.call(interp, pos, []Value{result})
+	}
+}
+
+// dbGetAsyncStatusFunc gets the status of an async operation
+func dbGetAsyncStatusFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 1 {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "db_get_async_status requires 1 argument: operation_id",
+		})
+	}
+
+	operationID, ok := args[0].(string)
+	if !ok {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Operation ID must be a string",
+		})
+	}
+
+	asyncManager.Mutex.RLock()
+	operation, exists := asyncManager.Operations[operationID]
+	asyncManager.Mutex.RUnlock()
+
+	if !exists {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Operation not found",
+		})
+	}
+
+	operation.Mutex.RLock()
+	defer operation.Mutex.RUnlock()
+
+	response := map[string]Value{
+		"success":      true,
+		"operation_id": operationID,
+		"status":       operation.Status,
+		"start_time":   operation.StartTime.Unix(),
+		"duration":     time.Since(operation.StartTime).Milliseconds(),
+	}
+
+	if operation.Status == "completed" && operation.Result != nil {
+		response["result"] = operation.Result
+	}
+
+	if operation.Status == "failed" && operation.Error != "" {
+		response["error"] = operation.Error
+	}
+
+	return Value(response)
+}
+
+// dbCancelAsyncFunc cancels an async operation
+func dbCancelAsyncFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 1 {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "db_cancel_async requires 1 argument: operation_id",
+		})
+	}
+
+	operationID, ok := args[0].(string)
+	if !ok {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Operation ID must be a string",
+		})
+	}
+
+	asyncManager.Mutex.RLock()
+	operation, exists := asyncManager.Operations[operationID]
+	asyncManager.Mutex.RUnlock()
+
+	if !exists {
+		return Value(map[string]Value{
+			"success": false,
+			"error":   "Operation not found",
+		})
+	}
+
+	// Cancel the operation
+	operation.Cancel()
+
+	return Value(map[string]Value{
+		"success":      true,
+		"operation_id": operationID,
+		"message":      "Operation cancellation requested",
+	})
+}
+
+// dbListAsyncOperationsFunc lists all async operations
+func dbListAsyncOperationsFunc(interp *interpreter, pos Position, args []Value) Value {
+	asyncManager.Mutex.RLock()
+	defer asyncManager.Mutex.RUnlock()
+
+	var operations []Value
+	for id, op := range asyncManager.Operations {
+		op.Mutex.RLock()
+		opInfo := map[string]Value{
+			"operation_id": id,
+			"status":       op.Status,
+			"start_time":   op.StartTime.Unix(),
+			"duration":     time.Since(op.StartTime).Milliseconds(),
+			"query":        op.Query,
+		}
+		if op.Error != "" {
+			opInfo["error"] = op.Error
+		}
+		op.Mutex.RUnlock()
+		operations = append(operations, Value(opInfo))
+	}
+
+	return Value(map[string]Value{
+		"success":    true,
+		"operations": Value(&operations),
+		"count":      len(operations),
+	})
+}
+
+// dbCleanupAsyncOperationsFunc cleans up completed/failed async operations
+func dbCleanupAsyncOperationsFunc(interp *interpreter, pos Position, args []Value) Value {
+	// Optional: max_age parameter in seconds (default: 3600 = 1 hour)
+	maxAge := int64(3600)
+	if len(args) > 0 {
+		if age, ok := args[0].(int); ok {
+			maxAge = int64(age)
+		}
+	}
+
+	cutoffTime := time.Now().Add(-time.Duration(maxAge) * time.Second)
+	cleanedCount := 0
+
+	asyncManager.Mutex.Lock()
+	defer asyncManager.Mutex.Unlock()
+
+	for id, op := range asyncManager.Operations {
+		op.Mutex.RLock()
+		shouldCleanup := (op.Status == "completed" || op.Status == "failed" || op.Status == "cancelled") &&
+			op.StartTime.Before(cutoffTime)
+		op.Mutex.RUnlock()
+
+		if shouldCleanup {
+			// Cancel if still running (shouldn't happen, but safety first)
+			op.Cancel()
+			delete(asyncManager.Operations, id)
+			cleanedCount++
+		}
+	}
+
+	return Value(map[string]Value{
+		"success":       true,
+		"cleaned_count": cleanedCount,
+		"remaining":     len(asyncManager.Operations),
+	})
 }
