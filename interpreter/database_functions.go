@@ -33,6 +33,30 @@ type ConnectionPool struct {
 	Mutex  sync.RWMutex
 }
 
+type silentLogger struct{}
+
+func (l *silentLogger) Debug(args ...any)                 {}
+func (l *silentLogger) Debugf(format string, args ...any) {}
+func (l *silentLogger) Debugln(args ...any)               {}
+func (l *silentLogger) Info(args ...any)                  {}
+func (l *silentLogger) Infof(format string, args ...any)  {}
+func (l *silentLogger) Infoln(args ...any)                {}
+func (l *silentLogger) Warn(args ...any)                  {}
+func (l *silentLogger) Warnf(format string, args ...any)  {}
+func (l *silentLogger) Warnln(args ...any)                {}
+func (l *silentLogger) Error(args ...any)                 {}
+func (l *silentLogger) Errorf(format string, args ...any) {}
+func (l *silentLogger) Errorln(args ...any)               {}
+func (l *silentLogger) Fatal(args ...any)                 {}
+func (l *silentLogger) Fatalf(format string, args ...any) {}
+func (l *silentLogger) Fatalln(args ...any)               {}
+func (l *silentLogger) Panic(args ...any)                 {}
+func (l *silentLogger) Panicf(format string, args ...any) {}
+func (l *silentLogger) Panicln(args ...any)               {}
+func (l *silentLogger) Print(args ...any)                 {}
+func (l *silentLogger) Printf(format string, args ...any) {}
+func (l *silentLogger) Println(args ...any)               {}
+
 // NewConnectionPool creates a new connection pool
 func NewConnectionPool(driver, dsn string, config ConnectionPoolConfig) (*ConnectionPool, error) {
 	db, err := sql.Open(driver, dsn)
@@ -105,20 +129,20 @@ type TableColumnConfig struct {
 
 // DatabaseStreamer represents a real-time database streamer using LISTEN/NOTIFY or Binlog
 type DatabaseStreamer struct {
-	ID        string
-	DB        *sql.DB
-	Listener  *pq.Listener
-	Binlog    *BinlogStreamer
-	TableName string
-	Callback  Value // UDDIN-LANG function to call on data change
-	Active    bool
-	Cancel    context.CancelFunc
-	Mutex     sync.RWMutex
-	Driver    string
-	LastID    int64
-	BinlogPos string // For MySQL binary log position
-	UseBinlog bool   // Whether to use binlog streaming instead of polling
-	ServerID  uint32 // MySQL server ID for binlog replication
+	ID           string
+	DB           *sql.DB
+	Listener     *pq.Listener
+	Binlog       *BinlogStreamer
+	TableName    string
+	Callback     Value // UDDIN-LANG function to call on data change
+	Active       bool
+	Cancel       context.CancelFunc
+	Mutex        sync.RWMutex
+	Driver       string
+	LastID       int64
+	BinlogPos    string              // For MySQL binary log position
+	UseBinlog    bool                // Whether to use binlog streaming instead of polling
+	ServerID     uint32              // MySQL server ID for binlog replication
 	TableColumns map[string][]string // Selected columns per table (empty means all columns)
 }
 
@@ -447,8 +471,8 @@ func dbExecuteBatchFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Execute each operation in the transaction
 	for i, op := range operations {
-		// Convert UDDIN-LANG values to Go interface{} values
-		var sqlArgs []interface{}
+		// Convert UDDIN-LANG values to Go any values
+		var sqlArgs []any
 		for _, arg := range op.Args {
 			sqlArgs = append(sqlArgs, convertToSQLArg(arg))
 		}
@@ -490,7 +514,7 @@ func dbExecuteBatchFunc(interp *interpreter, pos Position, args []Value) Value {
 }
 
 // convertToSQLArg converts UDDIN-LANG Value to SQL argument
-func convertToSQLArg(value Value) interface{} {
+func convertToSQLArg(value Value) any {
 	switch v := value.(type) {
 	case string:
 		return v
@@ -512,7 +536,7 @@ func convertPlaceholders(query string, driver string) string {
 	if driver != "postgres" {
 		return query
 	}
-	
+
 	result := ""
 	placeholderCount := 1
 	for _, char := range query {
@@ -590,7 +614,7 @@ func streamTablesFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Check if second argument is an array of table names
 		if tableArrayPtr, ok := args[1].(*[]Value); ok {
 			// Multi-table streaming
-			var tableColumns interface{}
+			var tableColumns any
 			if len(args) == 4 {
 				// Fourth argument can be:
 				// 1. Array of strings (backward compatibility)
@@ -679,32 +703,32 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 			connObj.Host, connObj.Port, connObj.Username, connObj.Database), 10*time.Second, time.Minute, nil)
 
 		streamer = &DatabaseStreamer{
-			ID:        streamerID,
-			DB:        connObj.DB,
-			Listener:  listener,
-			TableName: tableName,
-			Callback:  callback,
-			Active:    true,
-			Cancel:    cancel,
-			Driver:    "postgres",
+			ID:           streamerID,
+			DB:           connObj.DB,
+			Listener:     listener,
+			TableName:    tableName,
+			Callback:     callback,
+			Active:       true,
+			Cancel:       cancel,
+			Driver:       "postgres",
 			TableColumns: make(map[string][]string),
 		}
 	} else {
 		// MySQL - use binlog streaming
 		streamer = &DatabaseStreamer{
-			ID:        streamerID,
-			DB:        connObj.DB,
-			TableName: tableName,
-			Callback:  callback,
-			Active:    true,
-			Cancel:    cancel,
-			Driver:    "mysql",
-			UseBinlog: true,
-			ServerID:  uint32(time.Now().Unix() % 1000000), // Generate unique server ID
+			ID:           streamerID,
+			DB:           connObj.DB,
+			TableName:    tableName,
+			Callback:     callback,
+			Active:       true,
+			Cancel:       cancel,
+			Driver:       "mysql",
+			UseBinlog:    true,
+			ServerID:     uint32(time.Now().Unix() % 1000000), // Generate unique server ID
 			TableColumns: make(map[string][]string),
 		}
 	}
-	
+
 	// Set columns for the single table
 	if len(columns) > 0 {
 		streamer.TableColumns[tableName] = columns
@@ -836,7 +860,7 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 // stream_tables(connection, ["table1", "table2"], callback) -> nil
 // stream_tables(connection, ["table1", "table2"], callback, ["col1", "col2"]) -> nil (with column selection)
 // stream_tables(connection, ["table1", "table2"], callback, [{"table": "table1", "columns": ["col1", "col2"]}]) -> nil (with table-column mapping)
-func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tableArray []Value, callback Value, tableColumns interface{}) Value {
+func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tableArray []Value, callback Value, tableColumns any) Value {
 	// Get connection
 	connObj, ok := connArg.(*DatabaseConnection)
 	if !ok {
@@ -882,7 +906,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 					// Parse columns array - handle both []Value and *[]Value
 					var columnsArray []Value
 					columnsFound := false
-					
+
 					if arr, isSlice := columnsVal.([]Value); isSlice {
 						columnsArray = arr
 						columnsFound = true
@@ -890,7 +914,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 						columnsArray = *columnsPtr
 						columnsFound = true
 					}
-					
+
 					if columnsFound {
 						var columns []string
 						for _, colVal := range columnsArray {
@@ -924,30 +948,30 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 			connObj.Host, connObj.Port, connObj.Username, connObj.Database), 10*time.Second, time.Minute, nil)
 
 		streamer = &DatabaseStreamer{
-			ID:        streamerID,
-			DB:        connObj.DB,
-			Listener:  listener,
-			TableName: strings.Join(tableNames, ","),
-			Callback:  callback,
-			Active:    true,
-			Cancel:    cancel,
-			Driver:    "postgres",
+			ID:           streamerID,
+			DB:           connObj.DB,
+			Listener:     listener,
+			TableName:    strings.Join(tableNames, ","),
+			Callback:     callback,
+			Active:       true,
+			Cancel:       cancel,
+			Driver:       "postgres",
 			TableColumns: tableColumnMap,
 		}
 	} else {
 		// MySQL streamer with optimized CDC
 		streamer = &DatabaseStreamer{
-			ID:        streamerID,
-			DB:        connObj.DB,
-			Listener:  nil,
-			TableName: strings.Join(tableNames, ","),
-			Callback:  callback,
-			Active:    true,
-			Cancel:    cancel,
-			Driver:    "mysql",
-			LastID:    0,
-			UseBinlog: true, // Enable optimized CDC
-			ServerID:  1001, // Default server ID for binlog replication
+			ID:           streamerID,
+			DB:           connObj.DB,
+			Listener:     nil,
+			TableName:    strings.Join(tableNames, ","),
+			Callback:     callback,
+			Active:       true,
+			Cancel:       cancel,
+			Driver:       "mysql",
+			LastID:       0,
+			UseBinlog:    true, // Enable optimized CDC
+			ServerID:     1001, // Default server ID for binlog replication
 			TableColumns: tableColumnMap,
 		}
 	}
@@ -1407,6 +1431,7 @@ func (ds *DatabaseStreamer) setupPostgreSQLMultiTableStreaming(interp *interpret
 
 // setupMySQLBinlogStreaming sets up true MySQL binlog streaming like Debezium
 func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos Position, ctx context.Context, tableNames []string, host string, port int, username, password string) {
+
 	// Initialize binlog configuration
 	cfg := replication.BinlogSyncerConfig{
 		ServerID: ds.ServerID,
@@ -1415,6 +1440,7 @@ func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos P
 		Port:     uint16(port),
 		User:     username,
 		Password: password,
+		Logger:   &silentLogger{}, // Use our custom silent logger implementation
 	}
 
 	// Create binlog syncer
@@ -1472,7 +1498,7 @@ func (ds *DatabaseStreamer) setupMySQLMultiTableStreaming(interp *interpreter, p
 func (ds *DatabaseStreamer) getCurrentBinlogPosition() (mysql.Position, error) {
 	var file string
 	var position uint32
-	var binlogDoDB, binlogIgnoreDB, executedGtidSet interface{}
+	var binlogDoDB, binlogIgnoreDB, executedGtidSet any
 
 	// Try modern MySQL syntax first (MySQL 8.0+)
 	query := "SHOW BINARY LOG STATUS"
@@ -1507,13 +1533,13 @@ func (ds *DatabaseStreamer) processBinlogEvents(interp *interpreter, pos Positio
 			if err != nil {
 				errorCount++
 				log.Printf("Error getting binlog event (%d/%d): %v", errorCount, maxErrors, err)
-				
+
 				// If too many consecutive errors, exit
 				if errorCount >= maxErrors {
 					log.Printf("Too many consecutive errors, stopping binlog streaming")
 					return
 				}
-				
+
 				// Exponential backoff
 				select {
 				case <-ctx.Done():
@@ -1703,17 +1729,17 @@ func (ds *DatabaseStreamer) callBinlogCallback(interp *interpreter, pos Position
 
 // Async Processing Implementation
 type AsyncOperation struct {
-	ID          string
-	Query       string
-	Args        []Value
-	Connection  *DatabaseConnection
-	Callback    Value // Optional callback function
-	StartTime   time.Time
-	Status      string // "pending", "running", "completed", "failed"
-	Result      Value
-	Error       string
-	Cancel      context.CancelFunc
-	Mutex       sync.RWMutex
+	ID         string
+	Query      string
+	Args       []Value
+	Connection *DatabaseConnection
+	Callback   Value // Optional callback function
+	StartTime  time.Time
+	Status     string // "pending", "running", "completed", "failed"
+	Result     Value
+	Error      string
+	Cancel     context.CancelFunc
+	Mutex      sync.RWMutex
 }
 
 type AsyncManager struct {
@@ -1876,8 +1902,8 @@ func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation
 	// Convert query placeholders if needed
 	convertedQuery := convertPlaceholders(op.Query, op.Connection.Driver)
 
-	// Convert UDDIN-LANG values to Go interface{} values
-	sqlArgs := make([]interface{}, len(op.Args))
+	// Convert UDDIN-LANG values to Go any values
+	sqlArgs := make([]any, len(op.Args))
 	for i, arg := range op.Args {
 		sqlArgs[i] = convertToSQLArg(arg)
 	}
@@ -1895,12 +1921,12 @@ func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation
 			op.Status = "failed"
 			op.Error = err.Error()
 			op.Mutex.Unlock()
-			
+
 			// Call callback with error if provided
 			if op.Callback != nil && IsFunction(op.Callback) {
 				go callAsyncCallback(interp, pos, op.Callback, Value(map[string]Value{
-					"success": false,
-					"error":   err.Error(),
+					"success":      false,
+					"error":        err.Error(),
 					"operation_id": op.ID,
 				}))
 			}
@@ -1931,8 +1957,8 @@ func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation
 			default:
 			}
 
-			values := make([]interface{}, len(columns))
-			valuePtrs := make([]interface{}, len(columns))
+			values := make([]any, len(columns))
+			valuePtrs := make([]any, len(columns))
 			for i := range columns {
 				valuePtrs[i] = &values[i]
 			}
@@ -1962,9 +1988,9 @@ func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation
 
 		// Operation completed successfully
 		result = Value(map[string]Value{
-			"success": true,
-			"data":    Value(&results),
-			"count":   len(results),
+			"success":      true,
+			"data":         Value(&results),
+			"count":        len(results),
 			"operation_id": op.ID,
 		})
 	} else {
@@ -1975,12 +2001,12 @@ func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation
 			op.Status = "failed"
 			op.Error = err.Error()
 			op.Mutex.Unlock()
-			
+
 			// Call callback with error if provided
 			if op.Callback != nil && IsFunction(op.Callback) {
 				go callAsyncCallback(interp, pos, op.Callback, Value(map[string]Value{
-					"success": false,
-					"error":   err.Error(),
+					"success":      false,
+					"error":        err.Error(),
 					"operation_id": op.ID,
 				}))
 			}
@@ -1992,10 +2018,10 @@ func executeAsyncOperation(interp *interpreter, pos Position, op *AsyncOperation
 
 		// Operation completed successfully
 		result = Value(map[string]Value{
-			"success": true,
-			"rows_affected": rowsAffected,
+			"success":        true,
+			"rows_affected":  rowsAffected,
 			"last_insert_id": lastInsertId,
-			"operation_id": op.ID,
+			"operation_id":   op.ID,
 		})
 	}
 
