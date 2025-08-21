@@ -257,84 +257,34 @@ func GetGlobalSpecializedBuiltins() *SpecializedBuiltinFunctions {
 func InitializeBuiltinDispatcher() {
 	dispatcher := GetGlobalBuiltinDispatcher()
 	
-	// Core System Functions (commonly used, fast path enabled)
-	dispatcher.RegisterBuiltinFunction("len", lenFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("typeof", typeofFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("str", strFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("int", intFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("float", floatFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("print", printFunc, -1, false)
-	
-	// Type Conversion Functions
-	dispatcher.RegisterBuiltinFunction("char", charFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("rune", runeFunc, 1, false)
-	
-	// Basic Array/Collection Functions
-	dispatcher.RegisterBuiltinFunction("append", appendFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("range", rangeFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("slice", sliceFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("sort", sortFunc, 1, false)
-	
-	// String Manipulation Functions - Basic (commonly used)
-	dispatcher.RegisterBuiltinFunction("join", joinFunc, 2, true)
-	dispatcher.RegisterBuiltinFunction("split", splitFunc, 2, true)
-	dispatcher.RegisterBuiltinFunction("lower", lowerFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("upper", upperFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("contains", containsFunc, 2, true)
-	dispatcher.RegisterBuiltinFunction("substr", substrFunc, 3, false)
-	
-	// Array/Collection Methods - Advanced
-	dispatcher.RegisterBuiltinFunction("push", pushFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("pop", popFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("shift", shiftFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("unshift", unshiftFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("reverse", reverseFunc, 1, false)
-	
-	// Mathematical Functions - Basic (commonly used)
-	dispatcher.RegisterBuiltinFunction("abs", absFunc, 1, true)
-	dispatcher.RegisterBuiltinFunction("max", maxFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("min", minFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("pow", powFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("sqrt", sqrtFunc, 1, false)
-	
-	// File I/O Functions
-	dispatcher.RegisterBuiltinFunction("read_file", readFileFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("write_file", writeFileFunc, 2, false)
-	
-	// Functional Programming Functions
-	dispatcher.RegisterBuiltinFunction("map", mapFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("filter", filterFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("reduce", reduceFunc, 3, false)
-	
-	// System Functions
-	dispatcher.RegisterBuiltinFunction("import", importFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("exit", exitFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("input", inputFunc, -1, false)
-	
-	// Concurrent execution functions
-	dispatcher.RegisterBuiltinFunction("concurrent_map", concurrentMapFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("concurrent_filter", concurrentFilterFunc, 2, false)
-	dispatcher.RegisterBuiltinFunction("concurrent_reduce", concurrentReduceFunc, 3, false)
-	dispatcher.RegisterBuiltinFunction("parallel_execute", parallelExecuteFunc, -1, false)
-	
-	// Database Functions
-	dispatcher.RegisterBuiltinFunction("db_connect", dbConnectFunc, 6, false)
-	dispatcher.RegisterBuiltinFunction("db_connect_with_pool", dbConnectWithPoolFunc, 7, false)
-	dispatcher.RegisterBuiltinFunction("db_configure_pool", dbConfigurePoolFunc, 4, false)
-	dispatcher.RegisterBuiltinFunction("db_query", dbQueryFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("db_execute", dbExecuteFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("db_execute_batch", dbExecuteBatchFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("stream_tables", streamTablesFunc, 3, false)
-	dispatcher.RegisterBuiltinFunction("db_stop_stream", dbStopStreamFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("db_close", dbCloseFunc, 1, false)
-	
-	// Async processing functions
-	dispatcher.RegisterBuiltinFunction("db_execute_async", dbExecuteAsyncFunc, -1, false)
-	dispatcher.RegisterBuiltinFunction("db_get_async_status", dbGetAsyncStatusFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("db_cancel_async", dbCancelAsyncFunc, 1, false)
-	dispatcher.RegisterBuiltinFunction("db_list_async_operations", dbListAsyncOperationsFunc, 0, false)
-	dispatcher.RegisterBuiltinFunction("db_cleanup_async_operations", dbCleanupAsyncOperationsFunc, 0, false)
-	
-	// Note: Additional functions can be registered as needed
-	// This covers the most commonly used builtin functions with appropriate fast path settings
+	// Register all builtin functions from the builtins map
+	for name, builtin := range builtins {
+		// Determine argument count and fast path based on function characteristics
+		argCount := -1 // Default to variadic
+		fastPath := false
+		
+		// Set specific argument counts and fast path for commonly used functions
+		switch name {
+		case "len", "typeof", "str", "int", "float", "char", "rune", "abs", "sqrt":
+			argCount = 1
+			fastPath = true
+		case "join", "split", "contains", "pow", "max", "min", "push", "unshift":
+			argCount = 2
+			fastPath = true
+		case "substr", "reduce":
+			argCount = 3
+			fastPath = false
+		case "lower", "upper", "reverse", "pop", "shift", "sort", "trim", "reverse_str":
+			argCount = 1
+			fastPath = true
+		case "replace", "starts_with", "ends_with", "repeat", "find", "index_of", "last_index_of":
+			argCount = 2
+			fastPath = false
+		case "str_pad":
+			argCount = 3
+			fastPath = false
+		}
+		
+		dispatcher.RegisterBuiltinFunction(name, builtin.Function, argCount, fastPath)
+	}
 }

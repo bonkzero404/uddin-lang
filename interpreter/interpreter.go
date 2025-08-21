@@ -820,7 +820,7 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 				return value, true
 			}
 		}
-		
+
 		// Check builtin dispatcher for functions not in environment
 		dispatcher := GetGlobalBuiltinDispatcher()
 		if _, exists := dispatcher.dispatchTable[name]; exists {
@@ -836,7 +836,7 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 			}
 			return builtinFunc, true
 		}
-		
+
 		return nil, false
 	}
 
@@ -847,7 +847,7 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 			return v, true
 		}
 	}
-	
+
 	// Check builtin dispatcher for functions not in environment
 	dispatcher := GetGlobalBuiltinDispatcher()
 	if _, exists := dispatcher.dispatchTable[name]; exists {
@@ -863,7 +863,7 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 		}
 		return builtinFunc, true
 	}
-	
+
 	return nil, false
 }
 
@@ -1247,9 +1247,6 @@ func newInterpreter(config *Config) *interpreter {
 	InitializeBuiltinDispatcher()
 
 	interp.pushScope(make(map[string]Value))
-	for k, v := range builtins {
-		interp.assign(k, v)
-	}
 
 	// Add mathematical constants
 	interp.assign("PI", Value(math.Pi))
