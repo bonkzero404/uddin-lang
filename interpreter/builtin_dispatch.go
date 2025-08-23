@@ -36,7 +36,7 @@ var globalBuiltinDispatcher = NewBuiltinFunctionDispatcher()
 func (bfd *BuiltinFunctionDispatcher) RegisterBuiltinFunction(name string, fn func(*interpreter, Position, []Value) Value, argCount int, fastPath bool) {
 	bfd.mutex.Lock()
 	defer bfd.mutex.Unlock()
-	
+
 	index := len(bfd.functions)
 	bfd.dispatchTable[name] = index
 	bfd.functions = append(bfd.functions, BuiltinFunctionEntry{
@@ -55,15 +55,15 @@ func (bfd *BuiltinFunctionDispatcher) DispatchBuiltinFunction(name string, inter
 		bfd.mutex.RUnlock()
 		return nil, false
 	}
-	
+
 	entry := bfd.functions[index]
 	bfd.mutex.RUnlock()
-	
+
 	// Update call count with write lock
 	bfd.mutex.Lock()
 	bfd.callCounts[name]++
 	bfd.mutex.Unlock()
-	
+
 	// Validate argument count if specified
 	if entry.ArgCount >= 0 && len(args) != entry.ArgCount {
 		plural := ""
@@ -72,7 +72,7 @@ func (bfd *BuiltinFunctionDispatcher) DispatchBuiltinFunction(name string, inter
 		}
 		panic(typeError(pos, "%s() requires %d arg%s, got %d", name, entry.ArgCount, plural, len(args)))
 	}
-	
+
 	// Call the function
 	result := entry.Function(interp, pos, args)
 	return result, true
@@ -89,17 +89,17 @@ func (bfd *BuiltinFunctionDispatcher) GetCallCount(name string) int64 {
 func (bfd *BuiltinFunctionDispatcher) GetMostCalledFunctions(limit int) []string {
 	bfd.mutex.RLock()
 	defer bfd.mutex.RUnlock()
-	
+
 	type funcCount struct {
 		name  string
 		count int64
 	}
-	
+
 	funcs := make([]funcCount, 0, len(bfd.callCounts))
 	for name, count := range bfd.callCounts {
 		funcs = append(funcs, funcCount{name, count})
 	}
-	
+
 	// Simple bubble sort for small datasets
 	for i := 0; i < len(funcs)-1; i++ {
 		for j := 0; j < len(funcs)-i-1; j++ {
@@ -108,12 +108,12 @@ func (bfd *BuiltinFunctionDispatcher) GetMostCalledFunctions(limit int) []string
 			}
 		}
 	}
-	
+
 	result := make([]string, 0, limit)
 	for i := 0; i < len(funcs) && i < limit; i++ {
 		result = append(result, funcs[i].name)
 	}
-	
+
 	return result
 }
 
@@ -146,21 +146,21 @@ func (avc *ArgumentValidationCache) ValidateArguments(funcName string, argTypes 
 	for _, argType := range argTypes {
 		cacheKey += argType + ","
 	}
-	
+
 	avc.mutex.RLock()
 	result, exists := avc.cache[cacheKey]
 	avc.mutex.RUnlock()
-	
+
 	if exists {
 		return result
 	}
-	
+
 	// Perform validation (simplified)
 	valid := true // In real implementation, this would contain validation logic
-	
+
 	avc.mutex.Lock()
 	defer avc.mutex.Unlock()
-	
+
 	// Check cache size limit
 	if len(avc.cache) >= avc.maxSize {
 		// Clear half the cache
@@ -173,7 +173,7 @@ func (avc *ArgumentValidationCache) ValidateArguments(funcName string, argTypes 
 			}
 		}
 	}
-	
+
 	avc.cache[cacheKey] = valid
 	return valid
 }
@@ -256,19 +256,19 @@ func GetGlobalSpecializedBuiltins() *SpecializedBuiltinFunctions {
 // InitializeBuiltinDispatcher initializes the builtin function dispatcher with all builtin functions
 func InitializeBuiltinDispatcher() {
 	dispatcher := GetGlobalBuiltinDispatcher()
-	
+
 	// Register all builtin functions from the builtins map
 	for name, builtin := range builtins {
 		// Determine argument count and fast path based on function characteristics
 		argCount := -1 // Default to variadic
 		fastPath := false
-		
+
 		// Set specific argument counts and fast path for commonly used functions
 		switch name {
 		case "len", "typeof", "str", "int", "float", "char", "rune", "abs", "sqrt":
 			argCount = 1
 			fastPath = true
-		case "join", "split", "contains", "pow", "max", "min", "push", "unshift":
+		case "join", "split", "contains", "pow", "push", "unshift":
 			argCount = 2
 			fastPath = true
 		case "substr", "reduce":
@@ -277,14 +277,17 @@ func InitializeBuiltinDispatcher() {
 		case "lower", "upper", "reverse", "pop", "shift", "sort", "trim", "reverse_str":
 			argCount = 1
 			fastPath = true
-		case "replace", "starts_with", "ends_with", "repeat", "find", "index_of", "last_index_of":
+		case "starts_with", "ends_with", "repeat", "find", "index_of", "last_index_of":
 			argCount = 2
+			fastPath = false
+		case "replace":
+			argCount = 3
 			fastPath = false
 		case "str_pad":
 			argCount = 3
 			fastPath = false
 		}
-		
+
 		dispatcher.RegisterBuiltinFunction(name, builtin.Function, argCount, fastPath)
 	}
 }
