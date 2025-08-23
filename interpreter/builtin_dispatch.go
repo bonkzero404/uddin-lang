@@ -265,6 +265,9 @@ func InitializeBuiltinDispatcher() {
 
 		// Set specific argument counts and fast path for commonly used functions
 		switch name {
+        case "print":
+			argCount = -1
+			fastPath = true
 		case "len", "typeof", "str", "int", "float", "char", "rune", "abs", "sqrt":
 			argCount = 1
 			fastPath = true
@@ -285,6 +288,25 @@ func InitializeBuiltinDispatcher() {
 			fastPath = false
 		case "str_pad":
 			argCount = 3
+			fastPath = false
+		// Database functions
+		case "db_execute_batch":
+			argCount = 2 // connection, operations_array
+			fastPath = false
+		case "db_execute_async":
+			argCount = -1 // variadic: connection, query, params...
+			fastPath = false
+		case "db_get_async_status":
+			argCount = 1 // operation_id
+			fastPath = false
+		case "db_cancel_async":
+			argCount = 1 // operation_id
+			fastPath = false
+		case "db_list_async_operations":
+			argCount = 0 // no arguments
+			fastPath = false
+		case "db_cleanup_async_operations":
+			argCount = -1 // optional max_age parameter
 			fastPath = false
 		}
 
