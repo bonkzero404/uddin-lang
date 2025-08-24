@@ -1,6 +1,8 @@
 package interpreter
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // detectMemoryLeaksFunc implements the detect_memory_leaks() built-in function
 // detect_memory_leaks() -> array
@@ -21,7 +23,8 @@ func detectMemoryLeaksFunc(interp *interpreter, pos Position, args []Value) Valu
 		tracker.mutex.RUnlock()
 
 		leakObj := make(map[string]Value)
-		leakObj["pointer"] = Value(fmt.Sprintf("%p", ptr))
+		// #nosec G103 - Intentional uintptr to unsafe.Pointer conversion for debugging output
+		leakObj["pointer"] = Value(fmt.Sprintf("%v", ptr))
 		if exists && alloc != nil {
 			leakObj["size"] = Value(alloc.size)
 			leakObj["type"] = Value(alloc.type_)
