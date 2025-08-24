@@ -90,6 +90,12 @@ func GetGlobalMemoryLayoutConfig() *MemoryLayoutConfig {
 	return globalMemoryLayoutConfig
 }
 
+// ResetGlobalMemoryLayoutConfig resets the global memory layout configuration to default
+// This function should be called in test cleanup to prevent test interference
+func ResetGlobalMemoryLayoutConfig() {
+	globalMemoryLayoutConfig = DefaultMemoryLayoutConfig()
+}
+
 // IsTaggedValuesEnabled returns true if TaggedValue optimization is enabled
 func IsTaggedValuesEnabled() bool {
 	return globalMemoryLayoutConfig.EnableTaggedValues

@@ -973,10 +973,11 @@ func GetGlobalTaggedValuePool() *SafeTaggedValuePool {
 func CreateTaggedValue(value Value) *SafeTaggedValue {
 	tv, err := CreateSafeTaggedValue(value)
 	if err != nil {
-		// For compatibility, return a basic tagged value on error
+		// For compatibility, return a basic tagged value on error with proper refCount
 		return &SafeTaggedValue{
-			Type: TaggedNull,
-			Data: 0,
+			Type:     TaggedNull,
+			Data:     0,
+			refCount: 1, // Set refCount to 1 for compatibility
 		}
 	}
 	return tv
@@ -986,10 +987,11 @@ func CreateTaggedValue(value Value) *SafeTaggedValue {
 func (stvp *SafeTaggedValuePool) GetTaggedValue() *SafeTaggedValue {
 	tv, err := stvp.GetSafeTaggedValue()
 	if err != nil {
-		// For compatibility, return a basic tagged value on error
+		// For compatibility, return a basic tagged value on error with proper refCount
 		return &SafeTaggedValue{
-			Type: TaggedNull,
-			Data: 0,
+			Type:     TaggedNull,
+			Data:     0,
+			refCount: 1, // Set refCount to 1 for compatibility
 		}
 	}
 	return tv
@@ -1311,10 +1313,13 @@ func CleanupMemoryLayout() error {
 	atomic.StoreInt64(&globalMemoryTracker.totalFreed, 0)
 	globalMemoryTracker.mutex.Unlock()
 
-	// Reset pool counters
+	// Reset pool counters only, keep the pool instances for reuse
+	globalSafeTaggedValuePool.mutex.Lock()
 	atomic.StoreInt64(&globalSafeTaggedValuePool.created, 0)
 	atomic.StoreInt64(&globalSafeTaggedValuePool.reused, 0)
+	atomic.StoreInt64(&globalSafeTaggedValuePool.active, 0)
 	atomic.StoreInt32(&globalSafeTaggedValuePool.currSize, 0)
+	globalSafeTaggedValuePool.mutex.Unlock()
 
 	// Force garbage collection
 	runtime.GC()

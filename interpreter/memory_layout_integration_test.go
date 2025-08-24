@@ -7,6 +7,11 @@ import (
 
 // TestMemoryLayoutIntegration tests the integration of memory layout optimizations
 func TestMemoryLayoutIntegration(t *testing.T) {
+	// Ensure cleanup after test to prevent interference with other tests
+	defer func() {
+		ResetGlobalMemoryLayoutConfig()
+		CleanupMemoryLayout()
+	}()
 	// Test with default configuration (memory layout disabled)
 	t.Run("DefaultConfig", func(t *testing.T) {
 		config := DefaultConfig()
@@ -137,6 +142,12 @@ func TestMemoryLayoutPerformance(t *testing.T) {
 		t.Skip("Skipping performance test in short mode")
 	}
 	
+	// Ensure cleanup after test to prevent interference with other tests
+	defer func() {
+		ResetGlobalMemoryLayoutConfig()
+		CleanupMemoryLayout()
+	}()
+	
 	program := `
 		// Create arrays and maps
 		arr = []
@@ -226,6 +237,11 @@ func BenchmarkMemoryLayoutDefault(b *testing.B) {
 
 // BenchmarkMemoryLayoutExperimental benchmarks interpreter with experimental memory layout
 func BenchmarkMemoryLayoutExperimental(b *testing.B) {
+	// Ensure cleanup after benchmark to prevent interference with other tests
+	defer func() {
+		ResetGlobalMemoryLayoutConfig()
+		CleanupMemoryLayout()
+	}()
 	program := `
 		arr = []
 		for (i in range(100)):
