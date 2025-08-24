@@ -629,11 +629,11 @@ func tcpReadFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Try to get connection from either "socket" or "_conn" property
 	var conn net.Conn
-	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
-		if c, ok := socketObj["_conn"].(net.Conn); ok {
+	if socketObj, isSocketObj := connObj["socket"].(map[string]Value); isSocketObj {
+		if c, isConn := socketObj["_conn"].(net.Conn); isConn {
 			conn = c
 		}
-	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+	} else if c, isConn := connObj["_conn"].(net.Conn); isConn {
 		conn = c
 	}
 	if conn == nil {
@@ -668,11 +668,11 @@ func tcpWriteFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Try to get connection from either "socket" or "_conn" property
 	var conn net.Conn
-	if socketObj, ok := connObj["socket"].(map[string]Value); ok {
-		if c, ok := socketObj["_conn"].(net.Conn); ok {
+	if socketObj, isSocketObj := connObj["socket"].(map[string]Value); isSocketObj {
+		if c, isConn := socketObj["_conn"].(net.Conn); isConn {
 			conn = c
 		}
-	} else if c, ok := connObj["_conn"].(net.Conn); ok {
+	} else if c, isConn := connObj["_conn"].(net.Conn); isConn {
 		conn = c
 	}
 	if conn == nil {
