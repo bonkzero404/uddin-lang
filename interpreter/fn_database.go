@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"strings"
 	"sync"
 	"time"
@@ -33,29 +34,7 @@ type ConnectionPool struct {
 	Mutex  sync.RWMutex
 }
 
-type silentLogger struct{}
 
-func (l *silentLogger) Debug(args ...any)                 {}
-func (l *silentLogger) Debugf(format string, args ...any) {}
-func (l *silentLogger) Debugln(args ...any)               {}
-func (l *silentLogger) Info(args ...any)                  {}
-func (l *silentLogger) Infof(format string, args ...any)  {}
-func (l *silentLogger) Infoln(args ...any)                {}
-func (l *silentLogger) Warn(args ...any)                  {}
-func (l *silentLogger) Warnf(format string, args ...any)  {}
-func (l *silentLogger) Warnln(args ...any)                {}
-func (l *silentLogger) Error(args ...any)                 {}
-func (l *silentLogger) Errorf(format string, args ...any) {}
-func (l *silentLogger) Errorln(args ...any)               {}
-func (l *silentLogger) Fatal(args ...any)                 {}
-func (l *silentLogger) Fatalf(format string, args ...any) {}
-func (l *silentLogger) Fatalln(args ...any)               {}
-func (l *silentLogger) Panic(args ...any)                 {}
-func (l *silentLogger) Panicf(format string, args ...any) {}
-func (l *silentLogger) Panicln(args ...any)               {}
-func (l *silentLogger) Print(args ...any)                 {}
-func (l *silentLogger) Printf(format string, args ...any) {}
-func (l *silentLogger) Println(args ...any)               {}
 
 // NewConnectionPool creates a new connection pool
 func NewConnectionPool(driver, dsn string, config ConnectionPoolConfig) (*ConnectionPool, error) {
@@ -629,8 +608,8 @@ func streamTablesFunc(interp *interpreter, pos Position, args []Value) Value {
 								if colName, ok := colVal.(string); ok {
 									columns = append(columns, colName)
 								} else {
-									panic(typeError(pos, fmt.Sprintf("stream_tables() column array element %d must be a string", i)))
-								}
+						panic(typeError(pos, "stream_tables() column array element %d must be a string", i))
+					}
 							}
 							tableColumns = columns
 						} else {
@@ -663,7 +642,7 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 				if colName, ok := colVal.(string); ok {
 					columns = append(columns, colName)
 				} else {
-					panic(typeError(pos, fmt.Sprintf("stream_tables() column array element %d must be a string", i)))
+					panic(typeError(pos, "stream_tables() column array element %d must be a string", i))
 				}
 			}
 		} else {
@@ -877,7 +856,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 	for i, tableVal := range tableArray {
 		tableName, ok := tableVal.(string)
 		if !ok {
-			panic(typeError(pos, fmt.Sprintf("stream_tables() table array element %d must be a string", i)))
+			panic(typeError(pos, "stream_tables() table array element %d must be a string", i))
 		}
 		tableNames = append(tableNames, tableName)
 	}
@@ -1440,7 +1419,7 @@ func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos P
 		Port:     uint16(port),
 		User:     username,
 		Password: password,
-		Logger:   &silentLogger{}, // Use our custom silent logger implementation
+		Logger:   slog.New(slog.NewTextHandler(nil, &slog.HandlerOptions{Level: slog.LevelError + 1})), // Silent logger
 	}
 
 	// Create binlog syncer
