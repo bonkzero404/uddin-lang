@@ -121,7 +121,11 @@ func TestTaggedValue_ToValue(t *testing.T) {
 			tv := CreateTaggedValue(test.input)
 			defer GetGlobalTaggedValuePool().PutTaggedValue(tv)
 			
-			result := tv.ToValue()
+			result, err := tv.ToValue()
+			if err != nil {
+				t.Errorf("ToValue failed: %v", err)
+				return
+			}
 			if result != test.expected {
 				t.Errorf("Expected %v, got %v", test.expected, result)
 			}
