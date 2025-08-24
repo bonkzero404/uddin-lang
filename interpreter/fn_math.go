@@ -785,7 +785,7 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Check memoization cache
 	// EXPERIMENTAL: Using experimental memoization for fibonacci function
 	memoKey := getMemoKey("fibonacci", args)
-	if cached, exists := interp.memoCache[memoKey]; exists {
+	if cached, exists := interp.getMemoValue(memoKey); exists {
 		return cached
 	}
 
@@ -802,7 +802,7 @@ func fibonacciFunc(interp *interpreter, pos Position, args []Value) Value {
 
 	// Store in memoization cache
 	// EXPERIMENTAL: Storing result in experimental memoization cache
-	interp.memoCache[memoKey] = result
+	interp.setMemoValue(memoKey, result)
 	return result
 }
 

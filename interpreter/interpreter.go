@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 // Value represents any runtime value in the language.
@@ -39,6 +40,7 @@ type interpreter struct {
 	currentPos Position
 	// Optimization caches
 	memoCache map[string]Value
+	productionMemoCache *ProductionMemoCache
 	// String builder pool for efficient memory allocation
 	stringBuilderPool sync.Pool
 	// Array pool for efficient memory allocation
@@ -613,13 +615,19 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Track function calls for performance monitoring
 	TrackOperation("function_call")
 
-	// Check optimized memoization cache for functions marked with memo
-	// EXPERIMENTAL: Memoization is experimental and may consume significant memory
+	// Check memoization cache for functions marked with memo
 	// Only cache functions that are explicitly memoized and return non-nil values
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized {
-		memoKey := OptimizedMemoKey(uf.Name, args)
-		if cached, exists := GetGlobalOptimizedMemoCache().Get(memoKey); exists {
-			return cached
+		if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
+			memoKey := FastHash(uf.Name, args)
+			if cached, exists := interp.productionMemoCache.Get(memoKey); exists {
+				return cached
+			}
+		} else {
+			memoKey := OptimizedMemoKey(uf.Name, args)
+			if cached, exists := GetGlobalOptimizedMemoCache().Get(memoKey); exists {
+				return cached
+			}
 		}
 	}
 
@@ -639,10 +647,14 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
 				// Cache the result for memoization only if function is marked as memoized and result is not nil
-				// EXPERIMENTAL: Memoization caching is experimental feature
 				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
-					memoKey := OptimizedMemoKey(uf.Name, args)
-					GetGlobalOptimizedMemoCache().Set(memoKey, ret)
+					if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
+						memoKey := FastHash(uf.Name, args)
+						interp.productionMemoCache.Set(memoKey, ret)
+					} else {
+						memoKey := OptimizedMemoKey(uf.Name, args)
+						GetGlobalOptimizedMemoCache().Set(memoKey, ret)
+					}
 				}
 			} else {
 				panic(r)
@@ -655,8 +667,13 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	// Cache the result for memoization only if function is marked as memoized and result is not nil
 	// This prevents caching functions with side effects that return nil
 	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && result != nil {
-		memoKey := OptimizedMemoKey(uf.Name, args)
-		GetGlobalOptimizedMemoCache().Set(memoKey, result)
+		if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
+			memoKey := FastHash(uf.Name, args)
+			interp.productionMemoCache.Set(memoKey, result)
+		} else {
+			memoKey := OptimizedMemoKey(uf.Name, args)
+			GetGlobalOptimizedMemoCache().Set(memoKey, result)
+		}
 	}
 
 	return result
@@ -716,6 +733,23 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 				}
 			}
 			return interp.callFunction(e.Function.Position(), f, args)
+		}
+		// Check if it's a function type wrapped in interface{} (from tagged values)
+		if interfaceVal, ok := function.(interface{}); ok {
+			if f, ok := interfaceVal.(functionType); ok {
+				args := []Value{}
+				for _, a := range e.Arguments {
+					args = SmartAppend(args, interp.evaluate(a))
+				}
+				if e.Ellipsis {
+					iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
+					args = args[:len(args)-1]
+					for iterator.HasNext() {
+						args = SmartAppend(args, iterator.Value())
+					}
+				}
+				return interp.callFunction(e.Function.Position(), f, args)
+			}
 		}
 		panic(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
 	case *Literal:
@@ -785,7 +819,20 @@ func (interp *interpreter) popScope() {
 func (interp *interpreter) assign(name string, value Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
-	interp.vars[len(interp.vars)-1][name] = value
+	
+	// Use tagged values if enabled for memory optimization
+	if IsTaggedValuesEnabled() {
+		if tv, err := CreateSafeTaggedValue(value); err == nil {
+			// Store the tagged value - creation is already tracked in CreateSafeTaggedValue
+			interp.vars[len(interp.vars)-1][name] = tv
+		} else {
+			// Fallback to regular value on error
+			interp.vars[len(interp.vars)-1][name] = value
+		}
+	} else {
+		interp.vars[len(interp.vars)-1][name] = value
+	}
+	
 	// Invalidate cache for this variable since it's been reassigned
 	if interp.variableLookupCache != nil {
 		interp.variableLookupCache.InvalidateVariable(name)
@@ -796,6 +843,23 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 	interp.mutex.RLock()
 	defer interp.mutex.RUnlock()
 
+	// Helper function to convert tagged value back to regular value
+	convertValue := func(v Value) Value {
+		if IsTaggedValuesEnabled() {
+			if tv, ok := v.(*SafeTaggedValue); ok {
+				if converted, err := tv.ToValue(); err == nil {
+					// Track reuse when converting back
+					atomic.AddInt64(&globalSafeTaggedValuePool.reused, 1)
+					return converted
+				} else {
+					// Return original value on conversion error
+					return v
+				}
+			}
+		}
+		return v
+	}
+
 	// Use variable lookup cache if enabled
 	if interp.variableLookupCache != nil {
 		// Check cache first
@@ -804,7 +868,7 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 			if cached.ScopeLevel < len(interp.vars) {
 				if value, found := interp.vars[cached.ScopeLevel][name]; found && safeValueEqual(value, cached.Value) {
 					interp.variableLookupCache.hits++
-					return cached.Value, true
+					return convertValue(cached.Value), true
 				}
 			}
 			// Cache is stale, remove it
@@ -817,7 +881,8 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 		for i := len(interp.vars) - 1; i >= 0; i-- {
 			if value, found := interp.vars[i][name]; found {
 				interp.variableLookupCache.CacheVariable(name, value, i)
-				return value, true
+				converted := convertValue(value)
+				return converted, true
 			}
 		}
 
@@ -844,7 +909,8 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 	for i := len(interp.vars) - 1; i >= 0; i-- {
 		thisVars := interp.vars[i]
 		if v, ok := thisVars[name]; ok {
-			return v, true
+			converted := convertValue(v)
+			return converted, true
 		}
 	}
 
@@ -1180,7 +1246,8 @@ func (interp *interpreter) executeStatement(s Statement) {
 		interp.mutex.RLock()
 		closure := interp.vars[len(interp.vars)-1]
 		interp.mutex.RUnlock()
-		interp.assign(s.Name, &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, closure, s.Memoized})
+		userFunc := &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, closure, s.Memoized}
+		interp.assign(s.Name, userFunc)
 	case *Return:
 		result := interp.evaluate(s.Result)
 		panic(returnResult{result, s.Position()})
@@ -1225,7 +1292,18 @@ func newInterpreter(config *Config) *interpreter {
 	}
 
 	// Initialize optimization caches
-	interp.memoCache = make(map[string]Value)
+	if config.Memoization != nil && config.Memoization.EnableMemoization {
+		if config.Memoization.UseProductionCache {
+			interp.productionMemoCache = NewProductionMemoCache(
+				config.Memoization.CacheSize,
+				config.Memoization.TTL,
+			)
+		} else {
+			interp.memoCache = make(map[string]Value)
+		}
+	} else {
+		interp.memoCache = make(map[string]Value)
+	}
 	interp.stringBuilderPool = sync.Pool{
 		New: func() any {
 			return &strings.Builder{}
@@ -1440,6 +1518,31 @@ func getMemoKey(funcName string, args []Value) string {
 		sb.WriteString(fmt.Sprintf("%v", arg))
 	}
 	return sb.String()
+}
+
+// getMemoValue retrieves a value from the appropriate memoization cache
+func (interp *interpreter) getMemoValue(key string) (Value, bool) {
+	if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
+		hashKey := FastHash(key, nil)
+		return interp.productionMemoCache.Get(hashKey)
+	}
+	if interp.memoCache != nil {
+		value, exists := interp.memoCache[key]
+		return value, exists
+	}
+	return nil, false
+}
+
+// setMemoValue stores a value in the appropriate memoization cache
+func (interp *interpreter) setMemoValue(key string, value Value) {
+	if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
+		hashKey := FastHash(key, nil)
+		interp.productionMemoCache.Set(hashKey, value)
+		return
+	}
+	if interp.memoCache != nil {
+		interp.memoCache[key] = value
+	}
 }
 
 // Map pool helpers

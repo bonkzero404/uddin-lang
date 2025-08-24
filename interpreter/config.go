@@ -3,7 +3,59 @@ package interpreter
 import (
 	"io"
 	"os"
+	"time"
 )
+
+// MemoizationConfig configures memoization behavior
+type MemoizationConfig struct {
+	// EnableMemoization enables or disables memoization globally
+	EnableMemoization bool
+
+	// CacheSize is the maximum number of entries in the memoization cache
+	CacheSize int
+
+	// TTL is the time-to-live for cache entries (0 means no expiration)
+	TTL time.Duration
+
+	// UseProductionCache determines whether to use ProductionMemoCache (true) or OptimizedMemoCache (false)
+	UseProductionCache bool
+
+	// CleanupInterval is the interval for cleaning up expired cache entries
+	CleanupInterval time.Duration
+}
+
+// DefaultMemoizationConfig returns default memoization configuration
+func DefaultMemoizationConfig() *MemoizationConfig {
+	return &MemoizationConfig{
+		EnableMemoization:   false, // Disabled by default for safety
+		CacheSize:          1000,
+		TTL:                5 * time.Minute,
+		UseProductionCache:  false, // Use experimental cache by default
+		CleanupInterval:     1 * time.Minute,
+	}
+}
+
+// StableMemoizationConfig returns stable memoization configuration for production
+func StableMemoizationConfig() *MemoizationConfig {
+	return &MemoizationConfig{
+		EnableMemoization:   true,
+		CacheSize:          5000,
+		TTL:                10 * time.Minute,
+		UseProductionCache:  true, // Use production cache for stability
+		CleanupInterval:     2 * time.Minute,
+	}
+}
+
+// ExperimentalMemoizationConfig returns experimental memoization configuration
+func ExperimentalMemoizationConfig() *MemoizationConfig {
+	return &MemoizationConfig{
+		EnableMemoization:   true,
+		CacheSize:          10000,
+		TTL:                15 * time.Minute,
+		UseProductionCache:  false, // Use experimental cache for testing
+		CleanupInterval:     30 * time.Second,
+	}
+}
 
 // Config allows you to configure the interpreter's interaction with the
 // outside world. This provides a way to customize the environment in which
@@ -36,6 +88,10 @@ type Config struct {
 	// MemoryLayout configures memory layout optimizations
 	// If nil, defaults to DefaultMemoryLayoutConfig()
 	MemoryLayout *MemoryLayoutConfig
+
+	// Memoization configures memoization behavior
+	// If nil, defaults to DefaultMemoizationConfig()
+	Memoization *MemoizationConfig
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -48,6 +104,7 @@ func DefaultConfig() *Config {
 		Exit:         os.Exit,
 		IsUnitTest:   false,
 		MemoryLayout: DefaultMemoryLayoutConfig(),
+		Memoization:  DefaultMemoizationConfig(),
 	}
 }
 
@@ -61,6 +118,7 @@ func TestConfig() *Config {
 		Exit:         func(int) {}, // No-op exit function for tests
 		IsUnitTest:   true,
 		MemoryLayout: DefaultMemoryLayoutConfig(),
+		Memoization:  DefaultMemoizationConfig(),
 	}
 }
 
@@ -107,6 +165,7 @@ func StableConfig() *Config {
 		Exit:         os.Exit,
 		IsUnitTest:   false,
 		MemoryLayout: StableMemoryLayoutConfig(),
+		Memoization:  StableMemoizationConfig(),
 	}
 }
 
@@ -123,5 +182,6 @@ func ExperimentalConfig() *Config {
 		Exit:         os.Exit,
 		IsUnitTest:   false,
 		MemoryLayout: ExperimentalMemoryLayoutConfig(),
+		Memoization:  ExperimentalMemoizationConfig(),
 	}
 }

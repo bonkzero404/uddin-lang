@@ -11,6 +11,12 @@ type MemoryLayoutConfig struct {
 	EnableCacheFriendlyStructures bool
 	// EnableVariableLookupCache enables variable lookup caching for performance
 	EnableVariableLookupCache bool
+	// EnableMemoryLeakDetection enables automatic memory leak detection
+	EnableMemoryLeakDetection bool
+	// MemoryLeakDetectionInterval sets the interval (in seconds) for periodic memory leak detection
+	MemoryLeakDetectionInterval int
+	// AutoCleanupMemoryLeaks enables automatic cleanup of detected memory leaks
+	AutoCleanupMemoryLeaks bool
 	// TaggedValuePoolSize sets the initial size of the TaggedValue pool
 	TaggedValuePoolSize int
 	// MaxStringCacheSize sets the maximum number of strings to cache globally
@@ -23,13 +29,16 @@ type MemoryLayoutConfig struct {
 // By default, memory layout optimizations are disabled for backward compatibility
 func DefaultMemoryLayoutConfig() *MemoryLayoutConfig {
 	return &MemoryLayoutConfig{
-		EnableTaggedValues:            false,
-		EnableCompactEnvironment:      false,
-		EnableCacheFriendlyStructures: false,
-		EnableVariableLookupCache:     false,
-		TaggedValuePoolSize:           1000,
-		MaxStringCacheSize:            10000,
-		VariableLookupCacheSize:       500,
+		EnableTaggedValues:              false,
+		EnableCompactEnvironment:        false,
+		EnableCacheFriendlyStructures:   false,
+		EnableVariableLookupCache:       false,
+		EnableMemoryLeakDetection:       false,
+		MemoryLeakDetectionInterval:     60, // 60 seconds
+		AutoCleanupMemoryLeaks:          false,
+		TaggedValuePoolSize:             1000,
+		MaxStringCacheSize:              10000,
+		VariableLookupCacheSize:         500,
 	}
 }
 
@@ -37,13 +46,16 @@ func DefaultMemoryLayoutConfig() *MemoryLayoutConfig {
 // These optimizations are production-ready and thread-safe
 func StableMemoryLayoutConfig() *MemoryLayoutConfig {
 	return &MemoryLayoutConfig{
-		EnableTaggedValues:            true,  // Production-ready
-		EnableCompactEnvironment:      true,  // Production-ready
-		EnableCacheFriendlyStructures: true,  // Production-ready
-		EnableVariableLookupCache:     false, // Still experimental
-		TaggedValuePoolSize:           1000,
-		MaxStringCacheSize:            10000,
-		VariableLookupCacheSize:       500,
+		EnableTaggedValues:              true,  // Production-ready
+		EnableCompactEnvironment:        true,  // Production-ready
+		EnableCacheFriendlyStructures:   true,  // Production-ready
+		EnableVariableLookupCache:       false, // Still experimental
+		EnableMemoryLeakDetection:       true,  // Production-ready
+		MemoryLeakDetectionInterval:     300,   // 5 minutes for production
+		AutoCleanupMemoryLeaks:          true,  // Safe automatic cleanup
+		TaggedValuePoolSize:             1000,
+		MaxStringCacheSize:              10000,
+		VariableLookupCacheSize:         500,
 	}
 }
 
@@ -52,13 +64,16 @@ func StableMemoryLayoutConfig() *MemoryLayoutConfig {
 // WARNING: Not compatible with concurrent functions and may cause thread safety issues
 func ExperimentalMemoryLayoutConfig() *MemoryLayoutConfig {
 	return &MemoryLayoutConfig{
-		EnableTaggedValues:            true,
-		EnableCompactEnvironment:      true,
-		EnableCacheFriendlyStructures: true,
-		EnableVariableLookupCache:     true, // Experimental feature
-		TaggedValuePoolSize:           1000,
-		MaxStringCacheSize:            10000,
-		VariableLookupCacheSize:       500,
+		EnableTaggedValues:              true,
+		EnableCompactEnvironment:        true,
+		EnableCacheFriendlyStructures:   true,
+		EnableVariableLookupCache:       true, // Experimental feature
+		EnableMemoryLeakDetection:       true, // Experimental aggressive detection
+		MemoryLeakDetectionInterval:     30,   // 30 seconds for aggressive testing
+		AutoCleanupMemoryLeaks:          true, // Experimental automatic cleanup
+		TaggedValuePoolSize:             1000,
+		MaxStringCacheSize:              10000,
+		VariableLookupCacheSize:         500,
 	}
 }
 
@@ -98,4 +113,19 @@ func IsVariableLookupCacheEnabled() bool {
 // GetVariableLookupCacheSize returns the configured variable lookup cache size
 func GetVariableLookupCacheSize() int {
 	return globalMemoryLayoutConfig.VariableLookupCacheSize
+}
+
+// IsMemoryLeakDetectionEnabled returns true if memory leak detection is enabled
+func IsMemoryLeakDetectionEnabled() bool {
+	return globalMemoryLayoutConfig.EnableMemoryLeakDetection
+}
+
+// GetMemoryLeakDetectionInterval returns the configured memory leak detection interval in seconds
+func GetMemoryLeakDetectionInterval() int {
+	return globalMemoryLayoutConfig.MemoryLeakDetectionInterval
+}
+
+// IsAutoCleanupMemoryLeaksEnabled returns true if automatic cleanup of memory leaks is enabled
+func IsAutoCleanupMemoryLeaksEnabled() bool {
+	return globalMemoryLayoutConfig.AutoCleanupMemoryLeaks
 }

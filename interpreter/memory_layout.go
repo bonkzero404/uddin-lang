@@ -356,7 +356,7 @@ func (stvp *SafeTaggedValuePool) cleanupTaggedValueInternal(tv *SafeTaggedValue)
 	case TaggedString:
 		// String cleanup is handled by global string store cleanup
 		// But we still validate the index
-		if tv.Data < 0 {
+		if tv.Data <= 0 {
 			return &MemoryError{"invalid string index during cleanup"}
 		}
 	case TaggedNull, TaggedBool, TaggedInt:
@@ -500,6 +500,7 @@ func CreateSafeTaggedValue(value Value) (*SafeTaggedValue, error) {
 			}
 		})
 	case functionType:
+		// Store function types as TaggedFunction with proper handling
 		tv.Type = TaggedFunction
 		// Allocate memory for function and track it
 		funcPtr := new(functionType)
@@ -642,11 +643,36 @@ func (tv *SafeTaggedValue) ToValue() (Value, error) {
 		if !globalMemoryTracker.isValidPointer(tv.Data) {
 			return nil, &MemoryError{"invalid function pointer in tagged value"}
 		}
+		// Convert back from functionType pointer
 		funcPtr, err := safeFunctionPtrFromUintptr(tv.Data)
 		if err != nil {
 			return nil, err
 		}
+		if funcPtr == nil {
+			return nil, &MemoryError{"null function pointer"}
+		}
+		// Return the function value directly
 		return *funcPtr, nil
+	case TaggedOther:
+		// Handle function types stored as TaggedOther
+		if tv.Data == 0 {
+			return nil, nil
+		}
+		// Validate pointer before dereferencing
+		if !globalMemoryTracker.isValidPointer(tv.Data) {
+			return nil, &MemoryError{"invalid other type pointer in tagged value"}
+		}
+		// Convert back from interface{} pointer
+		unsafePtr, err := safeUintptrToPointer(tv.Data, "other")
+		if err != nil {
+			return nil, err
+		}
+		interfacePtr := (*interface{})(unsafePtr)
+		if interfacePtr == nil {
+			return nil, &MemoryError{"null other type interface pointer"}
+		}
+		// Return the stored value directly
+		return *interfacePtr, nil
 	default:
 		return nil, &MemoryError{"unknown tagged value type: " + string(rune(tv.Type))}
 	}
@@ -1161,6 +1187,20 @@ func simpleHash(s string) uint32 {
 
 // Cleanup functions for graceful shutdown
 func CleanupMemoryLayout() error {
+	// Only perform memory leak detection if enabled
+	if IsMemoryLeakDetectionEnabled() {
+		leaks := globalMemoryTracker.detectMemoryLeaks()
+		if len(leaks) > 0 {
+			// Only auto-cleanup if enabled in configuration
+			if IsAutoCleanupMemoryLeaksEnabled() {
+				if err := globalMemoryTracker.forceCleanupLeaks(); err != nil {
+					// Log error but continue with cleanup
+					// In a production system, you might want to log this properly
+				}
+			}
+		}
+	}
+
 	// Cleanup string store
 	globalSafeStringMutex.Lock()
 	globalSafeStringStore = make(map[int]string)
@@ -1178,6 +1218,10 @@ func CleanupMemoryLayout() error {
 	atomic.StoreInt64(&globalSafeTaggedValuePool.created, 0)
 	atomic.StoreInt64(&globalSafeTaggedValuePool.reused, 0)
 	atomic.StoreInt32(&globalSafeTaggedValuePool.currSize, 0)
+
+	// Force garbage collection
+	runtime.GC()
+	runtime.GC() // Double GC for better cleanup
 
 	return nil
 }

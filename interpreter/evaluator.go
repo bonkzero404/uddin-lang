@@ -240,7 +240,35 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 		*e.stats = interp.stats // Update stats
 		return result
 	default:
-		panic(typeError(node.Position(), "object is not callable: %T", function))
+		// Check if it's a function type wrapped in interface{} (from tagged values)
+		if interfaceVal, ok := function.(interface{}); ok {
+			if userFn, ok := interfaceVal.(*userFunction); ok {
+				return e.callUserFunction(userFn, node.Position(), args)
+			}
+			if builtinFn, ok := interfaceVal.(builtinFunction); ok {
+				// Try builtin dispatcher first for optimized dispatch
+				dispatcher := GetGlobalBuiltinDispatcher()
+				if result, dispatched := dispatcher.DispatchBuiltinFunction(builtinFn.name(), e.interp, node.Position(), args); dispatched {
+					e.stats.BuiltinCalls++
+					return result
+				}
+				
+				// Fallback to original method if not in dispatcher
+				interp := &interpreter{
+					vars:       e.env.vars,
+					args:       e.env.args,
+					stdin:      e.env.stdin,
+					stdout:     e.env.stdout,
+					exit:       e.env.exit,
+					stats:      *e.stats,
+					inUnitTest: e.env.inUnitTest,
+				}
+				result := builtinFn.call(interp, node.Position(), args)
+				*e.stats = interp.stats // Update stats
+				return result
+			}
+		}
+		panic(typeError(node.Position(), "can't call non-function type %s", typeName(function)))
 	}
 }
 
@@ -332,10 +360,8 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 	// EXPERIMENTAL: Memoization is experimental and may consume significant memory
 	if fn.Name != "" && fn.Memoized {
 		memoKey := getMemoKey(fn.Name, args)
-		if e.interp.memoCache != nil {
-			if cached, exists := e.interp.memoCache[memoKey]; exists {
-				return cached
-			}
+		if cached, exists := e.interp.getMemoValue(memoKey); exists {
+			return cached
 		}
 	}
 
@@ -375,9 +401,9 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 				result = ret.value
 				// Cache the result for memoized functions
 				// EXPERIMENTAL: Storing result in experimental memoization cache
-				if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
+				if fn.Name != "" && fn.Memoized && result != nil {
 					memoKey := getMemoKey(fn.Name, args)
-					e.interp.memoCache[memoKey] = result
+					e.interp.setMemoValue(memoKey, result)
 				}
 			} else {
 				panic(r) // Re-panic other errors
@@ -395,15 +421,16 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 		stats:      *e.stats,
 		inUnitTest: e.env.inUnitTest,
 		memoCache:  e.interp.memoCache, // Share memo cache
+		productionMemoCache: e.interp.productionMemoCache, // Share production memo cache
 	}
 	interp.executeBlock(fn.Body)
 	*e.stats = interp.stats // Update stats
 
 	// Cache the result for memoized functions
 	// EXPERIMENTAL: Storing result in experimental memoization cache
-	if fn.Name != "" && fn.Memoized && result != nil && e.interp.memoCache != nil {
+	if fn.Name != "" && fn.Memoized && result != nil {
 		memoKey := getMemoKey(fn.Name, args)
-		e.interp.memoCache[memoKey] = result
+		e.interp.setMemoValue(memoKey, result)
 	}
 
 	return result // Will be nil if no explicit return

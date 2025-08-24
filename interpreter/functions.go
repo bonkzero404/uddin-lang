@@ -414,9 +414,14 @@ var builtins = map[string]builtinFunction{
 	"getcwd":           {getcwdFunc, "getcwd"},
 	"chdir":            {chdirFunc, "chdir"},
 
-	// Concurrent execution functions
+	// Concurrent Processing Functions
 	"concurrent_map":    {concurrentMapFunc, "concurrent_map"},
 	"concurrent_filter": {concurrentFilterFunc, "concurrent_filter"},
 	"concurrent_reduce": {concurrentReduceFunc, "concurrent_reduce"},
 	"parallel_execute":  {parallelExecuteFunc, "parallel_execute"},
+
+	// Memory Management Functions
+	"detect_memory_leaks": {detectMemoryLeaksFunc, "detect_memory_leaks"},
+	"force_cleanup_leaks": {forceCleanupLeaksFunc, "force_cleanup_leaks"},
+	"get_memory_stats":    {getMemoryStatsFunc, "get_memory_stats"},
 }

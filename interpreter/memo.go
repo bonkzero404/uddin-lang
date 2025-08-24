@@ -1,9 +1,11 @@
 package interpreter
 
 import (
+	"container/list"
 	"hash/fnv"
 	"strings"
 	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -29,6 +31,176 @@ func NewOptimizedMemoCache(maxSize int) *OptimizedMemoCache {
 // Global optimized memo cache
 // EXPERIMENTAL: Global memoization cache for experimental function caching
 var globalOptimizedMemoCache = NewOptimizedMemoCache(10000)
+
+// ProductionMemoCache provides a production-ready memoization cache with LRU eviction and TTL support
+type ProductionMemoCache struct {
+	cache    map[uint64]*cacheEntry
+	lruList  *list.List
+	mutex    sync.RWMutex
+	maxSize  int
+	ttl      time.Duration
+	enabled  bool
+}
+
+// cacheEntry represents a single cache entry with metadata
+type cacheEntry struct {
+	key       uint64
+	value     Value
+	createdAt time.Time
+	lruNode   *list.Element
+}
+
+// NewProductionMemoCache creates a new production-ready memo cache
+func NewProductionMemoCache(maxSize int, ttl time.Duration) *ProductionMemoCache {
+	return &ProductionMemoCache{
+		cache:   make(map[uint64]*cacheEntry, maxSize/4),
+		lruList: list.New(),
+		maxSize: maxSize,
+		ttl:     ttl,
+		enabled: true,
+	}
+}
+
+// Get retrieves a value from the cache with TTL check
+func (pmc *ProductionMemoCache) Get(key uint64) (Value, bool) {
+	if !pmc.enabled {
+		return nil, false
+	}
+
+	pmc.mutex.Lock()
+	defer pmc.mutex.Unlock()
+
+	entry, exists := pmc.cache[key]
+	if !exists {
+		return nil, false
+	}
+
+	// Check TTL expiration
+	if pmc.ttl > 0 && time.Since(entry.createdAt) > pmc.ttl {
+		// Remove expired entry
+		pmc.removeEntry(entry)
+		return nil, false
+	}
+
+	// Move to front of LRU list (most recently used)
+	pmc.lruList.MoveToFront(entry.lruNode)
+
+	return entry.value, true
+}
+
+// Set stores a value in the cache with proper LRU eviction
+func (pmc *ProductionMemoCache) Set(key uint64, value Value) {
+	if !pmc.enabled {
+		return
+	}
+
+	pmc.mutex.Lock()
+	defer pmc.mutex.Unlock()
+
+	// Check if key already exists
+	if existingEntry, exists := pmc.cache[key]; exists {
+		// Update existing entry
+		existingEntry.value = value
+		existingEntry.createdAt = time.Now()
+		pmc.lruList.MoveToFront(existingEntry.lruNode)
+		return
+	}
+
+	// Evict entries if cache is full
+	for len(pmc.cache) >= pmc.maxSize {
+		// Remove least recently used entry
+		oldest := pmc.lruList.Back()
+		if oldest != nil {
+			oldEntry := oldest.Value.(*cacheEntry)
+			pmc.removeEntry(oldEntry)
+		} else {
+			break
+		}
+	}
+
+	// Create new entry
+	entry := &cacheEntry{
+		key:       key,
+		value:     value,
+		createdAt: time.Now(),
+	}
+
+	// Add to front of LRU list
+	entry.lruNode = pmc.lruList.PushFront(entry)
+	pmc.cache[key] = entry
+}
+
+// removeEntry removes an entry from both cache and LRU list
+func (pmc *ProductionMemoCache) removeEntry(entry *cacheEntry) {
+	delete(pmc.cache, entry.key)
+	pmc.lruList.Remove(entry.lruNode)
+}
+
+// Clear clears all entries from the cache
+func (pmc *ProductionMemoCache) Clear() {
+	pmc.mutex.Lock()
+	defer pmc.mutex.Unlock()
+
+	pmc.cache = make(map[uint64]*cacheEntry, pmc.maxSize/4)
+	pmc.lruList = list.New()
+}
+
+// Size returns the current number of entries in the cache
+func (pmc *ProductionMemoCache) Size() int {
+	pmc.mutex.RLock()
+	defer pmc.mutex.RUnlock()
+	return len(pmc.cache)
+}
+
+// SetEnabled enables or disables the cache
+func (pmc *ProductionMemoCache) SetEnabled(enabled bool) {
+	pmc.mutex.Lock()
+	defer pmc.mutex.Unlock()
+	pmc.enabled = enabled
+}
+
+// IsEnabled returns whether the cache is enabled
+func (pmc *ProductionMemoCache) IsEnabled() bool {
+	pmc.mutex.RLock()
+	defer pmc.mutex.RUnlock()
+	return pmc.enabled
+}
+
+// CleanupExpired removes all expired entries from the cache
+func (pmc *ProductionMemoCache) CleanupExpired() int {
+	if pmc.ttl <= 0 {
+		return 0
+	}
+
+	pmc.mutex.Lock()
+	defer pmc.mutex.Unlock()
+
+	expiredKeys := make([]uint64, 0)
+
+	// Find expired entries
+	for key, entry := range pmc.cache {
+		if time.Since(entry.createdAt) > pmc.ttl {
+			expiredKeys = append(expiredKeys, key)
+		}
+	}
+
+	// Remove expired entries
+	for _, key := range expiredKeys {
+		if entry, exists := pmc.cache[key]; exists {
+			pmc.removeEntry(entry)
+		}
+	}
+
+	return len(expiredKeys)
+}
+
+// Global production memo cache
+var globalProductionMemoCache = NewProductionMemoCache(5000, 10*time.Minute)
+
+// GetGlobalProductionMemoCache returns the global production memo cache
+func GetGlobalProductionMemoCache() *ProductionMemoCache {
+	return globalProductionMemoCache
+}
 
 // FastHash computes a fast hash for memoization keys
 // Uses FNV-1a hash which is faster than string concatenation
