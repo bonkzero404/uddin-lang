@@ -8,7 +8,7 @@
 
 **Flexible Rule Logic Platform with Programming Language Expressiveness**
 
-[![Go Version](https://img.shields.io/badge/Go-1.23+-blue.svg)](https://golang.org)
+[![Go Version](https://img.shields.io/badge/Go-1.24+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 [**📚 Read Full Documentation →**](https://bonkzero404.github.io/uddin-lang)

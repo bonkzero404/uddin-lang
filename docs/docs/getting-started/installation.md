@@ -10,7 +10,7 @@ Get Uddin Programming Language up and running on your system.
 
 Before installing Uddin-Lang, make sure you have:
 
--   **Go 1.23 or later** (for building from source)
+-   **Go 1.24 or later** (for building from source)
 -   **Git** (for cloning the repository)
 -   **Terminal/Command Prompt** access
 
@@ -329,7 +329,7 @@ chmod +x uddinlang
 
 **Problem**: Build fails with dependency errors
 
-**Solution**: Ensure you have Go 1.19+ and run:
+**Solution**: Ensure you have Go 1.24+ and run:
 
 ```bash
 go mod tidy
