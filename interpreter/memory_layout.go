@@ -521,6 +521,40 @@ func CreateSafeTaggedValue(value Value) (*SafeTaggedValue, error) {
 				globalMemoryTracker.trackDeallocation(uintPtr, "function")
 			}
 		})
+	case *userFunction:
+		// Store user-defined functions as TaggedFunction
+		tv.Type = TaggedFunction
+		// Store the userFunction pointer directly as it implements functionType
+		uintPtr, err := safePointerToUintptr(unsafe.Pointer(v), "userFunction")
+		if err != nil {
+			return nil, err
+		}
+		tv.Data = uintPtr
+
+		// Track allocation
+		globalMemoryTracker.trackAllocation(tv.Data, 128, "userFunction")
+	case builtinFunction:
+		// Store builtin functions as TaggedFunction
+		tv.Type = TaggedFunction
+		// Allocate memory for builtin function and track it
+		funcPtr := new(builtinFunction)
+		if funcPtr == nil {
+			return nil, &MemoryError{"failed to allocate memory for builtin function"}
+		}
+		*funcPtr = v
+		uintPtr, err := safePointerToUintptr(unsafe.Pointer(funcPtr), "builtinFunction")
+		if err != nil {
+			return nil, err
+		}
+		tv.Data = uintPtr
+
+		// Track allocation and set finalizer
+		globalMemoryTracker.trackAllocation(tv.Data, 64, "builtinFunction")
+		runtime.SetFinalizer(funcPtr, func(ptr *builtinFunction) {
+			if uintPtr, err := safePointerToUintptr(unsafe.Pointer(ptr), "builtinFunction"); err == nil {
+				globalMemoryTracker.trackDeallocation(uintPtr, "builtinFunction")
+			}
+		})
 	default:
 		return nil, &MemoryError{"unsupported value type for tagged value"}
 	}
@@ -643,7 +677,53 @@ func (tv *SafeTaggedValue) ToValue() (Value, error) {
 		if !globalMemoryTracker.isValidPointer(tv.Data) {
 			return nil, &MemoryError{"invalid function pointer in tagged value"}
 		}
-		// Convert back from functionType pointer
+
+		// Try to determine the function type based on allocation info
+		globalMemoryTracker.mutex.RLock()
+		alloc, exists := globalMemoryTracker.allocatedPointers[tv.Data]
+		globalMemoryTracker.mutex.RUnlock()
+
+		if exists {
+			switch alloc.type_ {
+			case "userFunction":
+				// Direct pointer to userFunction - stored as pointer directly
+				ptr, err := safeUintptrToPointer(tv.Data, "userFunction")
+				if err != nil {
+					return nil, err
+				}
+				if ptr == nil {
+					return nil, &MemoryError{"null userFunction pointer"}
+				}
+				// Return the userFunction directly, not as pointer
+				userFunc := (*userFunction)(ptr)
+				if userFunc == nil {
+					return nil, &MemoryError{"invalid userFunction"}
+				}
+				return userFunc, nil
+			case "builtinFunction":
+				// Pointer to allocated builtinFunction
+				ptr, err := safeUintptrToPointer(tv.Data, "builtinFunction")
+				if err != nil {
+					return nil, err
+				}
+				if ptr == nil {
+					return nil, &MemoryError{"null builtinFunction pointer"}
+				}
+				return *(*builtinFunction)(ptr), nil
+			case "function":
+				// Generic functionType pointer
+				funcPtr, err := safeFunctionPtrFromUintptr(tv.Data)
+				if err != nil {
+					return nil, err
+				}
+				if funcPtr == nil {
+					return nil, &MemoryError{"null function pointer"}
+				}
+				return *funcPtr, nil
+			}
+		}
+
+		// Fallback to generic function handling
 		funcPtr, err := safeFunctionPtrFromUintptr(tv.Data)
 		if err != nil {
 			return nil, err
@@ -766,6 +846,16 @@ func (mt *MemoryTracker) isValidPointer(ptr uintptr) bool {
 
 	// Check if already freed
 	return !alloc.freed
+}
+
+// getAllocationType returns the type of allocation for a given pointer
+func (mt *MemoryTracker) getAllocationType(ptr uintptr) string {
+	mt.mutex.RLock()
+	defer mt.mutex.RUnlock()
+	if alloc, exists := mt.allocatedPointers[ptr]; exists {
+		return alloc.type_
+	}
+	return ""
 }
 
 // detectMemoryLeaks identifies potential memory leaks

@@ -722,6 +722,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 	case *Call:
 		function := interp.evaluate(e.Function)
+		// Check for direct functionType
 		if f, ok := function.(functionType); ok {
 			args := []Value{}
 			for _, a := range e.Arguments {
@@ -735,6 +736,36 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 				}
 			}
 			return interp.callFunction(e.Function.Position(), f, args)
+		}
+		// Check for *userFunction specifically
+		if uf, ok := function.(*userFunction); ok {
+			args := []Value{}
+			for _, a := range e.Arguments {
+				args = SmartAppend(args, interp.evaluate(a))
+			}
+			if e.Ellipsis {
+				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
+				args = args[:len(args)-1]
+				for iterator.HasNext() {
+					args = SmartAppend(args, iterator.Value())
+				}
+			}
+			return interp.callFunction(e.Function.Position(), uf, args)
+		}
+		// Check for builtinFunction specifically
+		if bf, ok := function.(builtinFunction); ok {
+			args := []Value{}
+			for _, a := range e.Arguments {
+				args = SmartAppend(args, interp.evaluate(a))
+			}
+			if e.Ellipsis {
+				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
+				args = args[:len(args)-1]
+				for iterator.HasNext() {
+					args = SmartAppend(args, iterator.Value())
+				}
+			}
+			return interp.callFunction(e.Function.Position(), bf, args)
 		}
 		// Check if it's a function type wrapped in interface{} (from tagged values)
 		if interfaceVal, ok := function.(interface{}); ok {
@@ -822,8 +853,8 @@ func (interp *interpreter) assign(name string, value Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	
-	// Use tagged values if enabled for memory optimization
-	if IsTaggedValuesEnabled() {
+	// Use tagged values if enabled for memory optimization, but not for functions
+	if IsTaggedValuesEnabled() && !IsFunction(value) {
 		if tv, err := CreateSafeTaggedValue(value); err == nil {
 			// Store the tagged value - creation is already tracked in CreateSafeTaggedValue
 			interp.vars[len(interp.vars)-1][name] = tv
@@ -854,8 +885,9 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 					atomic.AddInt64(&globalSafeTaggedValuePool.reused, 1)
 					return converted
 				} else {
-					// Return original value on conversion error
-					return v
+					// Log conversion error for debugging
+					// Return nil if conversion fails for SafeTaggedValue
+					return nil
 				}
 			}
 		}
@@ -870,7 +902,8 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 			if cached.ScopeLevel < len(interp.vars) {
 				if value, found := interp.vars[cached.ScopeLevel][name]; found && safeValueEqual(value, cached.Value) {
 					interp.variableLookupCache.hits++
-					return convertValue(cached.Value), true
+					converted := convertValue(cached.Value)
+					return converted, true
 				}
 			}
 			// Cache is stale, remove it
@@ -1245,11 +1278,25 @@ func (interp *interpreter) executeStatement(s Statement) {
 	case *ExpressionStatement:
 		interp.evaluate(s.Expression)
 	case *FunctionDefinition:
-		interp.mutex.RLock()
-		closure := interp.vars[len(interp.vars)-1]
-		interp.mutex.RUnlock()
-		userFunc := &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, closure, s.Memoized}
+		// Create function first with nil closure for recursive functions
+		userFunc := &userFunction{s.Name, s.Parameters, s.Ellipsis, s.Body, nil, s.Memoized}
+		// Assign function to current scope so it can be found recursively
 		interp.assign(s.Name, userFunc)
+		// Now create closure that includes all accessible variables from all scopes
+		interp.mutex.RLock()
+		closure := make(map[string]Value)
+		// Copy variables from all scopes (from global to local)
+		for i := 0; i < len(interp.vars); i++ {
+			for k, v := range interp.vars[i] {
+				// Only add if not already present (local scope takes precedence)
+				if _, exists := closure[k]; !exists {
+					closure[k] = v
+				}
+			}
+		}
+		interp.mutex.RUnlock()
+		// Update the function's closure to include all accessible variables
+		userFunc.Closure = closure
 	case *Return:
 		result := interp.evaluate(s.Result)
 		panic(returnResult{result, s.Position()})

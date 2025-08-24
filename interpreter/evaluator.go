@@ -376,11 +376,19 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 
 	// Set up function's closure as the base scope
 	if fn.Closure != nil {
-		// Create a new scope with the closure
-		e.env.vars = []map[string]Value{fn.Closure}
+		// Create a new scope with the closure combined with current scope
+		newVars := make([]map[string]Value, len(oldVars)+1)
+		newVars[0] = fn.Closure
+		copy(newVars[1:], oldVars)
+		e.env.vars = newVars
 	} else {
 		// Create empty scope
 		e.env.vars = []map[string]Value{make(map[string]Value)}
+	}
+
+	// Ensure the function can find itself for recursion
+	if fn.Name != "" {
+		e.env.vars[0][fn.Name] = fn
 	}
 
 	// Create new scope for function parameters
