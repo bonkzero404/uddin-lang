@@ -114,34 +114,62 @@ Memory usage: 1.2MB
 ======================
 ```
 
-### Memory Optimization (Experimental)
+### Memory Optimization
 
-Enable experimental memory layout optimizations for improved performance:
+Uddin-Lang provides two levels of memory optimization to suit different use cases:
+
+#### Stable Memory Optimization (Production-Ready)
+
+Enable production-ready memory optimizations that are thread-safe and compatible with all language features:
 
 ```bash
-# Run with memory optimization
+# Run with stable memory optimizations
+uddin-lang --memory-optimize-stable mycode.din
+
+# Combine with profiling to measure optimization effects
+uddin-lang --memory-optimize-stable --profile mycode.din
+```
+
+**✅ Stable Features:**
+- Tagged value types for reduced memory overhead
+- Compact environment structures
+- Cache-friendly data layouts
+- Thread-safe implementation
+- Compatible with concurrent functions
+
+**Best Use Cases:**
+- Production environments
+- Applications using concurrent functions
+- Multi-threaded environments
+- Performance-critical applications requiring stability
+
+#### Experimental Memory Optimization
+
+Enable experimental memory optimizations for maximum performance in sequential workloads:
+
+```bash
+# Run with experimental memory optimizations
+uddin-lang --memory-optimize-experimental mycode.din
+
+# Legacy flag (DEPRECATED - maps to experimental)
 uddin-lang --memory-optimize mycode.din
 uddin-lang -m mycode.din
 
 # Combine with profiling to measure optimization effects
-uddin-lang --memory-optimize --profile mycode.din
+uddin-lang --memory-optimize-experimental --profile mycode.din
 ```
 
-**⚠️ Important Limitations:**
-- **Experimental feature** - may have stability issues
-- **Not compatible** with concurrent functions (`concurrent_map`, `concurrent_filter`, `concurrent_reduce`)
-- **Not thread-safe** - avoid in multi-threaded environments
-
-**Optimization Features:**
-- Tagged value types for reduced memory overhead
-- Compact environment structures
-- Cache-friendly data layouts
+**⚠️ Experimental Features (Additional to stable):**
 - Variable lookup caching
 - Expression memoization
+- **Not compatible** with concurrent functions (`concurrent_map`, `concurrent_filter`, `concurrent_reduce`)
+- **Not thread-safe** - avoid in multi-threaded environments
+- May have stability issues
 
 **Best Use Cases:**
-- Sequential processing workloads
-- Memory-constrained environments
+- Sequential processing workloads only
+- Development and testing environments
+- Performance benchmarking
 - Performance-critical single-threaded applications
 
 ### AST Conversion Tools

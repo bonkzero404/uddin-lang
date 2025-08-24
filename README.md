@@ -312,50 +312,72 @@ Monitor execution performance and optimization metrics:
 # User Calls: 1 (3934/s)
 ```
 
-#### Memory Optimization (Experimental)
+#### Memory Optimization
 
-Enable experimental memory layout optimizations for improved performance:
+Uddin-Lang provides two levels of memory optimization:
+
+##### Stable Memory Optimization (Production-Ready)
 
 ```bash
-# Run with memory optimization
-./uddinlang --memory-optimize script.din
-./uddinlang -m script.din
+# Run with stable memory optimizations
+./uddinlang --memory-optimize-stable script.din
 
 # Combine with profiling to see optimization effects
-./uddinlang --memory-optimize --profile script.din
+./uddinlang --memory-optimize-stable --profile script.din
 ```
 
-**⚠️ Important Notes:**
-- Memory optimization is **experimental** and may have compatibility issues
-- **Not compatible** with concurrent functions (`concurrent_map`, `concurrent_filter`, `concurrent_reduce`)
-- Includes optimizations for:
-  - Tagged value types for reduced memory overhead
-  - Compact environment structures
-  - Cache-friendly data layouts
-  - Variable lookup caching
-  - Expression memoization
+**✅ Production Features:**
+- Tagged value types for reduced memory overhead
+- Compact environment structures
+- Cache-friendly data layouts
+- Thread-safe and concurrent function compatible
 
 **When to use:**
-- Sequential processing workloads
-- Memory-constrained environments
-- Performance-critical applications without concurrency
+- Production environments
+- Applications using concurrent functions
+- Multi-threaded environments
+- Performance-critical applications
 
-**When to avoid:**
+##### Experimental Memory Optimization
+
+```bash
+# Run with experimental memory optimizations
+./uddinlang --memory-optimize-experimental script.din
+
+# Legacy flag (DEPRECATED - maps to experimental)
+./uddinlang --memory-optimize script.din
+./uddinlang -m script.din
+```
+
+**⚠️ Experimental Features (Additional to stable):**
+- Variable lookup caching
+- Expression memoization
+- **Not compatible** with concurrent functions (`concurrent_map`, `concurrent_filter`, `concurrent_reduce`)
+- May have thread safety issues
+
+**When to use experimental:**
+- Sequential processing workloads only
+- Development and testing environments
+- Performance benchmarking
+
+**When to avoid experimental:**
 - Programs using concurrent functions
 - Multi-threaded environments
 - Production systems requiring stability
 
 #### Available CLI Commands
 
-| Command            | Short | Description                                    |
-| ------------------ | ----- | ---------------------------------------------- |
-| `--help`           | `-h`  | Show usage information                         |
-| `--version`        | `-v`  | Display version information                    |
-| `--examples`       | `-e`  | List all available example files               |
-| `--analyze`        | `-a`  | Syntax analysis without execution              |
-| `--profile`        | `-p`  | Enable performance profiling                   |
-| `--memory-optimize`| `-m`  | Enable experimental memory layout optimization |
-| `--from_json`      |       | Execute code from JSON AST format             |
+| Command                          | Short | Description                                    |
+| -------------------------------- | ----- | ---------------------------------------------- |
+| `--help`                         | `-h`  | Show usage information                         |
+| `--version`                      | `-v`  | Display version information                    |
+| `--examples`                     | `-e`  | List all available example files               |
+| `--analyze`                      | `-a`  | Syntax analysis without execution              |
+| `--profile`                      | `-p`  | Enable performance profiling                   |
+| `--memory-optimize-stable`       |       | Enable stable memory optimizations (production-ready) |
+| `--memory-optimize-experimental` |       | Enable experimental memory optimizations      |
+| `--memory-optimize`              | `-m`  | Enable experimental memory optimization (DEPRECATED) |
+| `--from_json`                    |       | Execute code from JSON AST format             |
 
 #### Usage Examples
 

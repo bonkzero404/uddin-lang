@@ -96,6 +96,20 @@ func (s *Stats) Total() int {
 	return s.Ops + s.UserCalls + s.BuiltinCalls
 }
 
+// StableConfig returns a configuration with stable memory layout optimizations enabled
+// These optimizations are production-ready and safe for concurrent use
+func StableConfig() *Config {
+	return &Config{
+		Vars:         make(map[string]Value),
+		Args:         []string{},
+		Stdin:        os.Stdin,
+		Stdout:       os.Stdout,
+		Exit:         os.Exit,
+		IsUnitTest:   false,
+		MemoryLayout: StableMemoryLayoutConfig(),
+	}
+}
+
 // ExperimentalConfig returns a configuration with experimental memory layout optimizations enabled
 // EXPERIMENTAL: This is experimental and may have stability issues
 // WARNING: Not compatible with concurrent functions - use only for sequential processing

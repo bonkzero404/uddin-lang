@@ -177,10 +177,15 @@ func RunProgram(inputSource string) (bool, string) {
 
 // RunProgramOptions defines options for running a program
 type RunProgramOptions struct {
-	ShowProfiling   bool // Whether to show execution profiling information
+	ShowProfiling          bool // Whether to show execution profiling information
+	// Whether to enable stable memory layout optimizations (production-ready)
+	MemoryOptimizeStable   bool
 	// EXPERIMENTAL: Whether to enable experimental memory layout optimizations
 	// WARNING: Not recommended for production use, may have stability issues
-	MemoryOptimize  bool
+	MemoryOptimizeExperimental bool
+	// DEPRECATED: Use MemoryOptimizeStable or MemoryOptimizeExperimental instead
+	// This field is kept for backward compatibility and maps to MemoryOptimizeExperimental
+	MemoryOptimize         bool
 }
 
 // RunProgramWithOptions parses and executes the given program with custom options.
@@ -217,10 +222,25 @@ func RunProgramWithOptions(inputSource string, options *RunProgramOptions) (bool
 
 	// Create config to capture output
 	var config *Config
-	if options != nil && options.MemoryOptimize {
-		// Use experimental config with memory optimizations
-		// EXPERIMENTAL: Using experimental memory optimization configuration
-		config = ExperimentalConfig()
+	if options != nil {
+		// Check for new memory optimization options first
+		if options.MemoryOptimizeExperimental {
+			// Use experimental config with all memory optimizations including experimental ones
+			// EXPERIMENTAL: Using experimental memory optimization configuration
+			config = ExperimentalConfig()
+		} else if options.MemoryOptimizeStable {
+			// Use stable config with production-ready memory optimizations
+			config = StableConfig()
+		} else if options.MemoryOptimize {
+			// DEPRECATED: Backward compatibility - maps to experimental
+			// EXPERIMENTAL: Using experimental memory optimization configuration
+			config = ExperimentalConfig()
+		} else {
+			// Use default config
+			config = DefaultConfig()
+		}
+		
+		// Set up output capture
 		config.Stdout = writerFunc(func(s string) {
 			resultProgram += s
 		})

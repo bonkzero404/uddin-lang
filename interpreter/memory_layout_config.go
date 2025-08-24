@@ -33,6 +33,20 @@ func DefaultMemoryLayoutConfig() *MemoryLayoutConfig {
 	}
 }
 
+// StableMemoryLayoutConfig returns a configuration with stable memory layout optimizations enabled
+// These optimizations are production-ready and thread-safe
+func StableMemoryLayoutConfig() *MemoryLayoutConfig {
+	return &MemoryLayoutConfig{
+		EnableTaggedValues:            true,  // Production-ready
+		EnableCompactEnvironment:      true,  // Production-ready
+		EnableCacheFriendlyStructures: true,  // Production-ready
+		EnableVariableLookupCache:     false, // Still experimental
+		TaggedValuePoolSize:           1000,
+		MaxStringCacheSize:            10000,
+		VariableLookupCacheSize:       500,
+	}
+}
+
 // ExperimentalMemoryLayoutConfig returns a configuration with all memory layout optimizations enabled
 // EXPERIMENTAL: This is for testing and experimental use only - not recommended for production
 // WARNING: Not compatible with concurrent functions and may cause thread safety issues
@@ -41,7 +55,7 @@ func ExperimentalMemoryLayoutConfig() *MemoryLayoutConfig {
 		EnableTaggedValues:            true,
 		EnableCompactEnvironment:      true,
 		EnableCacheFriendlyStructures: true,
-		EnableVariableLookupCache:     true,
+		EnableVariableLookupCache:     true, // Experimental feature
 		TaggedValuePoolSize:           1000,
 		MaxStringCacheSize:            10000,
 		VariableLookupCacheSize:       500,
