@@ -183,13 +183,17 @@ func (c *CLI) runScript(filename string) error {
 		MemoryOptimize:             c.memoryOptimize, // DEPRECATED: kept for backward compatibility
 		MemoryOptimizeStable:       c.memoryOptimizeStable,
 		MemoryOptimizeExperimental: c.memoryOptimizeExperimental,
+		DirectOutput:               true, // CLI mode: output directly to stdout, don't capture
 	}
 
 	// Execute the program with options
 	success, output := interpreter.RunProgramWithOptions(string(content), options)
 
 	if success {
-		fmt.Print(output)
+		// In DirectOutput mode, output is already printed, only print if there's additional output
+		if output != "" {
+			fmt.Print(output)
+		}
 		return nil
 	} else {
 		return fmt.Errorf("execution failed:\n%s", output)

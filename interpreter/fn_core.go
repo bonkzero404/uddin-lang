@@ -130,11 +130,15 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	// Join strings with space and add newline
 	output := strings.Join(strs, " ") + "\n"
-	// Write to the interpreter's stdout (this allows capture during testing)
-	if interp.stdout != nil {
-		interp.stdout.Write([]byte(output))
-		// Also write to real stdout for interactive programs
+	// Check if DirectOutput is enabled
+	if interp.DirectOutput {
+		// Write directly to os.Stdout when DirectOutput is enabled
 		os.Stdout.WriteString(output)
+		// Force flush using syscall
+		syscall.Syscall(syscall.SYS_FSYNC, uintptr(os.Stdout.Fd()), 0, 0)
+	} else if interp.stdout != nil {
+		// Write to the interpreter's stdout (this allows capture during testing)
+		interp.stdout.Write([]byte(output))
 	} else {
 		// Fallback to direct stdout if no stdout is configured
 		os.Stdout.WriteString(output)
@@ -158,13 +162,19 @@ func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Print prompt if provided
 	if len(args) == 1 {
 		prompt := toString(args[0], false)
-		// For input prompts, always write to both configured stdout AND real stdout
-		// This ensures prompts are visible to the user even when output is captured
-		if interp.stdout != nil {
-			interp.stdout.Write([]byte(prompt))
+		// When DirectOutput is enabled, only write to os.Stdout once
+		// When DirectOutput is disabled, write to configured stdout and also to real stdout for visibility
+		if interp.DirectOutput {
+			// DirectOutput mode: write only to os.Stdout
+			fmt.Print(prompt)
+		} else {
+			// Non-DirectOutput mode: write to both configured stdout and real stdout
+			if interp.stdout != nil {
+				interp.stdout.Write([]byte(prompt))
+			}
+			// Always show prompt to user on real stdout for interactive input
+			fmt.Print(prompt)
 		}
-		// Always show prompt to user on real stdout for interactive input
-		fmt.Print(prompt)
 	}
 
 	// Use bufio.Scanner to read the entire line including spaces

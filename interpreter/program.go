@@ -186,6 +186,10 @@ type RunProgramOptions struct {
 	// DEPRECATED: Use MemoryOptimizeStable or MemoryOptimizeExperimental instead
 	// This field is kept for backward compatibility and maps to MemoryOptimizeExperimental
 	MemoryOptimize         bool
+	// DirectOutput controls whether output goes directly to stdout (true) or is captured and returned (false)
+	// When true, print() writes directly to os.Stdout and the returned output string will be empty
+	// When false (default), print() output is captured and returned in the output string
+	DirectOutput           bool
 }
 
 // RunProgramWithOptions parses and executes the given program with custom options.
@@ -240,12 +244,20 @@ func RunProgramWithOptions(inputSource string, options *RunProgramOptions) (bool
 			config = DefaultConfig()
 		}
 		
-		// Set up output capture
-		config.Stdout = writerFunc(func(s string) {
-			resultProgram += s
-		})
+		// Set up output handling based on DirectOutput option
+		if options.DirectOutput {
+			// Direct output mode: let print() write directly to os.Stdout
+			config.DirectOutput = true
+			// Don't override config.Stdout, use default behavior
+		} else {
+			// Capture output mode: capture print() output and return it
+			config.DirectOutput = false
+			config.Stdout = writerFunc(func(s string) {
+				resultProgram += s
+			})
+		}
 	} else {
-		// Use default config
+		// Use default config with output capture
 		config = &Config{
 			Stdout: writerFunc(func(s string) {
 				resultProgram += s

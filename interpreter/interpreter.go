@@ -51,6 +51,8 @@ type interpreter struct {
 	variableLookupCache *VariableLookupCache
 	// Expression optimizer
 	optimizer *ConstantFolder
+	// DirectOutput controls whether print() writes directly to os.Stdout
+	DirectOutput bool
 }
 
 // returnResult is used to handle return statements in functions.
@@ -1353,6 +1355,7 @@ func newInterpreter(config *Config) *interpreter {
 	if interp.exit == nil {
 		interp.exit = os.Exit
 	}
+	interp.DirectOutput = config.DirectOutput
 	interp.inUnitTest = config.IsUnitTest
 	return interp
 }

@@ -85,6 +85,11 @@ type Config struct {
 	// Jika true, fungsi main() tidak akan dijalankan secara otomatis
 	IsUnitTest bool
 
+	// DirectOutput controls whether print() writes directly to os.Stdout (true) or to configured Stdout (false)
+	// When true, print() bypasses the configured Stdout and writes directly to os.Stdout
+	// This is useful for CLI applications where you want immediate output without capturing
+	DirectOutput bool
+
 	// MemoryLayout configures memory layout optimizations
 	// If nil, defaults to DefaultMemoryLayoutConfig()
 	MemoryLayout *MemoryLayoutConfig
