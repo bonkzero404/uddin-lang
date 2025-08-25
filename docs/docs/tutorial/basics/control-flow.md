@@ -60,6 +60,32 @@ fun main():
 end
 ```
 
+### Using elif (Alias for else if)
+
+You can use `elif` as a shorter alternative to `else if`:
+
+```uddin
+fun main():
+    score = 85
+
+    if (score >= 90) then:
+        print("Grade: A")
+    elif (score >= 80) then:
+        print("Grade: B")
+    elif (score >= 70) then:
+        print("Grade: C")
+    elif (score >= 60) then:
+        print("Grade: D")
+    else:
+        print("Grade: F")
+    end
+end
+```
+
+:::tip
+`elif` is an alias for `else if` and provides more concise syntax. Both forms are equivalent and can be used interchangeably.
+:::
+
 ### Nested Conditions
 
 ```uddin

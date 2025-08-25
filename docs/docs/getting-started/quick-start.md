@@ -216,6 +216,17 @@ fun main():
     else:
         print("Grade: F")
     end
+
+    // Same logic using elif (shorter syntax)
+    if (score >= 90) then:
+        print("Grade: A")
+    elif (score >= 80) then:
+        print("Grade: B")
+    elif (score >= 70) then:
+        print("Grade: C")
+    else:
+        print("Grade: F")
+    end
 end
 ```
 

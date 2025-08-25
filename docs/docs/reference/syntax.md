@@ -249,6 +249,8 @@ a %= 5    // a = a % 5  (1)
 
 ### If Statements
 
+Uddin-Lang supports conditional statements with `if`, `else if`, and `else`. You can also use `elif` as an alias for `else if` for more concise syntax.
+
 ```uddin
 // Basic if statement
 if (condition) then:
@@ -270,6 +272,19 @@ else if (score >= 80) then:
 else if (score >= 70) then:
     grade = "C"
 else if (score >= 60) then:
+    grade = "D"
+else:
+    grade = "F"
+end
+
+// Using elif (alias for else if)
+if (score >= 90) then:
+    grade = "A"
+elif (score >= 80) then:
+    grade = "B"
+elif (score >= 70) then:
+    grade = "C"
+elif (score >= 60) then:
     grade = "D"
 else:
     grade = "F"

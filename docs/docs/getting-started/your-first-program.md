@@ -385,6 +385,7 @@ fun lower(text):
     for (i in range(len(text))):
         char = text[i]
         // Convert uppercase letters to lowercase manually
+        // Note: You can use 'elif' instead of 'else if' for more concise syntax
         if (char == "A") then:
             result = result + "a"
         else if (char == "B") then:
