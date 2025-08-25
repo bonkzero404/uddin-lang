@@ -49,7 +49,7 @@ jobs:
                   rm -f package-lock.json
 
             - name: Install dependencies
-              run: npm install --legacy-peer-deps
+              run: npm install
 
             - name: Build with Docusaurus
               run: npm run build
