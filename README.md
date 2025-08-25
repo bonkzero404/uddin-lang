@@ -459,14 +459,17 @@ vim script.din                      # Edit script
 ### Formal Grammar (EBNF)
 
 ```ebnf
+// Program Structure
 program        = { statement }
 
+// Statements
 statement      = expression_stmt
                | assignment
                | if_stmt
                | while_stmt
                | for_stmt
                | function_def
+               | memo_function_def
                | return_stmt
                | break_stmt
                | continue_stmt
@@ -474,26 +477,89 @@ statement      = expression_stmt
                | try_catch_stmt
 
 expression_stmt = expression
-assignment     = IDENTIFIER ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expression
-               | subscript ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expression
-if_stmt        = "if" "(" expression ")" "then:" block
-                 { "else" "if" "(" expression ")" "then:" block }
-                 [ "else:" block ] "end"
-while_stmt     = "while" "(" expression "):" block "end"
-for_stmt       = "for" "(" IDENTIFIER "in" expression "):" block "end"
-function_def   = "fun" IDENTIFIER "(" [ parameter_list ] "):" block "end"
+assignment     = ( IDENTIFIER | subscript ) ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expression
+
+if_stmt        = "if" "(" expression ")" "then" ":" block
+                   { "else" "if" "(" expression ")" "then" ":" block }
+                   [ "else" ":" block ] "end"
+
+while_stmt     = "while" "(" expression ")" ":" block "end"
+
+for_stmt       = "for" "(" IDENTIFIER "in" expression ")" ":" block "end"
+
+function_def   = "fun" IDENTIFIER "(" [ parameter_list ] ")" ":" block "end"
+
+memo_function_def = "memo" "fun" IDENTIFIER "(" [ parameter_list ] ")" ":" block "end"
+
 return_stmt    = "return" [ expression ]
 break_stmt     = "break"
 continue_stmt  = "continue"
 import_stmt    = "import" STRING
-try_catch_stmt = "try:" block "catch" "(" IDENTIFIER "):" block "end"
+
+try_catch_stmt = "try" ":" block "catch" "(" IDENTIFIER ")" ":" block "end"
 
 block          = { statement }
-parameter_list = IDENTIFIER { "," IDENTIFIER }
+parameter_list = IDENTIFIER { "," IDENTIFIER } [ "..." ]
 
+// Expressions (in precedence order, lowest to highest)
+expression     = ternary
+ternary        = logical_or [ "?" expression ":" expression ]
+logical_or     = logical_xor { "or" logical_xor }
+logical_xor    = logical_and { "xor" logical_and }
+logical_and    = equality { "and" equality }
+equality       = comparison { ( "==" | "!=" ) comparison }
+comparison     = addition { ( "<" | "<=" | ">" | ">=" ) addition }
+addition       = multiplication { ( "+" | "-" ) multiplication }
+multiplication = power { ( "*" | "/" | "%" ) power }
+power          = unary [ "**" power ]  // Right associative
+unary          = ( "not" | "-" ) unary | postfix
+postfix        = primary { call_suffix | subscript_suffix | property_suffix }
 
+call_suffix    = "(" [ argument_list ] ")"
+subscript_suffix = "[" expression "]"
+property_suffix = "." IDENTIFIER
+
+argument_list  = expression { "," expression } [ "..." ]
+
+primary        = IDENTIFIER
+               | literal
+               | list
+               | map
+               | function_expression
+               | "(" expression ")"
+
+function_expression = "fun" "(" [ parameter_list ] ")" ":" block "end"
+
+list           = "[" [ expression { "," expression } [ "," ] ] "]"
+map            = "{" [ map_entry { "," map_entry } [ "," ] ] "}"
+map_entry      = ( IDENTIFIER | STRING | "(" expression ")" ) ":" expression
+
+subscript      = postfix "[" expression "]"
+               | postfix "." IDENTIFIER
+
+// Literals
+literal        = INTEGER
+               | FLOAT
+               | STRING
+               | "true"
+               | "false"
+               | "null"
 
 // Lexical Elements
+IDENTIFIER     = letter { letter | digit | "_" }
+INTEGER        = digit { digit }
+FLOAT          = digit { digit } "." digit { digit } [ ( "e" | "E" ) [ "+" | "-" ] digit { digit } ]
+               | digit { digit } ( "e" | "E" ) [ "+" | "-" ] digit { digit }
+STRING         = '"' { string_char } '"'
+               | "'" { string_char } "'"
+               | '"""' { any_char } '"""'  // Multiline string
+string_char    = any_char_except_quote_and_newline | escape_sequence
+escape_sequence = "\\" ( "n" | "t" | "r" | "\\" | '"' | "'" )
+
+letter         = "a" ... "z" | "A" ... "Z"
+digit          = "0" ... "9"
+
+// Comments
 comment        = single_line_comment | multiline_comment
 single_line_comment = "//" { any_character_except_newline }
 multiline_comment   = "/*" { any_character } "*/"
@@ -505,14 +571,109 @@ multiline_comment   = "/*" { any_character } "*/"
 | ---------- | ---------------------------- | ------------- | -------------------------------------------- |
 | 1          | `()` `[]` `.`                | Left          | Function call, Array access, Property access |
 | 2          | `not` `-` (unary)            | Right         | Logical NOT, Unary minus                     |
-| 3          | `*` `/` `%`                  | Left          | Multiplication, Division, Modulo             |
-| 4          | `+` `-`                      | Left          | Addition, Subtraction                        |
-| 5          | `<` `<=` `>` `>=`            | Left          | Relational operators                         |
-| 6          | `==` `!=`                    | Left          | Equality operators                           |
-| 7          | `and`                        | Left          | Logical AND                                  |
-| 8          | `xor`                        | Left          | Logical XOR (exclusive or)                   |
-| 9          | `or`                         | Left          | Logical OR                                   |
-| 10         | `=` `+=` `-=` `*=` `/=` `%=` | Right         | Assignment and compound assignment           |
+| 3          | `**`                         | Right         | Exponentiation (power operator)              |
+| 4          | `*` `/` `%`                  | Left          | Multiplication, Division, Modulo             |
+| 5          | `+` `-`                      | Left          | Addition, Subtraction                        |
+| 6          | `<` `<=` `>` `>=`            | Left          | Relational operators                         |
+| 7          | `==` `!=`                    | Left          | Equality operators                           |
+| 8          | `and`                        | Left          | Logical AND                                  |
+| 9          | `xor`                        | Left          | Logical XOR (exclusive or)                   |
+| 10         | `or`                         | Left          | Logical OR                                   |
+| 11         | `? :`                        | Right         | Ternary conditional operator                 |
+| 12         | `=` `+=` `-=` `*=` `/=` `%=` | Right         | Assignment and compound assignment           |
+
+### Language Features
+
+#### Variadic Functions
+Functions can accept variable number of arguments using the ellipsis (`...`) operator:
+
+```ebnf
+// Function definition with variadic parameters
+parameter_list = IDENTIFIER { "," IDENTIFIER } [ "..." ]
+
+// Function call with argument spreading
+argument_list = expression { "," expression } [ "..." ]
+```
+
+**Examples:**
+```din
+// Define variadic function
+fun sum(numbers...):
+    total = 0
+    for (num in numbers):
+        total += num
+    end
+    return total
+end
+
+// Call with multiple arguments
+result = sum(1, 2, 3, 4, 5)
+
+// Call with array spreading
+numbers = [1, 2, 3, 4, 5]
+result = sum(numbers...)
+```
+
+#### Memoization
+Functions can be memoized for automatic caching using the `memo` keyword:
+
+```ebnf
+memo_function_def = "memo" "fun" IDENTIFIER "(" [ parameter_list ] ")" ( ":" | "{" ) block ( "end" | "}" )
+```
+
+**Example:**
+```din
+// Memoized fibonacci function
+memo fun fibonacci(n):
+    if (n <= 1):
+        return n
+    end
+    return fibonacci(n-1) + fibonacci(n-2)
+end
+```
+
+#### Scientific Notation
+Numeric literals support scientific notation:
+
+```ebnf
+FLOAT = digit { digit } "." digit { digit } [ ( "e" | "E" ) [ "+" | "-" ] digit { digit } ]
+      | digit { digit } ( "e" | "E" ) [ "+" | "-" ] digit { digit }
+```
+
+**Examples:**
+```din
+avogadro = 6.022e23
+electron_mass = 9.109e-31
+speed_of_light = 2.998E+8
+```
+
+#### Multiline Strings
+Strings can span multiple lines using triple quotes:
+
+```ebnf
+STRING = '"' { string_char } '"'
+       | "'" { string_char } "'"
+       | '"""' { any_char } '"""'  // Multiline string
+```
+
+**Example:**
+```din
+query = """
+    SELECT name, age, email
+    FROM users
+    WHERE age > 18
+    ORDER BY name
+"""
+```
+
+#### Flexible Block Syntax
+Blocks use colon-end syntax:
+
+```ebnf
+if (condition):
+    statements
+end
+```
 
 ---
 
