@@ -749,12 +749,12 @@ func (tv *SafeTaggedValue) ToValue() (Value, error) {
 		if !globalMemoryTracker.isValidPointer(tv.Data) {
 			return nil, &MemoryError{"invalid other type pointer in tagged value"}
 		}
-		// Convert back from interface{} pointer
+		// Convert back from any pointer
 		unsafePtr, err := safeUintptrToPointer(tv.Data, "other")
 		if err != nil {
 			return nil, err
 		}
-		interfacePtr := (*interface{})(unsafePtr)
+		interfacePtr := (*any)(unsafePtr)
 		if interfacePtr == nil {
 			return nil, &MemoryError{"null other type interface pointer"}
 		}

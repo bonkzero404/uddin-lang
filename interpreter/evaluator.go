@@ -87,7 +87,7 @@ func (e *Evaluator) EvaluateExpression(expr Expression) Value {
 	if call, ok := expr.(*Call); ok {
 		return e.evaluateCall(call)
 	}
-	
+
 	// Less common types
 	switch node := expr.(type) {
 	case *Unary:
@@ -224,7 +224,7 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 			e.stats.BuiltinCalls++
 			return result
 		}
-		
+
 		// Fallback to original method if not in dispatcher
 		// Create a temporary interpreter for builtin calls
 		interp := &interpreter{
@@ -240,8 +240,8 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 		*e.stats = interp.stats // Update stats
 		return result
 	default:
-		// Check if it's a function type wrapped in interface{} (from tagged values)
-		if interfaceVal, ok := function.(interface{}); ok {
+		// Check if it's a function type wrapped in any (from tagged values)
+		if interfaceVal, ok := function.(any); ok {
 			if userFn, ok := interfaceVal.(*userFunction); ok {
 				return e.callUserFunction(userFn, node.Position(), args)
 			}
@@ -252,7 +252,7 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 					e.stats.BuiltinCalls++
 					return result
 				}
-				
+
 				// Fallback to original method if not in dispatcher
 				interp := &interpreter{
 					vars:       e.env.vars,

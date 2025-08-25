@@ -140,7 +140,7 @@ func typeName(v Value) string {
 	case functionType:
 		t = "function" // Function value
 	default:
-		// Check if it's a function type that was stored as interface{}
+		// Check if it's a function type that was stored as any
 		if _, ok := v.(functionType); ok {
 			t = "function"
 		} else {

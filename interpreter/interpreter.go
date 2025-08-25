@@ -767,8 +767,8 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 			}
 			return interp.callFunction(e.Function.Position(), bf, args)
 		}
-		// Check if it's a function type wrapped in interface{} (from tagged values)
-		if interfaceVal, ok := function.(interface{}); ok {
+		// Check if it's a function type wrapped in any (from tagged values)
+		if interfaceVal, ok := function.(any); ok {
 			if f, ok := interfaceVal.(functionType); ok {
 				args := []Value{}
 				for _, a := range e.Arguments {
@@ -852,7 +852,7 @@ func (interp *interpreter) popScope() {
 func (interp *interpreter) assign(name string, value Value) {
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
-	
+
 	// Use tagged values if enabled for memory optimization, but not for functions
 	if IsTaggedValuesEnabled() && !IsFunction(value) {
 		if tv, err := CreateSafeTaggedValue(value); err == nil {
@@ -865,7 +865,7 @@ func (interp *interpreter) assign(name string, value Value) {
 	} else {
 		interp.vars[len(interp.vars)-1][name] = value
 	}
-	
+
 	// Invalidate cache for this variable since it's been reassigned
 	if interp.variableLookupCache != nil {
 		interp.variableLookupCache.InvalidateVariable(name)
