@@ -28,6 +28,7 @@ const sidebars = {
             collapsed: false,
             items: [
                 'tutorial/basics/introduction',
+                'tutorial/basics/language-overview',
                 'tutorial/basics/basic-syntax',
                 'tutorial/basics/variables-and-data-types',
                 'tutorial/basics/operators',
@@ -36,7 +37,7 @@ const sidebars = {
                 'tutorial/basics/arrays-and-objects',
                 'tutorial/basics/modules',
             ],
-        },
+        }
         {
             type: 'category',
             label: 'Advanced Features',
