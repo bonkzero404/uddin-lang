@@ -312,4 +312,4 @@ Memoization is a powerful optimization technique that can provide significant pe
 - Test thoroughly before using in production
 - Consider the experimental nature and potential limitations
 
-For more examples, see the [memoization examples](../../examples/index.md#experimental-features) in the examples section.
+For more examples, see the [memoization examples](../../examples/index.md#-performance-and-optimization) in the examples section.

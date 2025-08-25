@@ -430,8 +430,8 @@ PostgreSQL uses native LISTEN/NOTIFY mechanism:
 
 MySQL uses binary log (binlog) streaming for real-time CDC:
 - **Binlog Streaming**: Reads directly from MySQL binary logs (like Debezium)
-- **Real-time**: 1-10ms latency for change detection
-- **Minimal Impact**: <1% CPU usage, minimal database load
+- **Real-time**: 1-10 ms latency for change detection
+- **Minimal Impact**: Less than 1% CPU usage, minimal database load
 - **High Performance**: Supports 10,000+ events/sec throughput
 - **Compatible**: Works with MySQL 5.7+ and MariaDB
 - **Reliable**: Handles connection interruptions and binlog rotation gracefully
@@ -635,7 +635,7 @@ end
 3. **Buffer Size**: Tune `binlog_cache_size` for high-throughput scenarios
 4. **Sync Settings**: Configure `sync_binlog` based on durability requirements
 
-For more detailed information, see the [MySQL Binlog Streaming Reference](../../reference/mysql-binlog-streaming.md).
+For more detailed information, see the [Database Streaming Reference](../../reference/database-streaming.md).
 
 ## Summary
 

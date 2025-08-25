@@ -12,6 +12,7 @@ const sidebars = {
     // By default, Docusaurus generates a sidebar from the docs folder structure
     tutorialSidebar: [
         'intro',
+        'language-overview',
         {
             type: 'category',
             label: 'Getting Started',
@@ -28,7 +29,6 @@ const sidebars = {
             collapsed: false,
             items: [
                 'tutorial/basics/introduction',
-                'tutorial/basics/language-overview',
                 'tutorial/basics/basic-syntax',
                 'tutorial/basics/variables-and-data-types',
                 'tutorial/basics/operators',

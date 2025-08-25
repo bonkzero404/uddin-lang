@@ -1197,7 +1197,7 @@ fun calculate_statistics(numbers):
         "std_dev": round(sqrt(variance), 2)
     }
 end
-```
+```uddin
 
 // ✓ Good: Sanitize user input
 function sanitizeUserInput(input) {
@@ -1207,7 +1207,7 @@ return ""
 
     // Remove potentially dangerous characters
     sanitized = input
-    sanitized = regex_replace(sanitized, "[<>\"'&]", "")
+    sanitized = regex_replace(sanitized, `[<>"'&]`, "")
 
     // Trim whitespace
     sanitized = trim(sanitized)
@@ -1220,8 +1220,7 @@ return ""
     return sanitized
 
 }
-
-````
+```
 
 ## Performance Best Practices
 
