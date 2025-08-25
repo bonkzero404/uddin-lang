@@ -37,7 +37,7 @@ const sidebars = {
                 'tutorial/basics/arrays-and-objects',
                 'tutorial/basics/modules',
             ],
-        }
+        },
         {
             type: 'category',
             label: 'Advanced Features',
