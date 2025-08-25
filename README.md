@@ -752,19 +752,122 @@ graph TB
     A[Source Code] --> B[Tokenizer/Lexer]
     B --> C[Parser]
     C --> D[Abstract Syntax Tree]
-    D --> E[Interpreter]
-    E --> F[Runtime Environment]
+    D --> E[Evaluator]
+    E --> F[Interpreter Core]
+    F --> G[Runtime Environment]
 
-    F --> G[Built-in Functions]
-    F --> H[Memory Management]
-    F --> I[Error Handling]
+    %% Core Components
+    G --> H[Variable Scopes]
+    G --> I[Built-in Dispatcher]
+    G --> J[Memory Pools]
+    G --> K[Error Handling]
 
-    J[Standard Library] --> E
+    %% Optimization Layer
+    L[Expression Optimizer] --> E
+    M[Constant Folder] --> E
+    N[Memoization Cache] --> F
+    O[String Interning] --> J
+
+    %% Built-in Function Categories
+    I --> P[Core Functions]
+    I --> Q[Math Functions]
+    I --> R[String Functions]
+    I --> S[Array Functions]
+    I --> T[File System]
+    I --> U[Network Functions]
+    I --> V[Database Functions]
+
+    %% Memory Management
+    J --> W[Array Pools]
+    J --> X[Map Pools]
+    J --> Y[String Builder Pools]
+    J --> Z[Variable Lookup Cache]
 
     style A fill:#e1f5fe
     style D fill:#f3e5f5
     style E fill:#e8f5e8
     style F fill:#fff3e0
+    style G fill:#f0f4c3
+    style L fill:#fce4ec
+    style I fill:#e0f2f1
+```
+
+### Memory Management & Optimization
+
+```mermaid
+graph TB
+    A[Memory Layout Config] --> B[Tagged Values]
+    A --> C[Compact Environment]
+    A --> D[Cache-Friendly Structures]
+
+    %% Object Pools
+    E[Object Pools] --> F[Array Pool]
+    E --> G[Map Pool]
+    E --> H[String Builder Pool]
+    E --> I[AST Node Pool]
+
+    %% Caching Systems
+    J[Caching Layer] --> K[Memoization Cache]
+    J --> L[Variable Lookup Cache]
+    J --> M[Token Cache]
+    J --> N[Parser Cache]
+
+    %% Optimization Engines
+    O[Optimization] --> P[Expression Optimizer]
+    O --> Q[Constant Folder]
+    O --> R[Fast Numeric Evaluator]
+    O --> S[String Interning]
+
+    %% Performance Monitoring
+    T[Performance Monitor] --> U[Operation Tracking]
+    T --> V[Memory Leak Detection]
+    T --> W[Call Statistics]
+
+    style A fill:#e3f2fd
+    style E fill:#f3e5f5
+    style J fill:#e8f5e8
+    style O fill:#fff3e0
+    style T fill:#fce4ec
+```
+
+### Built-in Function System
+
+```mermaid
+graph TB
+    A[Built-in Dispatcher] --> B[Function Registry]
+    B --> C[Argument Validation]
+    B --> D[Call Statistics]
+
+    %% Function Categories
+    E[Core Functions] --> F[print, len, typeof]
+    G[Math Functions] --> H[abs, sqrt, pow, sin, cos]
+    I[String Functions] --> J[substr, split, join, contains]
+    K[Array Functions] --> L[range, filter, map, reduce]
+    M[File System] --> N[read_file, write_file, exists]
+    O[Network] --> P[http_get, http_post, tcp_connect]
+    Q[Database] --> R[mysql_stream, postgres_stream]
+    S[Concurrent] --> T[async, await, parallel]
+    U[Data Structure] --> V[stack, queue, heap, graph]
+
+    %% Dispatch Flow
+    A --> E
+    A --> G
+    A --> I
+    A --> K
+    A --> M
+    A --> O
+    A --> Q
+    A --> S
+    A --> U
+
+    %% Optimization
+    W[Fast Path] --> X[Type-specific Handlers]
+    W --> Y[Specialized Builtins]
+    A --> W
+
+    style A fill:#e0f2f1
+    style B fill:#f3e5f5
+    style W fill:#fff3e0
 ```
 
 ### Execution Flow
@@ -790,14 +893,21 @@ sequenceDiagram
 
 ### Component Responsibilities
 
-| Component       | Responsibility                                            |
-| --------------- | --------------------------------------------------------- |
-| **Tokenizer**   | Converts source code into tokens (lexical analysis)       |
-| **Parser**      | Builds Abstract Syntax Tree from tokens (syntax analysis) |
-| **AST**         | Represents program structure in tree form                 |
-| **Interpreter** | Executes the AST (semantic analysis & execution)          |
-| **Environment** | Manages variable scopes and function calls                |
-| **Built-ins**   | Provides standard library functions                       |
+| Component                | Responsibility                                                    |
+| ------------------------ | ----------------------------------------------------------------- |
+| **Tokenizer**           | Converts source code into tokens with caching (lexical analysis) |
+| **Parser**              | Builds Abstract Syntax Tree from tokens with node pooling        |
+| **AST**                 | Represents program structure in optimized tree form              |
+| **Evaluator**           | Evaluates expressions with constant folding optimization         |
+| **Interpreter Core**    | Orchestrates execution flow and manages global state             |
+| **Runtime Environment** | Manages variable scopes, I/O streams, and execution context      |
+| **Built-in Dispatcher** | Optimized dispatch system for built-in functions                 |
+| **Memory Pools**        | Efficient memory allocation and reuse for arrays, maps, strings  |
+| **Expression Optimizer**| Optimizes expressions through constant folding and caching       |
+| **Memoization Cache**   | Caches function results for pure functions                       |
+| **Variable Lookup Cache**| Accelerates variable resolution in nested scopes                |
+| **String Interning**    | Reduces memory usage by reusing identical strings                |
+| **Performance Monitor** | Tracks operation counts and detects memory leaks                 |
 
 ---
 
