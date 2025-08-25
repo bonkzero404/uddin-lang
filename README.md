@@ -480,7 +480,7 @@ expression_stmt = expression
 assignment     = ( IDENTIFIER | subscript ) ( "=" | "+=" | "-=" | "*=" | "/=" | "%=" ) expression
 
 if_stmt        = "if" "(" expression ")" "then" ":" block
-                   { "else" "if" "(" expression ")" "then" ":" block }
+                   { ( "else" "if" | "elif" ) "(" expression ")" "then" ":" block }
                    [ "else" ":" block ] "end"
 
 while_stmt     = "while" "(" expression ")" ":" block "end"

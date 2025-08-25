@@ -77,6 +77,7 @@ const (
 	WHILE    = 518
 	XOR      = 519
 	MEMO     = 520
+	ELIF     = 521
 
 	// Literals and identifiers (sequential from 600)
 	INT   = 600
@@ -90,6 +91,7 @@ var keywordTokens = map[string]Token{
 	"break":    BREAK,
 	"catch":    CATCH,
 	"continue": CONTINUE,
+	"elif":     ELIF,
 	"else":     ELSE,
 	"end":      END,
 	"false":    FALSE,
@@ -152,6 +154,7 @@ var tokenNames = map[Token]string{
 	BREAK:    "break",
 	CATCH:    "catch",
 	CONTINUE: "continue",
+	ELIF:     "elif",
 	ELSE:     "else",
 	FALSE:    "false",
 	FOR:      "for",

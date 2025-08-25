@@ -102,7 +102,7 @@ func (p *parser) statement() Statement {
 	switch p.tok {
 	case MEMO:
 		return p.memoFun_()
-	case IF:
+	case IF, ELIF:
 		return p.if_()
 	case WHILE:
 		return p.while()
@@ -149,13 +149,13 @@ func (p *parser) block() Block {
 		return body
 	case COLON:
 		p.expect(COLON)
-		// We'll collect statements until we hit END, ELSE, or CATCH
+		// We'll collect statements until we hit END, ELSE, ELIF, or CATCH
 		statements := Block{}
-		for p.tok != END && p.tok != ELSE && p.tok != CATCH && p.tok != EOF {
+		for p.tok != END && p.tok != ELSE && p.tok != ELIF && p.tok != CATCH && p.tok != EOF {
 			statements = SmartAppendBlock(statements, p.statement())
 		}
 
-		// Only expect END if we're not at ELSE or CATCH
+		// Only expect END if we're not at ELSE, ELIF, or CATCH
 		if p.tok == END {
 			p.expect(END)
 		}
@@ -173,7 +173,11 @@ func (p *parser) block() Block {
 //	IF LPAREN expression RPAREN THEN block ELSE if
 func (p *parser) if_() Statement {
 	pos := p.pos
-	p.expect(IF)
+	if p.tok == ELIF {
+		p.expect(ELIF)
+	} else {
+		p.expect(IF)
+	}
 	p.expect(LPAREN) // Require opening parenthesis
 	condition := p.expression()
 	p.expect(RPAREN) // Require closing parenthesis
@@ -187,11 +191,13 @@ func (p *parser) if_() Statement {
 		switch p.tok {
 		case LBRACE, COLON:
 			elseBody = p.block()
-		case IF:
+		case IF, ELIF:
 			elseBody = Block{p.if_()}
 		default:
 			p.error("expected ':' or 'if' after 'else' keyword, got %s", p.tok)
 		}
+	} else if p.tok == ELIF {
+		elseBody = Block{p.if_()}
 	}
 
 	return &If{pos, condition, body, elseBody}
