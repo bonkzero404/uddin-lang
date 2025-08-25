@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"unsafe"
 )
 
 // importFunc implements the import() built-in function
@@ -122,30 +123,112 @@ func exitFunc(interp *interpreter, pos Position, args []Value) Value {
 //
 // Returns null
 // Example: print("hello", 42) -> hello 42
+// High-performance print function with zero-copy optimization
 func printFunc(interp *interpreter, pos Position, args []Value) Value {
-	// Convert all arguments to strings
-	strs := make([]string, len(args))
-	for i, a := range args {
-		strs[i] = toString(a, false)
+	if len(args) == 0 {
+		// Fast path for empty print
+		writeDirectStdout([]byte("\n"))
+		return Value(nil)
 	}
-	// Join strings with space and add newline
-	output := strings.Join(strs, " ") + "\n"
-	// Check if DirectOutput is enabled
-	if interp.DirectOutput {
-		// Write directly to os.Stdout when DirectOutput is enabled
-		os.Stdout.WriteString(output)
-		// Force flush using syscall
-		syscall.Syscall(syscall.SYS_FSYNC, uintptr(os.Stdout.Fd()), 0, 0)
-	} else if interp.stdout != nil {
-		// Write to the interpreter's stdout (this allows capture during testing)
-		interp.stdout.Write([]byte(output))
+	
+	// Use string builder from pool for efficient concatenation
+	sb := interp.getStringBuilder()
+	defer interp.putStringBuilder(sb)
+	
+	// Build output string efficiently
+	for i, arg := range args {
+		if i > 0 {
+			sb.WriteByte(' ')
+		}
+		// Direct string conversion without allocation when possible
+		switch v := arg.(type) {
+		case string:
+			sb.WriteString(v)
+		case int:
+			// Fast integer to string conversion
+			writeIntToBuilder(sb, int64(v))
+		case int64:
+			writeIntToBuilder(sb, v)
+		case float64:
+			// Fast float to string conversion
+			writeFloatToBuilder(sb, v)
+		case bool:
+			if v {
+				sb.WriteString("true")
+			} else {
+				sb.WriteString("false")
+			}
+		case nil:
+			sb.WriteString("null")
+		default:
+			// Fallback to toString for complex types
+			sb.WriteString(toString(arg, false))
+		}
+	}
+	sb.WriteByte('\n')
+	
+	// Get string as bytes without copying
+	str := sb.String()
+	bytes := stringToBytes(str)
+	
+	// Write output using direct syscall for maximum performance
+	if interp.DirectOutput || interp.stdout == nil {
+		writeDirectStdout(bytes)
 	} else {
-		// Fallback to direct stdout if no stdout is configured
-		os.Stdout.WriteString(output)
-		// Force flush using syscall
-		syscall.Syscall(syscall.SYS_FSYNC, uintptr(os.Stdout.Fd()), 0, 0)
+		// Use configured stdout for testing
+		interp.stdout.Write(bytes)
 	}
+	
 	return Value(nil)
+}
+
+// writeDirectStdout performs direct syscall write to stdout
+func writeDirectStdout(data []byte) {
+	if len(data) == 0 {
+		return
+	}
+	// Direct syscall write - fastest possible I/O
+	syscall.Syscall(syscall.SYS_WRITE, uintptr(1), uintptr(unsafe.Pointer(&data[0])), uintptr(len(data)))
+}
+
+// stringToBytes converts string to []byte without copying
+func stringToBytes(s string) []byte {
+	return unsafe.Slice(unsafe.StringData(s), len(s))
+}
+
+// writeIntToBuilder writes integer to string builder efficiently
+func writeIntToBuilder(sb *strings.Builder, n int64) {
+	if n == 0 {
+		sb.WriteByte('0')
+		return
+	}
+	
+	if n < 0 {
+		sb.WriteByte('-')
+		n = -n
+	}
+	
+	// Fast integer to string conversion
+	var buf [20]byte // enough for 64-bit int
+	i := len(buf)
+	for n > 0 {
+		i--
+		buf[i] = byte('0' + n%10)
+		n /= 10
+	}
+	sb.Write(buf[i:])
+}
+
+// writeFloatToBuilder writes float to string builder efficiently
+func writeFloatToBuilder(sb *strings.Builder, f float64) {
+	// Simple float formatting - can be optimized further
+	if f == float64(int64(f)) {
+		// Integer value, write as int
+		writeIntToBuilder(sb, int64(f))
+	} else {
+		// Use fallback for now - can implement custom float formatting
+		sb.WriteString(fmt.Sprintf("%.6g", f))
+	}
 }
 
 // inputFunc implements the input() built-in function
