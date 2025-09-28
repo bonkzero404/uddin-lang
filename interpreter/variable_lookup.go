@@ -42,7 +42,7 @@ func safeValueEqual(a, b Value) bool {
 			// If comparison panics, consider them different
 		}
 	}()
-	
+
 	// Use reflect.DeepEqual for safe comparison
 	return reflect.DeepEqual(a, b)
 }
@@ -52,7 +52,7 @@ func (vlc *VariableLookupCache) FastLookup(name string, env *Environment) (Value
 	vlc.mutex.RLock()
 	cached, exists := vlc.cache[name]
 	vlc.mutex.RUnlock()
-	
+
 	if exists {
 		// Verify the cached value is still valid for the current scope
 		if cached.ScopeLevel < len(env.vars) {
@@ -64,9 +64,9 @@ func (vlc *VariableLookupCache) FastLookup(name string, env *Environment) (Value
 		// Cache is stale, remove it
 		vlc.InvalidateVariable(name)
 	}
-	
+
 	vlc.misses++
-	
+
 	// Perform regular lookup and cache the result
 	for i := len(env.vars) - 1; i >= 0; i-- {
 		if value, found := env.vars[i][name]; found {
@@ -74,7 +74,7 @@ func (vlc *VariableLookupCache) FastLookup(name string, env *Environment) (Value
 			return value, true
 		}
 	}
-	
+
 	return nil, false
 }
 
@@ -82,12 +82,12 @@ func (vlc *VariableLookupCache) FastLookup(name string, env *Environment) (Value
 func (vlc *VariableLookupCache) CacheVariable(name string, value Value, scopeLevel int) {
 	vlc.mutex.Lock()
 	defer vlc.mutex.Unlock()
-	
+
 	// Check cache size limit
 	if len(vlc.cache) >= vlc.maxSize {
 		vlc.evictOldEntries()
 	}
-	
+
 	vlc.cache[name] = &CachedVariable{
 		Value:      value,
 		ScopeLevel: scopeLevel,
@@ -106,7 +106,7 @@ func (vlc *VariableLookupCache) InvalidateVariable(name string) {
 func (vlc *VariableLookupCache) InvalidateScope(scopeLevel int) {
 	vlc.mutex.Lock()
 	defer vlc.mutex.Unlock()
-	
+
 	for name, cached := range vlc.cache {
 		if cached.ScopeLevel >= scopeLevel {
 			delete(vlc.cache, name)
@@ -120,7 +120,7 @@ func (vlc *VariableLookupCache) evictOldEntries() {
 	toRemove := len(vlc.cache) / 2
 	oldestAccess := vlc.hits + vlc.misses
 	oldestNames := make([]string, 0, toRemove)
-	
+
 	// Find oldest entries
 	for name, cached := range vlc.cache {
 		if len(oldestNames) < toRemove {
@@ -138,7 +138,7 @@ func (vlc *VariableLookupCache) evictOldEntries() {
 			}
 		}
 	}
-	
+
 	// Remove oldest entries
 	for _, name := range oldestNames {
 		delete(vlc.cache, name)
@@ -149,12 +149,12 @@ func (vlc *VariableLookupCache) evictOldEntries() {
 func (vlc *VariableLookupCache) GetCacheStats() (hits, misses int64, hitRatio float64) {
 	vlc.mutex.RLock()
 	defer vlc.mutex.RUnlock()
-	
+
 	total := vlc.hits + vlc.misses
 	if total > 0 {
 		hitRatio = float64(vlc.hits) / float64(total)
 	}
-	
+
 	return vlc.hits, vlc.misses, hitRatio
 }
 
@@ -238,15 +238,15 @@ func (sf *ScopeFlattener) FlattenScope(env *Environment) map[string]Value {
 	if len(env.vars) <= sf.maxDepth {
 		return nil // No need to flatten
 	}
-	
+
 	sf.mutex.Lock()
 	defer sf.mutex.Unlock()
-	
+
 	// Clear previous flattened vars
 	for k := range sf.flattenedVars {
 		delete(sf.flattenedVars, k)
 	}
-	
+
 	// Flatten variables from all scopes
 	for i := 0; i < len(env.vars); i++ {
 		for name, value := range env.vars[i] {
@@ -255,7 +255,7 @@ func (sf *ScopeFlattener) FlattenScope(env *Environment) map[string]Value {
 			}
 		}
 	}
-	
+
 	return sf.flattenedVars
 }
 

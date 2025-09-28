@@ -88,9 +88,9 @@ func TestElifFunctionality(t *testing.T) {
 func TestElifTokenizer(t *testing.T) {
 	input := "elif (x > 0) then: print(x) end"
 	tokenizer := NewTokenizer([]byte(input))
-	
+
 	expectedTokens := []Token{ELIF, LPAREN, NAME, GT, INT, RPAREN, THEN, COLON, NAME, LPAREN, NAME, RPAREN, END, EOF}
-	
+
 	for i, expected := range expectedTokens {
 		_, tok, _ := tokenizer.Next()
 		if tok != expected {

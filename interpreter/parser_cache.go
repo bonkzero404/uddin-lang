@@ -6,15 +6,15 @@ import (
 
 // TokenCache provides caching for frequently used tokens to reduce parsing overhead
 type TokenCache struct {
-	cache map[string]Token
-	mutex sync.RWMutex
+	cache   map[string]Token
+	mutex   sync.RWMutex
 	maxSize int
 }
 
 // NewTokenCache creates a new token cache with specified maximum size
 func NewTokenCache(maxSize int) *TokenCache {
 	return &TokenCache{
-		cache: make(map[string]Token),
+		cache:   make(map[string]Token),
 		maxSize: maxSize,
 	}
 }
@@ -27,11 +27,11 @@ func (tc *TokenCache) GetCachedToken(tokenStr string) (Token, bool) {
 	tc.mutex.RLock()
 	token, exists := tc.cache[tokenStr]
 	tc.mutex.RUnlock()
-	
+
 	if exists {
 		return token, true
 	}
-	
+
 	return 0, false
 }
 
@@ -39,7 +39,7 @@ func (tc *TokenCache) GetCachedToken(tokenStr string) (Token, bool) {
 func (tc *TokenCache) SetCachedToken(tokenStr string, token Token) {
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
-	
+
 	// Check cache size limit
 	if len(tc.cache) >= tc.maxSize {
 		// Simple eviction: clear half the cache
@@ -50,7 +50,7 @@ func (tc *TokenCache) SetCachedToken(tokenStr string, token Token) {
 			}
 		}
 	}
-	
+
 	tc.cache[tokenStr] = token
 }
 

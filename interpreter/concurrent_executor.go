@@ -35,7 +35,7 @@ func NewConcurrentExecutor(maxWorkers, maxQueueSize int) *ConcurrentExecutor {
 	if maxQueueSize <= 0 {
 		maxQueueSize = maxWorkers * 10
 	}
-	
+
 	return &ConcurrentExecutor{
 		workerPool:   NewWorkerPool(maxWorkers, maxQueueSize),
 		asyncIOPool:  NewAsyncIOPool(maxWorkers/2, maxQueueSize),
@@ -93,7 +93,7 @@ func NewWorkerPool(numWorkers, queueSize int) *WorkerPool {
 		quitChannel: make(chan bool),
 		active:      true,
 	}
-	
+
 	// Create and start workers
 	for i := 0; i < numWorkers; i++ {
 		worker := &Worker{
@@ -106,7 +106,7 @@ func NewWorkerPool(numWorkers, queueSize int) *WorkerPool {
 		pool.wg.Add(1)
 		go worker.start()
 	}
-	
+
 	return pool
 }
 
@@ -114,11 +114,11 @@ func NewWorkerPool(numWorkers, queueSize int) *WorkerPool {
 func (wp *WorkerPool) SubmitTask(task *Task) error {
 	wp.mutex.RLock()
 	defer wp.mutex.RUnlock()
-	
+
 	if !wp.active {
 		return &RuntimeError{Message: "Worker pool is not active"}
 	}
-	
+
 	select {
 	case wp.taskQueue <- task:
 		return nil
@@ -133,7 +133,7 @@ func (wp *WorkerPool) Shutdown() {
 	wp.active = false
 	close(wp.quitChannel)
 	wp.mutex.Unlock()
-	
+
 	wp.wg.Wait()
 	close(wp.taskQueue)
 }
@@ -141,7 +141,7 @@ func (wp *WorkerPool) Shutdown() {
 // start starts the worker
 func (w *Worker) start() {
 	defer w.wg.Done()
-	
+
 	for {
 		select {
 		case task := <-w.taskQueue:
@@ -162,7 +162,7 @@ func (w *Worker) executeTask(task *Task) {
 			}
 		}
 	}()
-	
+
 	// Set up timeout if specified
 	ctx := task.Context
 	if task.Timeout > 0 {
@@ -170,7 +170,7 @@ func (w *Worker) executeTask(task *Task) {
 		ctx, cancel = context.WithTimeout(ctx, task.Timeout)
 		defer cancel()
 	}
-	
+
 	// Execute task with timeout
 	done := make(chan TaskResult, 1)
 	go func() {
@@ -185,7 +185,7 @@ func (w *Worker) executeTask(task *Task) {
 		value, err := task.Function()
 		done <- TaskResult{Value: value, Error: err}
 	}()
-	
+
 	select {
 	case result := <-done:
 		task.Result <- result
@@ -231,7 +231,7 @@ func NewAsyncIOPool(numWorkers, queueSize int) *AsyncIOPool {
 		quitChannel: make(chan bool),
 		active:      true,
 	}
-	
+
 	// Create and start workers
 	for i := 0; i < numWorkers; i++ {
 		worker := &AsyncIOWorker{
@@ -244,7 +244,7 @@ func NewAsyncIOPool(numWorkers, queueSize int) *AsyncIOPool {
 		pool.wg.Add(1)
 		go worker.start()
 	}
-	
+
 	return pool
 }
 
@@ -252,11 +252,11 @@ func NewAsyncIOPool(numWorkers, queueSize int) *AsyncIOPool {
 func (aio *AsyncIOPool) SubmitIOTask(task *IOTask) error {
 	aio.mutex.RLock()
 	defer aio.mutex.RUnlock()
-	
+
 	if !aio.active {
 		return &RuntimeError{Message: "Async I/O pool is not active"}
 	}
-	
+
 	select {
 	case aio.ioQueue <- task:
 		return nil
@@ -271,7 +271,7 @@ func (aio *AsyncIOPool) Shutdown() {
 	aio.active = false
 	close(aio.quitChannel)
 	aio.mutex.Unlock()
-	
+
 	aio.wg.Wait()
 	close(aio.ioQueue)
 }
@@ -279,7 +279,7 @@ func (aio *AsyncIOPool) Shutdown() {
 // start starts the async I/O worker
 func (w *AsyncIOWorker) start() {
 	defer w.wg.Done()
-	
+
 	for {
 		select {
 		case task := <-w.ioQueue:
@@ -300,7 +300,7 @@ func (w *AsyncIOWorker) executeIOTask(task *IOTask) {
 			}
 		}
 	}()
-	
+
 	select {
 	case <-task.Context.Done():
 		task.Result <- TaskResult{
@@ -328,7 +328,7 @@ func NewParallelArrayProcessor(executor *ConcurrentExecutor, chunkSize, maxParal
 	if maxParallel <= 0 {
 		maxParallel = runtime.NumCPU()
 	}
-	
+
 	return &ParallelArrayProcessor{
 		executor:    executor,
 		chunkSize:   chunkSize,
@@ -341,7 +341,7 @@ func (pap *ParallelArrayProcessor) ProcessArray(array []Value, processor func(Va
 	if len(array) == 0 {
 		return array, nil
 	}
-	
+
 	// Calculate number of chunks
 	numChunks := (len(array) + pap.chunkSize - 1) / pap.chunkSize
 	if numChunks > pap.maxParallel {
@@ -349,12 +349,12 @@ func (pap *ParallelArrayProcessor) ProcessArray(array []Value, processor func(Va
 		actualChunkSize := (len(array) + numChunks - 1) / numChunks
 		pap.chunkSize = actualChunkSize
 	}
-	
+
 	// Create result array
 	result := make([]Value, len(array))
 	var wg sync.WaitGroup
 	errorChan := make(chan error, numChunks)
-	
+
 	// Process chunks in parallel
 	for i := 0; i < numChunks; i++ {
 		start := i * pap.chunkSize
@@ -362,33 +362,33 @@ func (pap *ParallelArrayProcessor) ProcessArray(array []Value, processor func(Va
 		if end > len(array) {
 			end = len(array)
 		}
-		
+
 		wg.Add(1)
 		go func(chunkStart, chunkEnd int) {
 			defer wg.Done()
-			
+
 			for j := chunkStart; j < chunkEnd; j++ {
 				result[j] = processor(array[j])
 			}
 		}(start, end)
 	}
-	
+
 	// Wait for all chunks to complete
 	wg.Wait()
 	close(errorChan)
-	
+
 	// Check for errors
 	for err := range errorChan {
 		if err != nil {
 			return nil, err
 		}
 	}
-	
+
 	// Update stats
 	pap.executor.mutex.Lock()
 	pap.executor.stats.ParallelOpsCount++
 	pap.executor.mutex.Unlock()
-	
+
 	return result, nil
 }
 
@@ -401,7 +401,7 @@ func (ce *ConcurrentExecutor) ExecuteTask(taskFunc func() (Value, error), timeou
 		Context:  context.Background(),
 		Timeout:  timeout,
 	}
-	
+
 	err := ce.workerPool.SubmitTask(task)
 	if err != nil {
 		ce.mutex.Lock()
@@ -409,14 +409,14 @@ func (ce *ConcurrentExecutor) ExecuteTask(taskFunc func() (Value, error), timeou
 		ce.mutex.Unlock()
 		return nil, err
 	}
-	
+
 	ce.mutex.Lock()
 	ce.stats.TasksQueued++
 	ce.mutex.Unlock()
-	
+
 	// Wait for result
 	result := <-task.Result
-	
+
 	ce.mutex.Lock()
 	if result.Error != nil {
 		ce.stats.TasksFailed++
@@ -424,7 +424,7 @@ func (ce *ConcurrentExecutor) ExecuteTask(taskFunc func() (Value, error), timeou
 		ce.stats.TasksExecuted++
 	}
 	ce.mutex.Unlock()
-	
+
 	return result.Value, result.Error
 }
 
@@ -436,7 +436,7 @@ func (ce *ConcurrentExecutor) ExecuteIOTask(ioFunc func() (Value, error)) (Value
 		Result:   make(chan TaskResult, 1),
 		Context:  context.Background(),
 	}
-	
+
 	err := ce.asyncIOPool.SubmitIOTask(task)
 	if err != nil {
 		ce.mutex.Lock()
@@ -444,10 +444,10 @@ func (ce *ConcurrentExecutor) ExecuteIOTask(ioFunc func() (Value, error)) (Value
 		ce.mutex.Unlock()
 		return nil, err
 	}
-	
+
 	// Wait for result
 	result := <-task.Result
-	
+
 	ce.mutex.Lock()
 	if result.Error != nil {
 		ce.stats.TasksFailed++
@@ -455,7 +455,7 @@ func (ce *ConcurrentExecutor) ExecuteIOTask(ioFunc func() (Value, error)) (Value
 		ce.stats.AsyncIOOpsCount++
 	}
 	ce.mutex.Unlock()
-	
+
 	return result.Value, result.Error
 }
 
@@ -490,11 +490,11 @@ func (ce *ConcurrentExecutor) ParallelFilterOperation(array []Value, filterFunc 
 	if len(array) == 0 {
 		return array, nil
 	}
-	
+
 	// First pass: determine which elements to keep
 	keepFlags := make([]bool, len(array))
 	processor := NewParallelArrayProcessor(ce, 100, ce.maxWorkers)
-	
+
 	// Use ProcessArray to evaluate filter function in parallel
 	filterResults, err := processor.ProcessArray(array, func(v Value) Value {
 		return filterFunc(v)
@@ -502,14 +502,14 @@ func (ce *ConcurrentExecutor) ParallelFilterOperation(array []Value, filterFunc 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// Convert filter results to boolean flags
 	for i, result := range filterResults {
 		if boolResult, ok := result.(bool); ok {
 			keepFlags[i] = boolResult
 		}
 	}
-	
+
 	// Second pass: collect kept elements
 	var result []Value
 	for i, keep := range keepFlags {
@@ -517,11 +517,11 @@ func (ce *ConcurrentExecutor) ParallelFilterOperation(array []Value, filterFunc 
 			result = append(result, array[i])
 		}
 	}
-	
+
 	ce.mutex.Lock()
 	ce.stats.ParallelOpsCount++
 	ce.mutex.Unlock()
-	
+
 	return result, nil
 }
 
@@ -530,7 +530,7 @@ func (ce *ConcurrentExecutor) ParallelReduceOperation(array []Value, reduceFunc 
 	if len(array) == 0 {
 		return initialValue, nil
 	}
-	
+
 	// For small arrays, use sequential processing
 	if len(array) < 100 {
 		result := initialValue
@@ -539,17 +539,17 @@ func (ce *ConcurrentExecutor) ParallelReduceOperation(array []Value, reduceFunc 
 		}
 		return result, nil
 	}
-	
+
 	// Parallel reduce using divide and conquer
 	chunkSize := len(array) / ce.maxWorkers
 	if chunkSize < 1 {
 		chunkSize = 1
 	}
-	
+
 	numChunks := (len(array) + chunkSize - 1) / chunkSize
 	partialResults := make([]Value, numChunks)
 	var wg sync.WaitGroup
-	
+
 	// Process chunks in parallel
 	for i := 0; i < numChunks; i++ {
 		start := i * chunkSize
@@ -557,11 +557,11 @@ func (ce *ConcurrentExecutor) ParallelReduceOperation(array []Value, reduceFunc 
 		if end > len(array) {
 			end = len(array)
 		}
-		
+
 		wg.Add(1)
 		go func(chunkIndex, chunkStart, chunkEnd int) {
 			defer wg.Done()
-			
+
 			result := initialValue
 			for j := chunkStart; j < chunkEnd; j++ {
 				result = reduceFunc(result, array[j])
@@ -569,18 +569,18 @@ func (ce *ConcurrentExecutor) ParallelReduceOperation(array []Value, reduceFunc 
 			partialResults[chunkIndex] = result
 		}(i, start, end)
 	}
-	
+
 	wg.Wait()
-	
+
 	// Combine partial results
 	finalResult := initialValue
 	for _, partial := range partialResults {
 		finalResult = reduceFunc(finalResult, partial)
 	}
-	
+
 	ce.mutex.Lock()
 	ce.stats.ParallelOpsCount++
 	ce.mutex.Unlock()
-	
+
 	return finalResult, nil
 }

@@ -265,7 +265,7 @@ func InitializeBuiltinDispatcher() {
 
 		// Set specific argument counts and fast path for commonly used functions
 		switch name {
-        case "print":
+		case "print":
 			argCount = -1
 			fastPath = true
 		case "len", "typeof", "str", "int", "float", "char", "rune", "abs", "sqrt":

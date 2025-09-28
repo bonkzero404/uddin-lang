@@ -289,13 +289,32 @@ func mapFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "map() requires second argument to be a function"))
 	}
 
-	// Note: Concurrent execution is available but disabled for thread safety
-	// TODO: Implement thread-safe interpreter access for concurrent execution
-	// For now, using sequential execution for all array sizes
-	result := make([]Value, len(*arr))
-	for i, v := range *arr {
-		result[i] = interp.callFunction(pos, fn, []Value{v})
+	// For small arrays, use sequential processing to avoid overhead
+	if len(*arr) < 100 {
+		result := make([]Value, len(*arr))
+		for i, v := range *arr {
+			result[i] = interp.callFunction(pos, fn, []Value{v})
+		}
+		return Value(&result)
 	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
+	executor := GetGlobalConcurrentExecutor()
+	mapFunc := func(v Value) Value {
+		// Create a new interpreter instance for this goroutine to avoid scope conflicts
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		return threadInterp.callFunction(pos, fn, []Value{v})
+	}
+
+	result, err := executor.ParallelMapOperation(*arr, mapFunc)
+	if err != nil {
+		// Fallback to sequential execution on error
+		result = make([]Value, len(*arr))
+		for i, v := range *arr {
+			result[i] = interp.callFunction(pos, fn, []Value{v})
+		}
+	}
+
 	return Value(&result)
 }
 
@@ -318,12 +337,40 @@ func filterFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Note: Concurrent execution is available but disabled for thread safety
 	// TODO: Implement thread-safe interpreter access for concurrent execution
 	// For now, using sequential execution for all array sizes
-	result := make([]Value, 0)
-	for _, v := range *arr {
-		if IsTruthy(interp.callFunction(pos, fn, []Value{v})) {
-			result = append(result, v)
+	if len(*arr) < 100 {
+		result := make([]Value, 0)
+		for _, v := range *arr {
+			if IsTruthy(interp.callFunction(pos, fn, []Value{v})) {
+				result = append(result, v)
+			}
 		}
+		return Value(&result)
 	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
+	executor := GetGlobalConcurrentExecutor()
+	filterFunc := func(v Value) bool {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		result := threadInterp.callFunction(pos, fn, []Value{v})
+		if b, ok := result.(bool); ok {
+			return b
+		}
+		return false
+	}
+
+	result, err := executor.ParallelFilterOperation(*arr, filterFunc)
+	if err != nil {
+		// Fallback to sequential execution on error
+		var filtered []Value
+		for _, v := range *arr {
+			result := interp.callFunction(pos, fn, []Value{v})
+			if b, ok := result.(bool); ok && b {
+				filtered = append(filtered, v)
+			}
+		}
+		result = filtered
+	}
+
 	return Value(&result)
 }
 
@@ -348,11 +395,31 @@ func reduceFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Note: Concurrent execution is available but disabled for thread safety
 	// TODO: Implement thread-safe interpreter access for concurrent execution
 	// For now, using sequential execution for all array sizes
-	accumulator := initialValue
-	for _, v := range *arr {
-		accumulator = interp.callFunction(pos, fn, []Value{accumulator, v})
+	if len(*arr) < 100 {
+		accumulator := initialValue
+		for _, v := range *arr {
+			accumulator = interp.callFunction(pos, fn, []Value{accumulator, v})
+		}
+		return accumulator
 	}
-	return accumulator
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
+	executor := GetGlobalConcurrentExecutor()
+	reduceFunc := func(a, b Value) Value {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		return threadInterp.callFunction(pos, fn, []Value{a, b})
+	}
+
+	result, err := executor.ParallelReduceOperation(*arr, reduceFunc, initialValue)
+	if err != nil {
+		// Fallback to sequential execution on error
+		result = initialValue
+		for _, v := range *arr {
+			result = interp.callFunction(pos, fn, []Value{result, v})
+		}
+	}
+
+	return result
 }
 
 // reverseFunc implements the reverse() built-in function

@@ -130,11 +130,11 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 		writeDirectStdout([]byte("\n"))
 		return Value(nil)
 	}
-	
+
 	// Use string builder from pool for efficient concatenation
 	sb := interp.getStringBuilder()
 	defer interp.putStringBuilder(sb)
-	
+
 	// Build output string efficiently
 	for i, arg := range args {
 		if i > 0 {
@@ -166,11 +166,11 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	}
 	sb.WriteByte('\n')
-	
+
 	// Get string as bytes without copying
 	str := sb.String()
 	bytes := stringToBytes(str)
-	
+
 	// Write output using direct syscall for maximum performance
 	if interp.DirectOutput || interp.stdout == nil {
 		writeDirectStdout(bytes)
@@ -178,7 +178,7 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Use configured stdout for testing
 		interp.stdout.Write(bytes)
 	}
-	
+
 	return Value(nil)
 }
 
@@ -202,12 +202,12 @@ func writeIntToBuilder(sb *strings.Builder, n int64) {
 		sb.WriteByte('0')
 		return
 	}
-	
+
 	if n < 0 {
 		sb.WriteByte('-')
 		n = -n
 	}
-	
+
 	// Fast integer to string conversion
 	var buf [20]byte // enough for 64-bit int
 	i := len(buf)
@@ -235,6 +235,7 @@ func writeFloatToBuilder(sb *strings.Builder, f float64) {
 // Reads user input from stdin with an optional prompt
 // Parameters:
 //   - prompt (optional): string to display before reading input
+//
 // Returns the input string (without newline)
 // Example: name = input("Enter your name: ")
 func inputFunc(interp *interpreter, pos Position, args []Value) Value {
@@ -279,6 +280,7 @@ func inputFunc(interp *interpreter, pos Position, args []Value) Value {
 // Returns the type name of a value
 // Parameters:
 //   - value: Any value
+//
 // Returns: string type name
 // Example: typeof(42) -> "int"
 func typeofFunc(interp *interpreter, pos Position, args []Value) Value {

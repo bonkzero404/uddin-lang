@@ -17,8 +17,6 @@ type CLI struct {
 	analyze                    bool
 	toJson                     bool
 	fromJson                   bool
-	// DEPRECATED: Use memoryOptimizeStable or memoryOptimizeExperimental instead
-	memoryOptimize             bool
 	memoryOptimizeStable       bool
 	memoryOptimizeExperimental bool
 }
@@ -53,11 +51,6 @@ func (c *CLI) Run() error {
 			c.args = append(c.args[:i], c.args[i+1:]...)
 		case "--from_json":
 			c.fromJson = true
-			// Remove the flag from args
-			c.args = append(c.args[:i], c.args[i+1:]...)
-		case "--memory-optimize", "-m":
-			// DEPRECATED: Use --memory-optimize-stable or --memory-optimize-experimental instead
-			c.memoryOptimize = true
 			// Remove the flag from args
 			c.args = append(c.args[:i], c.args[i+1:]...)
 		case "--memory-optimize-stable":
@@ -98,7 +91,6 @@ func (c *CLI) printUsage() {
 	fmt.Println("  uddinlang <filename.din>   - Run a Uddin-Lang script file")
 	fmt.Println("  uddinlang --profile <filename.din> - Run with performance profiling")
 	fmt.Println("  uddinlang --analyze <filename.din> - Analyze syntax without execution")
-	fmt.Println("  uddinlang --memory-optimize <filename.din> - Run with memory optimizations (DEPRECATED)")
 	fmt.Println("  uddinlang --memory-optimize-stable <filename.din> - Run with stable memory optimizations")
 	fmt.Println("  uddinlang --memory-optimize-experimental <filename.din> - Run with experimental memory optimizations")
 	fmt.Println("  uddinlang --to_json <filename.din> - Convert Uddin-Lang code to JSON AST")
@@ -110,7 +102,6 @@ func (c *CLI) printUsage() {
 	fmt.Println("Flags:")
 	fmt.Println("  --profile, -p                    - Enable performance profiling output")
 	fmt.Println("  --analyze, -a                    - Analyze syntax only (no execution)")
-	fmt.Println("  --memory-optimize, -m            - Enable experimental memory optimizations (DEPRECATED)")
 	fmt.Println("  --memory-optimize-stable         - Enable stable memory optimizations (production-ready)")
 	fmt.Println("  --memory-optimize-experimental   - Enable experimental memory optimizations (may be unstable)")
 	fmt.Println("  --to_json                        - Convert source code to JSON AST representation")
@@ -180,7 +171,6 @@ func (c *CLI) runScript(filename string) error {
 	// Create options based on flags
 	options := &interpreter.RunProgramOptions{
 		ShowProfiling:              c.profile,
-		MemoryOptimize:             c.memoryOptimize, // DEPRECATED: kept for backward compatibility
 		MemoryOptimizeStable:       c.memoryOptimizeStable,
 		MemoryOptimizeExperimental: c.memoryOptimizeExperimental,
 		DirectOutput:               true, // CLI mode: output directly to stdout, don't capture

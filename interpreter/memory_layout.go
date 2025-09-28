@@ -74,9 +74,9 @@ var (
 	globalSafeTaggedValuePool = NewSafeTaggedValuePool(1000)
 
 	// Thread-safe string storage with cleanup
-	globalSafeStringStore = make(map[int]string)
-	globalSafeStringIndex int64 // Use atomic for thread safety
-	globalSafeStringMutex sync.RWMutex
+	globalSafeStringStore            = make(map[int]string)
+	globalSafeStringIndex            int64 // Use atomic for thread safety
+	globalSafeStringMutex            sync.RWMutex
 	globalSafeStringCleanupThreshold = 10000 // Cleanup when reaching this size
 
 	// Memory tracking
@@ -246,13 +246,13 @@ func safeUintptrToPointer(ptr uintptr, typeName string) (unsafe.Pointer, error) 
 	}
 
 	// Safe conversion: pointer has been validated above
-    if ptr == 0 {
-        return nil, &MemoryError{"cannot convert zero uintptr to pointer"}
-    }
-    // Use unsafe.Add to ensure pointer arithmetic is done safely
-    p := unsafe.Add(unsafe.Pointer(nil), ptr) // Convert after validation with safe pointer arithmetic
-    runtime.KeepAlive(p)
-    return p, nil
+	if ptr == 0 {
+		return nil, &MemoryError{"cannot convert zero uintptr to pointer"}
+	}
+	// Use unsafe.Add to ensure pointer arithmetic is done safely
+	p := unsafe.Add(unsafe.Pointer(nil), ptr) // Convert after validation with safe pointer arithmetic
+	runtime.KeepAlive(p)
+	return p, nil
 }
 
 // safeFloat64PtrFromUintptr safely converts uintptr to *float64 with validation
@@ -877,7 +877,7 @@ func (mt *MemoryTracker) detectMemoryLeaks() []uintptr {
 		if !alloc.freed {
 			// Consider it a leak if allocated more than 1000 goroutine cycles ago
 			// This is a heuristic and may need adjustment
-			if int64(currentTime) - alloc.allocTime > 1000 {
+			if int64(currentTime)-alloc.allocTime > 1000 {
 				leaks = append(leaks, ptr)
 			}
 		}

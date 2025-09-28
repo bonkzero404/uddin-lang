@@ -39,7 +39,7 @@ type interpreter struct {
 	// currentPos tracks the current position being executed for better error reporting
 	currentPos Position
 	// Optimization caches
-	memoCache map[string]Value
+	memoCache           map[string]Value
 	productionMemoCache *ProductionMemoCache
 	// String builder pool for efficient memory allocation
 	stringBuilderPool sync.Pool

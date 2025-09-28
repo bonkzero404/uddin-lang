@@ -35,7 +35,7 @@ type userFunction struct {
 	Closure    map[string]Value // Captured variables from outer scopes
 	// EXPERIMENTAL: Whether this function should use memoization (not production-ready)
 	// WARNING: Memoization may consume significant memory and is not thread-safe
-	Memoized   bool
+	Memoized bool
 }
 
 // ensureNumArgs checks if the number of arguments matches the required count
@@ -344,18 +344,18 @@ var builtins = map[string]builtinFunction{
 	"net_ping":    {netPingFunc, "net_ping"},
 
 	// Database Functions
-	"db_connect":     {dbConnectFunc, "db_connect"},
-	"db_query":       {dbQueryFunc, "db_query"},
-	"db_execute":     {dbExecuteFunc, "db_execute"},
-	"db_execute_batch": {dbExecuteBatchFunc, "db_execute_batch"},
-	"db_execute_async": {dbExecuteAsyncFunc, "db_execute_async"},
-	"db_get_async_status": {dbGetAsyncStatusFunc, "db_get_async_status"},
-	"db_cancel_async": {dbCancelAsyncFunc, "db_cancel_async"},
-	"db_list_async_operations": {dbListAsyncOperationsFunc, "db_list_async_operations"},
+	"db_connect":                  {dbConnectFunc, "db_connect"},
+	"db_query":                    {dbQueryFunc, "db_query"},
+	"db_execute":                  {dbExecuteFunc, "db_execute"},
+	"db_execute_batch":            {dbExecuteBatchFunc, "db_execute_batch"},
+	"db_execute_async":            {dbExecuteAsyncFunc, "db_execute_async"},
+	"db_get_async_status":         {dbGetAsyncStatusFunc, "db_get_async_status"},
+	"db_cancel_async":             {dbCancelAsyncFunc, "db_cancel_async"},
+	"db_list_async_operations":    {dbListAsyncOperationsFunc, "db_list_async_operations"},
 	"db_cleanup_async_operations": {dbCleanupAsyncOperationsFunc, "db_cleanup_async_operations"},
-	"stream_tables":      {streamTablesFunc, "stream_tables"},
-	"db_stop_stream": {dbStopStreamFunc, "db_stop_stream"},
-	"db_close":       {dbCloseFunc, "db_close"},
+	"stream_tables":               {streamTablesFunc, "stream_tables"},
+	"db_stop_stream":              {dbStopStreamFunc, "db_stop_stream"},
+	"db_close":                    {dbCloseFunc, "db_close"},
 
 	// Regular Expression Functions
 	"is_regex_match": {isregexFunc, "is_regex_match"},
@@ -395,7 +395,7 @@ var builtins = map[string]builtinFunction{
 	"event_count":          {eventCountFunc, "event_count"},
 
 	// File System Operations
-    "read_file":        {readFileFunc, "read_file"},
+	"read_file":        {readFileFunc, "read_file"},
 	"write_file":       {writeFileFunc, "write_file"},
 	"file_exists":      {fileExistsFunc, "file_exists"},
 	"file_size":        {fileSizeFunc, "file_size"},
@@ -414,13 +414,7 @@ var builtins = map[string]builtinFunction{
 	"getcwd":           {getcwdFunc, "getcwd"},
 	"chdir":            {chdirFunc, "chdir"},
 
-	// Concurrent Processing Functions
-	"concurrent_map":    {concurrentMapFunc, "concurrent_map"},
-	"concurrent_filter": {concurrentFilterFunc, "concurrent_filter"},
-	"concurrent_reduce": {concurrentReduceFunc, "concurrent_reduce"},
-	"parallel_execute":  {parallelExecuteFunc, "parallel_execute"},
-
-	// Memory Management Functions
+	// Memory functions
 	"detect_memory_leaks": {detectMemoryLeaksFunc, "detect_memory_leaks"},
 	"force_cleanup_leaks": {forceCleanupLeaksFunc, "force_cleanup_leaks"},
 	"get_memory_stats":    {getMemoryStatsFunc, "get_memory_stats"},
