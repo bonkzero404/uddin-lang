@@ -347,6 +347,8 @@ var builtins = map[string]builtinFunction{
 	"db_connect":                  {dbConnectFunc, "db_connect"},
 	"db_query":                    {dbQueryFunc, "db_query"},
 	"db_execute":                  {dbExecuteFunc, "db_execute"},
+	"db_connect_with_pool":        {dbConnectWithPoolFunc, "db_connect_with_pool"},
+	"db_configure_pool":           {dbConfigurePoolFunc, "db_configure_pool"},
 	"db_execute_batch":            {dbExecuteBatchFunc, "db_execute_batch"},
 	"db_execute_async":            {dbExecuteAsyncFunc, "db_execute_async"},
 	"db_get_async_status":         {dbGetAsyncStatusFunc, "db_get_async_status"},
