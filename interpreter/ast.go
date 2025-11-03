@@ -357,7 +357,7 @@ type FunctionDefinition struct {
 	Body       Block    // Function body
 	// EXPERIMENTAL: Whether the function should use memoization (experimental feature)
 	// WARNING: May consume significant memory and is not thread-safe
-	Memoized   bool
+	Memoized bool
 }
 
 func (s *FunctionDefinition) Position() Position { return s.pos }

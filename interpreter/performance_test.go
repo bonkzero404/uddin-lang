@@ -57,8 +57,6 @@ func BenchmarkAdvancedStringConcatenation(b *testing.B) {
 	}
 }
 
-
-
 // BenchmarkAdvancedNestedFunctionCalls tests optimized function calls with scope pooling
 func BenchmarkAdvancedNestedFunctionCalls(b *testing.B) {
 	source := []byte(`
@@ -90,8 +88,6 @@ func BenchmarkAdvancedNestedFunctionCalls(b *testing.B) {
 		}
 	}
 }
-
-
 
 // BenchmarkAdvancedMapOperations tests optimized map merging
 func BenchmarkAdvancedMapOperations(b *testing.B) {
@@ -168,8 +164,6 @@ func BenchmarkAdvancedComplexDataStructures(b *testing.B) {
 		}
 	}
 }
-
-
 
 // BenchmarkPerformanceMonitoring tests the performance monitoring overhead
 func BenchmarkPerformanceMonitoring(b *testing.B) {
@@ -504,8 +498,6 @@ func BenchmarkBuiltinFunctions(b *testing.B) {
 	}
 }
 
-
-
 // Additional benchmarks for specific optimizations
 func BenchmarkAppendOptimization(b *testing.B) {
 	source := []byte(`
@@ -576,14 +568,6 @@ func BenchmarkMapAccessOptimization(b *testing.B) {
 		}
 	}
 }
-
-
-
-
-
-
-
-
 
 // BenchmarkLargeArrayOperations tests performance with large array manipulations
 func BenchmarkLargeArrayOperations(b *testing.B) {

@@ -69,7 +69,7 @@ func maxFunc(interp *interpreter, pos Position, args []Value) Value {
 		maxVal := (*arr)[0]
 		for i := 1; i < len(*arr); i++ {
 			if evalLess(pos, maxVal, (*arr)[i]).(bool) {
-			maxVal = (*arr)[i]
+				maxVal = (*arr)[i]
 			}
 		}
 		return maxVal
@@ -100,7 +100,7 @@ func minFunc(interp *interpreter, pos Position, args []Value) Value {
 		minVal := (*arr)[0]
 		for i := 1; i < len(*arr); i++ {
 			if evalLess(pos, (*arr)[i], minVal).(bool) {
-			minVal = (*arr)[i]
+				minVal = (*arr)[i]
 			}
 		}
 		return minVal

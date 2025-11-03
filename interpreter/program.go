@@ -177,19 +177,16 @@ func RunProgram(inputSource string) (bool, string) {
 
 // RunProgramOptions defines options for running a program
 type RunProgramOptions struct {
-	ShowProfiling          bool // Whether to show execution profiling information
+	ShowProfiling bool // Whether to show execution profiling information
 	// Whether to enable stable memory layout optimizations (production-ready)
-	MemoryOptimizeStable   bool
+	MemoryOptimizeStable bool
 	// EXPERIMENTAL: Whether to enable experimental memory layout optimizations
 	// WARNING: Not recommended for production use, may have stability issues
 	MemoryOptimizeExperimental bool
-	// DEPRECATED: Use MemoryOptimizeStable or MemoryOptimizeExperimental instead
-	// This field is kept for backward compatibility and maps to MemoryOptimizeExperimental
-	MemoryOptimize         bool
 	// DirectOutput controls whether output goes directly to stdout (true) or is captured and returned (false)
 	// When true, print() writes directly to os.Stdout and the returned output string will be empty
 	// When false (default), print() output is captured and returned in the output string
-	DirectOutput           bool
+	DirectOutput bool
 }
 
 // RunProgramWithOptions parses and executes the given program with custom options.
@@ -235,15 +232,11 @@ func RunProgramWithOptions(inputSource string, options *RunProgramOptions) (bool
 		} else if options.MemoryOptimizeStable {
 			// Use stable config with production-ready memory optimizations
 			config = StableConfig()
-		} else if options.MemoryOptimize {
-			// DEPRECATED: Backward compatibility - maps to experimental
-			// EXPERIMENTAL: Using experimental memory optimization configuration
-			config = ExperimentalConfig()
 		} else {
 			// Use default config
 			config = DefaultConfig()
 		}
-		
+
 		// Set up output handling based on DirectOutput option
 		if options.DirectOutput {
 			// Direct output mode: let print() write directly to os.Stdout

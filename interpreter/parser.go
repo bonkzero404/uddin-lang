@@ -470,7 +470,7 @@ func (p *parser) call() Expression {
 					p.error("missing comma ',' between function arguments")
 				}
 				arg := p.expression()
-			args = SmartAppendExpression(args, arg)
+				args = SmartAppendExpression(args, arg)
 				if p.tok == ELLIPSIS {
 					gotEllipsis = true
 					p.next()

@@ -34,12 +34,12 @@ var globalOptimizedMemoCache = NewOptimizedMemoCache(10000)
 
 // ProductionMemoCache provides a production-ready memoization cache with LRU eviction and TTL support
 type ProductionMemoCache struct {
-	cache    map[uint64]*cacheEntry
-	lruList  *list.List
-	mutex    sync.RWMutex
-	maxSize  int
-	ttl      time.Duration
-	enabled  bool
+	cache   map[uint64]*cacheEntry
+	lruList *list.List
+	mutex   sync.RWMutex
+	maxSize int
+	ttl     time.Duration
+	enabled bool
 }
 
 // cacheEntry represents a single cache entry with metadata

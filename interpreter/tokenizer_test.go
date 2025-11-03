@@ -214,7 +214,7 @@ func TestTokenizerNumberLiterals(t *testing.T) {
 // TestTokenizerDigitSeparatorErrors tests invalid digit separator usage
 func TestTokenizerDigitSeparatorErrors(t *testing.T) {
 	errorTests := []struct {
-		input string
+		input         string
 		expectedError string
 	}{
 		{"1__000", "consecutive digit separators '_' are not allowed"},

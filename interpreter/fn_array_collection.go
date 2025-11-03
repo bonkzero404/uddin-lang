@@ -277,7 +277,7 @@ func sortFunc(interp *interpreter, pos Position, args []Value) Value {
 // map(array, function) -> array
 // Example: map([1, 2, 3], lambda x: x * 2) -> [2, 4, 6]
 func mapFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "map", args, 2); err != nil {
+	if err := ensureNumArgs(pos, "map", args, 2); err != Value(nil) {
 		return Value(err)
 	}
 	arr, ok := args[0].(*[]Value)
@@ -289,13 +289,32 @@ func mapFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "map() requires second argument to be a function"))
 	}
 
-	// Note: Concurrent execution is available but disabled for thread safety
-	// TODO: Implement thread-safe interpreter access for concurrent execution
-	// For now, using sequential execution for all array sizes
-	result := make([]Value, len(*arr))
-	for i, v := range *arr {
-		result[i] = interp.callFunction(pos, fn, []Value{v})
+	// For small arrays, use sequential processing to avoid overhead
+	if len(*arr) < 100 {
+		result := make([]Value, len(*arr))
+		for i, v := range *arr {
+			result[i] = interp.callFunction(pos, fn, []Value{v})
+		}
+		return Value(&result)
 	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
+	executor := GetGlobalConcurrentExecutor()
+	mapFunc := func(v Value) Value {
+		// Create a new interpreter instance for this goroutine to avoid scope conflicts
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		return threadInterp.callFunction(pos, fn, []Value{v})
+	}
+
+	result, err := executor.ParallelMapOperation(*arr, mapFunc)
+	if err != nil {
+		// Fallback to sequential execution on error
+		result = make([]Value, len(*arr))
+		for i, v := range *arr {
+			result[i] = interp.callFunction(pos, fn, []Value{v})
+		}
+	}
+
 	return Value(&result)
 }
 
@@ -303,7 +322,7 @@ func mapFunc(interp *interpreter, pos Position, args []Value) Value {
 // filter(array, function) -> array
 // Example: filter([1, 2, 3, 4], lambda x: x % 2 == 0) -> [2, 4]
 func filterFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "filter", args, 2); err != nil {
+	if err := ensureNumArgs(pos, "filter", args, 2); err != Value(nil) {
 		return Value(err)
 	}
 	arr, ok := args[0].(*[]Value)
@@ -318,12 +337,40 @@ func filterFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Note: Concurrent execution is available but disabled for thread safety
 	// TODO: Implement thread-safe interpreter access for concurrent execution
 	// For now, using sequential execution for all array sizes
-	result := make([]Value, 0)
-	for _, v := range *arr {
-		if IsTruthy(interp.callFunction(pos, fn, []Value{v})) {
-			result = append(result, v)
+	if len(*arr) < 100 {
+		result := make([]Value, 0)
+		for _, v := range *arr {
+			if IsTruthy(interp.callFunction(pos, fn, []Value{v})) {
+				result = append(result, v)
+			}
 		}
+		return Value(&result)
 	}
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
+	executor := GetGlobalConcurrentExecutor()
+	filterFunc := func(v Value) bool {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		result := threadInterp.callFunction(pos, fn, []Value{v})
+		if b, ok := result.(bool); ok {
+			return b
+		}
+		return false
+	}
+
+	result, err := executor.ParallelFilterOperation(*arr, filterFunc)
+	if err != nil {
+		// Fallback to sequential execution on error
+		var filtered []Value
+		for _, v := range *arr {
+			result := interp.callFunction(pos, fn, []Value{v})
+			if b, ok := result.(bool); ok && b {
+				filtered = append(filtered, v)
+			}
+		}
+		result = filtered
+	}
+
 	return Value(&result)
 }
 
@@ -348,19 +395,39 @@ func reduceFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Note: Concurrent execution is available but disabled for thread safety
 	// TODO: Implement thread-safe interpreter access for concurrent execution
 	// For now, using sequential execution for all array sizes
-	accumulator := initialValue
-	for _, v := range *arr {
-		accumulator = interp.callFunction(pos, fn, []Value{accumulator, v})
+	if len(*arr) < 100 {
+		accumulator := initialValue
+		for _, v := range *arr {
+			accumulator = interp.callFunction(pos, fn, []Value{accumulator, v})
+		}
+		return accumulator
 	}
-	return accumulator
+
+	// Use concurrent executor for parallel processing with thread-safe interpreter instances
+	executor := GetGlobalConcurrentExecutor()
+	reduceFunc := func(a, b Value) Value {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		return threadInterp.callFunction(pos, fn, []Value{a, b})
+	}
+
+	result, err := executor.ParallelReduceOperation(*arr, reduceFunc, initialValue)
+	if err != nil {
+		// Fallback to sequential execution on error
+		result = initialValue
+		for _, v := range *arr {
+			result = interp.callFunction(pos, fn, []Value{result, v})
+		}
+	}
+
+	return result
 }
 
 // reverseFunc implements the reverse() built-in function
 // reverse(array) -> null (modifies array in place)
 // Example: reverse([1, 2, 3]) -> [3, 2, 1]
 func reverseFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "reverse", args, 1); err != nil {
-		return Value(err)
+	if err := ensureNumArgs(pos, "reverse", args, 1); err != Value(nil) {
+		return err
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
@@ -404,8 +471,8 @@ func pushFunc(interp *interpreter, pos Position, args []Value) Value {
 // pop(array) -> any (removes and returns last element)
 // Example: pop([1, 2, 3]) -> 3, array becomes [1, 2]
 func popFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "pop", args, 1); err != nil {
-		return Value(err)
+	if err := ensureNumArgs(pos, "pop", args, 1); err != Value(nil) {
+		return err
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
@@ -425,8 +492,8 @@ func popFunc(interp *interpreter, pos Position, args []Value) Value {
 // shift(array) -> any (removes and returns first element)
 // Example: shift([1, 2, 3]) -> 1, array becomes [2, 3]
 func shiftFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "shift", args, 1); err != nil {
-		return Value(err)
+	if err := ensureNumArgs(pos, "shift", args, 1); err != Value(nil) {
+		return err
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
@@ -465,8 +532,8 @@ func unshiftFunc(interp *interpreter, pos Position, args []Value) Value {
 // index_of(array, element) -> int
 // Example: index_of([1, 2, 3, 2], 2) -> 1
 func indexOfFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "index_of", args, 2); err != nil {
-		return Value(err)
+	if err := ensureNumArgs(pos, "index_of", args, 2); err != Value(nil) {
+		return err
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
@@ -485,8 +552,8 @@ func indexOfFunc(interp *interpreter, pos Position, args []Value) Value {
 // last_index_of(array, element) -> int
 // Example: last_index_of([1, 2, 3, 2], 2) -> 3
 func lastIndexOfFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "last_index_of", args, 2); err != nil {
-		return Value(err)
+	if err := ensureNumArgs(pos, "last_index_of", args, 2); err != Value(nil) {
+		return err
 	}
 	arr, ok := args[0].(*[]Value)
 	if !ok {
@@ -499,4 +566,104 @@ func lastIndexOfFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	}
 	return Value(-1)
+}
+
+// concurrentMapFunc implements concurrent_map(array, function)
+func concurrentMapFunc(interp *interpreter, pos Position, args []Value) Value {
+	if err := ensureNumArgs(pos, "concurrent_map", args, 2); err != Value(nil) {
+		return Value(err)
+	}
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "concurrent_map() requires first argument to be an array"))
+	}
+	fn, ok := args[1].(functionType)
+	if !ok {
+		panic(typeError(pos, "concurrent_map() requires second argument to be a function"))
+	}
+
+	// Use concurrent executor for all sizes
+	executor := GetGlobalConcurrentExecutor()
+	mapFunc := func(v Value) Value {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		return threadInterp.callFunction(pos, fn, []Value{v})
+	}
+	result, err := executor.ParallelMapOperation(*arr, mapFunc)
+	if err != nil {
+		// Fallback sequentially on error
+		result = make([]Value, len(*arr))
+		for i, v := range *arr {
+			result[i] = interp.callFunction(pos, fn, []Value{v})
+		}
+	}
+	return Value(&result)
+}
+
+// concurrentFilterFunc implements concurrent_filter(array, function)
+func concurrentFilterFunc(interp *interpreter, pos Position, args []Value) Value {
+	if err := ensureNumArgs(pos, "concurrent_filter", args, 2); err != Value(nil) {
+		return Value(err)
+	}
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "concurrent_filter() requires first argument to be an array"))
+	}
+	fn, ok := args[1].(functionType)
+	if !ok {
+		panic(typeError(pos, "concurrent_filter() requires second argument to be a function"))
+	}
+
+	executor := GetGlobalConcurrentExecutor()
+	filterFunc := func(v Value) bool {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		res := threadInterp.callFunction(pos, fn, []Value{v})
+		if b, ok := res.(bool); ok {
+			return b
+		}
+		return false
+	}
+	result, err := executor.ParallelFilterOperation(*arr, filterFunc)
+	if err != nil {
+		// Fallback sequential
+		var filtered []Value
+		for _, v := range *arr {
+			res := interp.callFunction(pos, fn, []Value{v})
+			if b, ok := res.(bool); ok && b {
+				filtered = append(filtered, v)
+			}
+		}
+		result = filtered
+	}
+	return Value(&result)
+}
+
+// concurrentReduceFunc implements concurrent_reduce(array, function, initial)
+func concurrentReduceFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 3 {
+		panic(typeError(pos, "concurrent_reduce() requires 3 arguments, got %d", len(args)))
+	}
+	arr, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "concurrent_reduce() requires first argument to be an array"))
+	}
+	fn, ok := args[1].(functionType)
+	if !ok {
+		panic(typeError(pos, "concurrent_reduce() requires second argument to be a function"))
+	}
+	initialValue := args[2]
+
+	executor := GetGlobalConcurrentExecutor()
+	reduceFunc := func(a, b Value) Value {
+		threadInterp := createThreadSafeInterpreter(interp, pos)
+		return threadInterp.callFunction(pos, fn, []Value{a, b})
+	}
+	result, err := executor.ParallelReduceOperation(*arr, reduceFunc, initialValue)
+	if err != nil {
+		// Fallback sequential
+		result = initialValue
+		for _, v := range *arr {
+			result = interp.callFunction(pos, fn, []Value{result, v})
+		}
+	}
+	return result
 }

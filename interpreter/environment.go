@@ -60,7 +60,7 @@ func NewEnvironment(config *Config) *Environment {
 	env.vars[0]["PI"] = Value(math.Pi)
 	env.vars[0]["E"] = Value(math.E)
 	env.vars[0]["TAU"] = Value(2 * math.Pi)
-	env.vars[0]["PHI"] = Value((1 + math.Sqrt(5)) / 2)  // Golden ratio
+	env.vars[0]["PHI"] = Value((1 + math.Sqrt(5)) / 2) // Golden ratio
 	env.vars[0]["LN2"] = Value(math.Ln2)
 	env.vars[0]["LN10"] = Value(math.Ln10)
 	env.vars[0]["SQRT2"] = Value(math.Sqrt2)

@@ -2,6 +2,7 @@ package interpreter
 
 // Type-specific value extractors for better performance
 // Optimized with inline hints for better performance
+//
 //go:inline
 func asInt(v Value) (int, bool) {
 	if i, ok := v.(int); ok {
@@ -44,18 +45,18 @@ func asMap(v Value) (map[string]Value, bool) {
 
 // Evaluator handles expression evaluation
 type Evaluator struct {
-	env   *Environment
-	stats *Stats
-	interp *interpreter
+	env       *Environment
+	stats     *Stats
+	interp    *interpreter
 	optimizer *ConstantFolder
 }
 
 // NewEvaluator creates a new expression evaluator
 func NewEvaluator(env *Environment, stats *Stats, interp *interpreter) *Evaluator {
 	return &Evaluator{
-		env:   env,
-		stats: stats,
-		interp: interp,
+		env:       env,
+		stats:     stats,
+		interp:    interp,
 		optimizer: NewConstantFolder(GetGlobalExpressionOptimizer()),
 	}
 }
@@ -305,7 +306,7 @@ func (e *Evaluator) evaluateSubscript(node *Subscript) Value {
 
 	// Use optimized type checking with existing functions
 	switch c := container.(type) {
-	case *[]Value:  // Array is a pointer to slice
+	case *[]Value: // Array is a pointer to slice
 		idx, ok := asInt(index)
 		if !ok {
 			panic(typeError(node.Position(), "array index must be integer, got %T", index))
@@ -421,14 +422,14 @@ func (e *Evaluator) callUserFunction(fn *userFunction, pos Position, args []Valu
 
 	// Execute function body
 	interp := &interpreter{
-		vars:       e.env.vars,
-		args:       e.env.args,
-		stdin:      e.env.stdin,
-		stdout:     e.env.stdout,
-		exit:       e.env.exit,
-		stats:      *e.stats,
-		inUnitTest: e.env.inUnitTest,
-		memoCache:  e.interp.memoCache, // Share memo cache
+		vars:                e.env.vars,
+		args:                e.env.args,
+		stdin:               e.env.stdin,
+		stdout:              e.env.stdout,
+		exit:                e.env.exit,
+		stats:               *e.stats,
+		inUnitTest:          e.env.inUnitTest,
+		memoCache:           e.interp.memoCache,           // Share memo cache
 		productionMemoCache: e.interp.productionMemoCache, // Share production memo cache
 	}
 	interp.executeBlock(fn.Body)

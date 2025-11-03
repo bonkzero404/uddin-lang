@@ -16,19 +16,19 @@ func TestMemoryLayoutIntegration(t *testing.T) {
 	t.Run("DefaultConfig", func(t *testing.T) {
 		config := DefaultConfig()
 		config.Stdout = &strings.Builder{}
-		
+
 		if config.MemoryLayout.EnableTaggedValues {
 			t.Error("Expected TaggedValues to be disabled in default config")
 		}
-		
+
 		if config.MemoryLayout.EnableCompactEnvironment {
 			t.Error("Expected CompactEnvironment to be disabled in default config")
 		}
-		
+
 		if config.MemoryLayout.EnableCacheFriendlyStructures {
 			t.Error("Expected CacheFriendlyStructures to be disabled in default config")
 		}
-		
+
 		// Test basic interpreter functionality
 		program := `
 			x = 42
@@ -36,35 +36,35 @@ func TestMemoryLayoutIntegration(t *testing.T) {
 			z = {"key": "value"}
 			print(x + len(y) + len(z))
 		`
-		
+
 		ast, err := ParseProgram([]byte(program))
 		if err != nil {
 			t.Fatalf("Parse error: %v", err)
 		}
-		
+
 		_, err = Execute(ast, config)
 		if err != nil {
 			t.Fatalf("Execute error: %v", err)
 		}
 	})
-	
+
 	// Test with experimental configuration (memory layout enabled)
 	t.Run("ExperimentalConfig", func(t *testing.T) {
 		config := ExperimentalConfig()
 		config.Stdout = &strings.Builder{}
-		
+
 		if !config.MemoryLayout.EnableTaggedValues {
 			t.Error("Expected TaggedValues to be enabled in experimental config")
 		}
-		
+
 		if !config.MemoryLayout.EnableCompactEnvironment {
 			t.Error("Expected CompactEnvironment to be enabled in experimental config")
 		}
-		
+
 		if !config.MemoryLayout.EnableCacheFriendlyStructures {
 			t.Error("Expected CacheFriendlyStructures to be enabled in experimental config")
 		}
-		
+
 		// Test basic interpreter functionality with memory layout optimizations
 		program := `
 			x = 42
@@ -72,12 +72,12 @@ func TestMemoryLayoutIntegration(t *testing.T) {
 			z = {"key": "value"}
 			print(x + len(y) + len(z))
 		`
-		
+
 		prog, err := ParseProgram([]byte(program))
 		if err != nil {
 			t.Fatalf("Parse error: %v", err)
 		}
-		
+
 		_, err = Execute(prog, config)
 		if err != nil {
 			t.Fatalf("Execute error: %v", err)
@@ -98,7 +98,7 @@ func TestMemoryLayoutConfigurationAPI(t *testing.T) {
 	if defaultConfig.EnableCacheFriendlyStructures {
 		t.Error("Expected CacheFriendlyStructures to be disabled by default")
 	}
-	
+
 	// Test experimental configuration
 	experimentalConfig := ExperimentalMemoryLayoutConfig()
 	if !experimentalConfig.EnableTaggedValues {
@@ -110,7 +110,7 @@ func TestMemoryLayoutConfigurationAPI(t *testing.T) {
 	if !experimentalConfig.EnableCacheFriendlyStructures {
 		t.Error("Expected CacheFriendlyStructures to be enabled in experimental config")
 	}
-	
+
 	// Test global configuration setting
 	SetGlobalMemoryLayoutConfig(experimentalConfig)
 	if !IsTaggedValuesEnabled() {
@@ -122,7 +122,7 @@ func TestMemoryLayoutConfigurationAPI(t *testing.T) {
 	if !IsCacheFriendlyStructuresEnabled() {
 		t.Error("Expected CacheFriendlyStructures to be enabled globally")
 	}
-	
+
 	// Reset to default
 	SetGlobalMemoryLayoutConfig(defaultConfig)
 	if IsTaggedValuesEnabled() {
@@ -141,13 +141,13 @@ func TestMemoryLayoutPerformance(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping performance test in short mode")
 	}
-	
+
 	// Ensure cleanup after test to prevent interference with other tests
 	defer func() {
 		ResetGlobalMemoryLayoutConfig()
 		CleanupMemoryLayout()
 	}()
-	
+
 	program := `
 		// Create arrays and maps
 		arr = []
@@ -176,28 +176,28 @@ func TestMemoryLayoutPerformance(t *testing.T) {
 		
 		print("Sum: " + str(sum))
 	`
-	
+
 	ast, err := ParseProgram([]byte(program))
 	if err != nil {
 		t.Fatalf("Parse error: %v", err)
 	}
-	
+
 	// Test with default configuration
 	t.Run("DefaultConfig", func(t *testing.T) {
 		config := DefaultConfig()
 		config.Stdout = &strings.Builder{}
-		
+
 		_, err := Execute(ast, config)
 		if err != nil {
 			t.Fatalf("Execute error: %v", err)
 		}
 	})
-	
+
 	// Test with experimental configuration
 	t.Run("ExperimentalConfig", func(t *testing.T) {
 		config := ExperimentalConfig()
 		config.Stdout = &strings.Builder{}
-		
+
 		_, err := Execute(ast, config)
 		if err != nil {
 			t.Fatalf("Execute error: %v", err)
@@ -217,15 +217,15 @@ func BenchmarkMemoryLayoutDefault(b *testing.B) {
 			sum = sum + val
 		end
 	`
-	
+
 	prog, err := ParseProgram([]byte(program))
 	if err != nil {
 		b.Fatalf("Parse error: %v", err)
 	}
-	
+
 	config := DefaultConfig()
 	config.Stdout = &strings.Builder{}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := Execute(prog, config)
@@ -252,15 +252,15 @@ func BenchmarkMemoryLayoutExperimental(b *testing.B) {
 			sum = sum + val
 		end
 	`
-	
+
 	prog, err := ParseProgram([]byte(program))
 	if err != nil {
 		b.Fatalf("Parse error: %v", err)
 	}
-	
+
 	config := ExperimentalConfig()
 	config.Stdout = &strings.Builder{}
-	
+
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_, err := Execute(prog, config)

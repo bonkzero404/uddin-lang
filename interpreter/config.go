@@ -27,33 +27,33 @@ type MemoizationConfig struct {
 // DefaultMemoizationConfig returns default memoization configuration
 func DefaultMemoizationConfig() *MemoizationConfig {
 	return &MemoizationConfig{
-		EnableMemoization:   false, // Disabled by default for safety
+		EnableMemoization:  false, // Disabled by default for safety
 		CacheSize:          1000,
 		TTL:                5 * time.Minute,
-		UseProductionCache:  false, // Use experimental cache by default
-		CleanupInterval:     1 * time.Minute,
+		UseProductionCache: false, // Use experimental cache by default
+		CleanupInterval:    1 * time.Minute,
 	}
 }
 
 // StableMemoizationConfig returns stable memoization configuration for production
 func StableMemoizationConfig() *MemoizationConfig {
 	return &MemoizationConfig{
-		EnableMemoization:   true,
+		EnableMemoization:  true,
 		CacheSize:          5000,
 		TTL:                10 * time.Minute,
-		UseProductionCache:  true, // Use production cache for stability
-		CleanupInterval:     2 * time.Minute,
+		UseProductionCache: true, // Use production cache for stability
+		CleanupInterval:    2 * time.Minute,
 	}
 }
 
 // ExperimentalMemoizationConfig returns experimental memoization configuration
 func ExperimentalMemoizationConfig() *MemoizationConfig {
 	return &MemoizationConfig{
-		EnableMemoization:   true,
+		EnableMemoization:  true,
 		CacheSize:          10000,
 		TTL:                15 * time.Minute,
-		UseProductionCache:  false, // Use experimental cache for testing
-		CleanupInterval:     30 * time.Second,
+		UseProductionCache: false, // Use experimental cache for testing
+		CleanupInterval:    30 * time.Second,
 	}
 }
 

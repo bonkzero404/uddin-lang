@@ -50,7 +50,7 @@ const (
 	DIVIDEEQUAL = 307
 	MODULOEQUAL = 308
 	// Power operator (two-character token)
-	POWER       = 309
+	POWER = 309
 
 	// Three-character tokens (sequential from 400)
 	ELLIPSIS = 400
@@ -215,7 +215,7 @@ func NewTokenizer(input []byte) *Tokenizer {
 	t.nextPos.Line = 1   // Start at line 1
 	t.nextPos.Column = 1 // Start at column 1
 	t.tokenCache = GetGlobalTokenCache()
-	t.next()             // Read the first character
+	t.next() // Read the first character
 	return t
 }
 

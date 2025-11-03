@@ -333,7 +333,7 @@ func OptimizedArrayFilter(arr []Value, predicate func(Value) bool) []Value {
 	// Use appropriate pool based on input array size
 	var result []Value
 	var poolType int // 0=small, 1=medium, 2=large
-	
+
 	if len(arr) <= 32 {
 		result = globalComplexPool.GetSmallArray()
 		poolType = 0
@@ -344,7 +344,7 @@ func OptimizedArrayFilter(arr []Value, predicate func(Value) bool) []Value {
 		result = globalComplexPool.GetArray()
 		poolType = 1
 	}
-	
+
 	defer func() {
 		switch poolType {
 		case 0:
@@ -558,22 +558,22 @@ func (cap *ChunkedArrayProcessor) ProcessInChunks(arr []Value, processor func([]
 		// Small array, process directly
 		return processor(arr)
 	}
-	
+
 	// Process in chunks
 	result := GetPooledArray(len(arr))
 	defer PutPooledArray(result)
-	
+
 	for i := 0; i < len(arr); i += cap.chunkSize {
 		end := i + cap.chunkSize
 		if end > len(arr) {
 			end = len(arr)
 		}
-		
+
 		chunk := arr[i:end]
 		processed := processor(chunk)
 		result = append(result, processed...)
 	}
-	
+
 	// Return a copy
 	final := make([]Value, len(result))
 	copy(final, result)
@@ -586,7 +586,7 @@ func OptimizedLargeArrayFilter(arr []Value, predicate func(Value) bool) []Value 
 		// Use regular optimized filter for smaller arrays
 		return OptimizedArrayFilter(arr, predicate)
 	}
-	
+
 	// Use chunked processing for very large arrays
 	processor := NewChunkedArrayProcessor(5000)
 	return processor.ProcessInChunks(arr, func(chunk []Value) []Value {

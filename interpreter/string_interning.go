@@ -242,7 +242,8 @@ func NewStringPool() *StringPool {
 		},
 		bytePool: sync.Pool{
 			New: func() any {
-				return make([]byte, 0, 256)
+				b := make([]byte, 0, 256)
+				return &b
 			},
 		},
 	}
@@ -261,13 +262,16 @@ func (sp *StringPool) PutBuilder(sb *strings.Builder) {
 
 // GetBytes gets a byte slice from the pool
 func (sp *StringPool) GetBytes() []byte {
-	return sp.bytePool.Get().([]byte)[:0]
+	bptr := sp.bytePool.Get().(*[]byte)
+	b := *bptr
+	return b[:0]
 }
 
 // PutBytes returns a byte slice to the pool
 func (sp *StringPool) PutBytes(b []byte) {
 	if cap(b) <= 1024 { // Only pool reasonably sized slices
-		sp.bytePool.Put(b[:0])
+		b = b[:0]
+		sp.bytePool.Put(&b)
 	}
 }
 

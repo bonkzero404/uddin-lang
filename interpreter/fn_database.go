@@ -34,8 +34,6 @@ type ConnectionPool struct {
 	Mutex  sync.RWMutex
 }
 
-
-
 // NewConnectionPool creates a new connection pool
 func NewConnectionPool(driver, dsn string, config ConnectionPoolConfig) (*ConnectionPool, error) {
 	db, err := sql.Open(driver, dsn)
@@ -608,8 +606,8 @@ func streamTablesFunc(interp *interpreter, pos Position, args []Value) Value {
 								if colName, ok := colVal.(string); ok {
 									columns = append(columns, colName)
 								} else {
-						panic(typeError(pos, "stream_tables() column array element %d must be a string", i))
-					}
+									panic(typeError(pos, "stream_tables() column array element %d must be a string", i))
+								}
 							}
 							tableColumns = columns
 						} else {
@@ -819,11 +817,7 @@ func streamTablesSingleFunc(interp *interpreter, pos Position, args []Value) Val
 		} else {
 			// MySQL streaming using binlog
 			tableNames := []string{tableName}
-			if streamer.UseBinlog {
-				streamer.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, connObj.Host, connObj.Port, connObj.Username, connObj.Password)
-			} else {
-				streamer.setupMySQLMultiTableStreaming(interp, pos, ctx, tableNames)
-			}
+			streamer.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, connObj.Host, connObj.Port, connObj.Username, connObj.Password)
 		}
 	}()
 
@@ -978,11 +972,7 @@ func streamTablesMultiFunc(interp *interpreter, pos Position, connArg Value, tab
 			streamer.setupPostgreSQLMultiTableStreaming(interp, pos, ctx, tableNames)
 		} else {
 			// Use optimized CDC for MySQL
-			if streamer.UseBinlog {
-				streamer.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, connObj.Host, connObj.Port, connObj.Username, connObj.Password)
-			} else {
-				streamer.setupMySQLMultiTableStreaming(interp, pos, ctx, tableNames)
-			}
+			streamer.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, connObj.Host, connObj.Port, connObj.Username, connObj.Password)
 		}
 	}()
 
@@ -1463,14 +1453,6 @@ func (ds *DatabaseStreamer) setupMySQLBinlogStreaming(interp *interpreter, pos P
 
 	// Start processing binlog events
 	ds.processBinlogEvents(interp, pos, ctx)
-}
-
-// setupMySQLMultiTableStreaming is deprecated - use setupMySQLBinlogStreaming instead
-// This function is kept for backward compatibility but should not be used
-func (ds *DatabaseStreamer) setupMySQLMultiTableStreaming(interp *interpreter, pos Position, ctx context.Context, tableNames []string) {
-	log.Printf("Warning: setupMySQLMultiTableStreaming is deprecated. Use binlog streaming instead.")
-	// Fallback to binlog streaming
-	ds.setupMySQLBinlogStreaming(interp, pos, ctx, tableNames, "", 0, "", "")
 }
 
 // getCurrentBinlogPosition gets the current MySQL binlog position

@@ -64,17 +64,17 @@ func (cf *ConstantFolder) foldBinaryExpression(expr *Binary) (Value, bool) {
 	// Check if both operands are literals
 	leftLit, leftOk := expr.Left.(*Literal)
 	rightLit, rightOk := expr.Right.(*Literal)
-	
+
 	if !leftOk || !rightOk {
 		return nil, false
 	}
-	
+
 	leftVal := leftLit.Value
 	rightVal := rightLit.Value
-	
+
 	// Generate cache key
 	cacheKey := fmt.Sprintf("binary:%v:%s:%v", leftVal, expr.Operator.String(), rightVal)
-	
+
 	// Check cache first
 	cf.optimizer.mutex.RLock()
 	if cached, exists := cf.optimizer.constantCache[cacheKey]; exists {
@@ -84,22 +84,22 @@ func (cf *ConstantFolder) foldBinaryExpression(expr *Binary) (Value, bool) {
 	}
 	cf.optimizer.optimizationMiss++
 	cf.optimizer.mutex.RUnlock()
-	
+
 	// Perform constant folding
 	result, ok := cf.evaluateConstantBinary(leftVal, expr.Operator, rightVal)
 	if !ok {
 		return nil, false
 	}
-	
+
 	// Cache the result
 	cf.optimizer.mutex.Lock()
 	defer cf.optimizer.mutex.Unlock()
-	
+
 	// Check cache size limit
 	if len(cf.optimizer.constantCache) >= cf.optimizer.maxCacheSize {
 		cf.clearHalfCache(cf.optimizer.constantCache)
 	}
-	
+
 	cf.optimizer.constantCache[cacheKey] = result
 
 	return result, true
@@ -112,12 +112,12 @@ func (cf *ConstantFolder) foldUnaryExpression(expr *Unary) (Value, bool) {
 	if !ok {
 		return nil, false
 	}
-	
+
 	operandVal := operandLit.Value
-	
+
 	// Generate cache key
 	cacheKey := fmt.Sprintf("unary:%s:%v", expr.Operator.String(), operandVal)
-	
+
 	// Check cache first
 	cf.optimizer.mutex.RLock()
 	if cached, exists := cf.optimizer.constantCache[cacheKey]; exists {
@@ -127,22 +127,22 @@ func (cf *ConstantFolder) foldUnaryExpression(expr *Unary) (Value, bool) {
 	}
 	cf.optimizer.optimizationMiss++
 	cf.optimizer.mutex.RUnlock()
-	
+
 	// Perform constant folding
 	result, ok := cf.evaluateConstantUnary(expr.Operator, operandVal)
 	if !ok {
 		return nil, false
 	}
-	
+
 	// Cache the result
 	cf.optimizer.mutex.Lock()
 	defer cf.optimizer.mutex.Unlock()
-	
+
 	// Check cache size limit
 	if len(cf.optimizer.constantCache) >= cf.optimizer.maxCacheSize {
 		cf.clearHalfCache(cf.optimizer.constantCache)
 	}
-	
+
 	cf.optimizer.constantCache[cacheKey] = result
 
 	return result, true
@@ -457,7 +457,7 @@ func (cse *CommonSubexpressionEliminator) EliminateCommonSubexpressions(expr Exp
 	if signature == "" {
 		return nil, false
 	}
-	
+
 	// Check cache
 	cse.optimizer.mutex.RLock()
 	if cached, exists := cse.optimizer.subexprCache[signature]; exists {
@@ -466,7 +466,7 @@ func (cse *CommonSubexpressionEliminator) EliminateCommonSubexpressions(expr Exp
 		return cached, true
 	}
 	cse.optimizer.mutex.RUnlock()
-	
+
 	return nil, false
 }
 
@@ -476,15 +476,15 @@ func (cse *CommonSubexpressionEliminator) CacheSubexpression(expr Expression, re
 	if signature == "" {
 		return
 	}
-	
+
 	cse.optimizer.mutex.Lock()
 	defer cse.optimizer.mutex.Unlock()
-	
+
 	// Check cache size limit
 	if len(cse.optimizer.subexprCache) >= cse.optimizer.maxCacheSize {
 		cse.clearHalfCache(cse.optimizer.subexprCache)
 	}
-	
+
 	cse.optimizer.subexprCache[signature] = result
 }
 
@@ -543,7 +543,7 @@ func (cse *CommonSubexpressionEliminator) clearHalfCache(cache map[string]Value)
 func (eo *ExpressionOptimizer) GetOptimizationStats() (hits, misses int64, hitRatio float64) {
 	eo.mutex.RLock()
 	defer eo.mutex.RUnlock()
-	
+
 	hits = eo.optimizationHits
 	misses = eo.optimizationMiss
 	total := hits + misses
@@ -557,7 +557,7 @@ func (eo *ExpressionOptimizer) GetOptimizationStats() (hits, misses int64, hitRa
 func (eo *ExpressionOptimizer) ClearCaches() {
 	eo.mutex.Lock()
 	defer eo.mutex.Unlock()
-	
+
 	eo.constantCache = make(map[string]Value)
 	eo.subexprCache = make(map[string]Value)
 	eo.optimizationHits = 0

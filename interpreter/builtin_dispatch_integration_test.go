@@ -43,7 +43,7 @@ func TestBuiltinDispatchIntegration(t *testing.T) {
 
 	// Verifikasi dispatcher statistics
 	dispatcher := GetGlobalBuiltinDispatcher()
-	
+
 	// Test beberapa fungsi yang seharusnya dipanggil
 	functionTests := []struct {
 		name     string
@@ -111,7 +111,7 @@ func TestBuiltinDispatchPerformance(t *testing.T) {
 	}
 
 	dispatcher := GetGlobalBuiltinDispatcher()
-	
+
 	// Verifikasi call counts untuk fungsi yang sering dipanggil
 	lenCalls := dispatcher.GetCallCount("len")
 	typeofCalls := dispatcher.GetCallCount("typeof")
