@@ -7,6 +7,10 @@ import (
 	"unsafe"
 )
 
+var (
+	_ = (*MemoryTracker).getAllocationType
+)
+
 // TaggedValueType represents the type of a value for tagged union optimization
 type TaggedValueType uint8
 
@@ -298,18 +302,6 @@ func safeFunctionPtrFromUintptr(ptr uintptr) (*functionType, error) {
 	}
 
 	return funcPtr, nil
-}
-
-// cleanupTaggedValue safely cleans up memory allocated for a tagged value
-func (stvp *SafeTaggedValuePool) cleanupTaggedValue(tv *SafeTaggedValue) error {
-	if tv == nil {
-		return &MemoryError{"cannot cleanup nil tagged value"}
-	}
-
-	tv.mutex.Lock()
-	defer tv.mutex.Unlock()
-
-	return stvp.cleanupTaggedValueInternal(tv)
 }
 
 // cleanupTaggedValueInternal performs cleanup without acquiring locks (assumes caller has lock)
