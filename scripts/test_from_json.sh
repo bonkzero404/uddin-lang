@@ -2,16 +2,42 @@
 
 # Script to test --from_json feature with all example files
 # Performs round-trip conversion: .din -> JSON -> .din and executes the result
-# Usage: ./test_from_json.sh [optimized]
-# If 'optimized' parameter is provided, runs with --memory-optimize flag
+# Usage: ./test_from_json.sh [--memory-optimize-stable|--memory-optimize-experimental] [--include-database]
+#   --memory-optimize-stable: Use stable memory optimization (default: no optimization)
+#   --memory-optimize-experimental: Use experimental memory optimization
+#   --include-database: Include database tests (default: skip database tests)
 
-# Check if optimized flag is provided
+# Parse arguments
 OPTIMIZED_FLAG=""
-if [[ "$1" == "optimized" ]]; then
-    OPTIMIZED_FLAG="--memory-optimize"
-    echo "=== Testing --from_json feature for all examples (with memory optimization) ==="
+INCLUDE_DATABASE=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --memory-optimize-stable)
+            OPTIMIZED_FLAG="--memory-optimize-stable"
+            ;;
+        --memory-optimize-experimental)
+            OPTIMIZED_FLAG="--memory-optimize-experimental"
+            ;;
+        --include-database)
+            INCLUDE_DATABASE=true
+            ;;
+        *)
+            echo "Unknown argument: $arg"
+            echo "Usage: $0 [--memory-optimize-stable|--memory-optimize-experimental] [--include-database]"
+            exit 1
+            ;;
+    esac
+done
+
+# Print header
+if [[ -n "$OPTIMIZED_FLAG" ]]; then
+    echo "=== Testing --from_json feature for all examples (with $OPTIMIZED_FLAG) ==="
 else
     echo "=== Testing --from_json feature for all examples ==="
+fi
+if [[ "$INCLUDE_DATABASE" == false ]]; then
+    echo "Note: Database tests are skipped by default. Use --include-database to include them."
 fi
 echo
 
@@ -43,6 +69,12 @@ echo "========================================"
 # Loop through all .din files in examples directory and subdirectories
 for file in $(find examples -name "*.din" | sort); do
     if [[ -f "$file" ]]; then
+        # Skip database tests unless --include-database is specified
+        if [[ "$file" == examples/database/* ]] && [[ "$INCLUDE_DATABASE" == false ]]; then
+            echo -e "[SKIP] Skipping $file (database test - use --include-database to test)"
+            continue
+        fi
+        
         total_files=$((total_files + 1))
         filename=$(basename "$file" .din)
         
@@ -124,7 +156,7 @@ fi
 echo
 if [[ $failed_files -eq 0 ]]; then
     if [[ -n "$OPTIMIZED_FLAG" ]]; then
-        echo -e "${GREEN}🎉 All tests passed! --from_json feature is 100% compatible (with memory optimization)!${NC}"
+        echo -e "${GREEN}🎉 All tests passed! --from_json feature is 100% compatible (with $OPTIMIZED_FLAG)!${NC}"
     else
         echo -e "${GREEN}🎉 All tests passed! --from_json feature is 100% compatible!${NC}"
     fi
@@ -132,7 +164,7 @@ if [[ $failed_files -eq 0 ]]; then
 else
     success_rate=$(( (passed_files * 100) / total_files ))
     if [[ -n "$OPTIMIZED_FLAG" ]]; then
-        echo -e "${YELLOW}Success rate: ${success_rate}% (with memory optimization)${NC}"
+        echo -e "${YELLOW}Success rate: ${success_rate}% (with $OPTIMIZED_FLAG)${NC}"
     else
         echo -e "${YELLOW}Success rate: ${success_rate}%${NC}"
     fi

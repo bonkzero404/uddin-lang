@@ -635,16 +635,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 	// Handle builtin functions with dispatcher
 	if bf, ok := f.(builtinFunction); ok {
-		// Try builtin dispatcher first for optimized dispatch
-		dispatcher := GetGlobalBuiltinDispatcher()
-		// Use bf.Name (the actual function name) not bf.name() (formatted string)
-		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.Name, interp, pos, args); dispatched {
-			interp.stats.BuiltinCalls++
-			return result
-		}
-		// Fallback to original method if not in dispatcher
-		interp.stats.BuiltinCalls++
-		return bf.call(interp, pos, args)
+		return CallBuiltinWithDispatcher(bf, interp, pos, args)
 	}
 
 	defer func() {
@@ -1089,10 +1080,17 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 	dispatcher := GetGlobalBuiltinDispatcher()
 	if _, exists := dispatcher.dispatchTable[name]; exists {
 		// Create a builtin function wrapper for dispatcher functions
+		// We can't access builtins map here due to initialization cycle,
+		// so we rely on dispatcher only
 		builtinFunc := builtinFunction{
 			Name: name,
 			Function: func(interp *interpreter, pos Position, args []Value) Value {
+				// Use dispatcher - if not found, panic (should not happen)
+				// Note: Stats will be handled by CallBuiltinWithDispatcher if this function is called
+				dispatcher := GetGlobalBuiltinDispatcher()
 				if result, dispatched := dispatcher.DispatchBuiltinFunction(name, interp, pos, args); dispatched {
+					// Stats increment here is correct because this wrapper bypasses CallBuiltinWithDispatcher
+					interp.stats.BuiltinCalls++
 					return result
 				}
 				panic(nameError(pos, "builtin function '%s' not found in dispatcher", name))

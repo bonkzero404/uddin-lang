@@ -218,28 +218,8 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 	case *userFunction:
 		return e.callUserFunction(fn, node.Position(), args)
 	case builtinFunction:
-		// Try builtin dispatcher first for optimized dispatch
-		dispatcher := GetGlobalBuiltinDispatcher()
-		// Use the actual function name (fn.Name) instead of the formatted name
-		if result, dispatched := dispatcher.DispatchBuiltinFunction(fn.Name, e.interp, node.Position(), args); dispatched {
-			e.stats.BuiltinCalls++
-			return result
-		}
-
-		// Fallback to original method if not in dispatcher
-		// Create a temporary interpreter for builtin calls
-		interp := &interpreter{
-			vars:       e.env.vars,
-			args:       e.env.args,
-			stdin:      e.env.stdin,
-			stdout:     e.env.stdout,
-			exit:       e.env.exit,
-			stats:      *e.stats,
-			inUnitTest: e.env.inUnitTest,
-		}
-		result := fn.call(interp, node.Position(), args)
-		*e.stats = interp.stats // Update stats
-		return result
+		// Use unified dispatcher helper for consistent behavior
+		return CallBuiltinWithDispatcher(fn, e.interp, node.Position(), args)
 	default:
 		// Check if it's a function type wrapped in any (from tagged values)
 		if interfaceVal, ok := function.(any); ok {
@@ -247,26 +227,23 @@ func (e *Evaluator) evaluateCall(node *Call) Value {
 				return e.callUserFunction(userFn, node.Position(), args)
 			}
 			if builtinFn, ok := interfaceVal.(builtinFunction); ok {
-				// Try builtin dispatcher first for optimized dispatch
-				dispatcher := GetGlobalBuiltinDispatcher()
-				if result, dispatched := dispatcher.DispatchBuiltinFunction(builtinFn.name(), e.interp, node.Position(), args); dispatched {
-					e.stats.BuiltinCalls++
-					return result
+				// Use unified dispatcher helper for consistent behavior
+				// Note: For tagged values wrapped in any, we need to reconstruct the builtinFunction
+				// with the proper name for the dispatcher to work correctly
+				name := builtinFn.Name
+				if name == "" {
+					// Extract name from formatted string if needed
+					nameStr := builtinFn.name()
+					if len(nameStr) > 10 && nameStr[:10] == "<builtin " {
+						name = nameStr[10 : len(nameStr)-1]
+					}
 				}
-
-				// Fallback to original method if not in dispatcher
-				interp := &interpreter{
-					vars:       e.env.vars,
-					args:       e.env.args,
-					stdin:      e.env.stdin,
-					stdout:     e.env.stdout,
-					exit:       e.env.exit,
-					stats:      *e.stats,
-					inUnitTest: e.env.inUnitTest,
+				// Create a new builtinFunction with proper name for dispatcher
+				bf := builtinFunction{
+					Function: builtinFn.Function,
+					Name:     name,
 				}
-				result := builtinFn.call(interp, node.Position(), args)
-				*e.stats = interp.stats // Update stats
-				return result
+				return CallBuiltinWithDispatcher(bf, e.interp, node.Position(), args)
 			}
 		}
 		panic(typeError(node.Position(), "can't call non-function type %s", typeName(function)))

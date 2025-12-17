@@ -48,6 +48,8 @@ func (bfd *BuiltinFunctionDispatcher) RegisterBuiltinFunction(name string, fn fu
 }
 
 // DispatchBuiltinFunction dispatches a builtin function call
+// Note: This method does NOT increment stats - stats are handled by builtinFunction.call()
+// to avoid double counting when using the dispatcher
 func (bfd *BuiltinFunctionDispatcher) DispatchBuiltinFunction(name string, interp *interpreter, pos Position, args []Value) (Value, bool) {
 	bfd.mutex.RLock()
 	index, exists := bfd.dispatchTable[name]
@@ -59,12 +61,19 @@ func (bfd *BuiltinFunctionDispatcher) DispatchBuiltinFunction(name string, inter
 	entry := bfd.functions[index]
 	bfd.mutex.RUnlock()
 
-	// Update call count with write lock
+	// Update call count with write lock (for profiling/monitoring)
 	bfd.mutex.Lock()
 	bfd.callCounts[name]++
 	bfd.mutex.Unlock()
 
-	// Validate argument count if specified
+	// Fast path: skip validation for frequently called functions
+	if entry.FastPath {
+		// Direct call without validation for performance
+		result := entry.Function(interp, pos, args)
+		return result, true
+	}
+
+	// Slow path: validate argument count if specified
 	if entry.ArgCount >= 0 && len(args) != entry.ArgCount {
 		plural := ""
 		if entry.ArgCount != 1 {
@@ -76,6 +85,22 @@ func (bfd *BuiltinFunctionDispatcher) DispatchBuiltinFunction(name string, inter
 	// Call the function
 	result := entry.Function(interp, pos, args)
 	return result, true
+}
+
+// CallBuiltinWithDispatcher is a helper function to call builtin functions with dispatcher fallback
+// This consolidates the dispatcher logic and ensures consistent behavior across the codebase
+// It tries the fast dispatcher path first, then falls back to the standard builtinFunction.call() method
+// Note: Stats are handled by builtinFunction.call() in the fallback path to avoid double counting
+func CallBuiltinWithDispatcher(bf builtinFunction, interp *interpreter, pos Position, args []Value) Value {
+	dispatcher := GetGlobalBuiltinDispatcher()
+	if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.Name, interp, pos, args); dispatched {
+		// Dispatcher path: increment stats here since we bypass builtinFunction.call()
+		// This ensures stats are always tracked regardless of which path is taken
+		interp.stats.BuiltinCalls++
+		return result
+	}
+	// Fallback to original method (which will increment stats)
+	return bf.call(interp, pos, args)
 }
 
 // GetCallCount returns the call count for a specific function
@@ -254,62 +279,14 @@ func GetGlobalSpecializedBuiltins() *SpecializedBuiltinFunctions {
 }
 
 // InitializeBuiltinDispatcher initializes the builtin function dispatcher with all builtin functions
+// Uses metadata map for automatic configuration instead of hardcoded switch statements
 func InitializeBuiltinDispatcher() {
 	dispatcher := GetGlobalBuiltinDispatcher()
 
 	// Register all builtin functions from the builtins map
 	for name, builtin := range builtins {
-		// Determine argument count and fast path based on function characteristics
-		argCount := -1 // Default to variadic
-		fastPath := false
-
-		// Set specific argument counts and fast path for commonly used functions
-		switch name {
-		case "print":
-			argCount = -1
-			fastPath = true
-		case "len", "typeof", "str", "int", "float", "char", "rune", "abs", "sqrt":
-			argCount = 1
-			fastPath = true
-		case "join", "split", "contains", "pow", "push", "unshift":
-			argCount = 2
-			fastPath = true
-		case "substr", "reduce":
-			argCount = 3
-			fastPath = false
-		case "lower", "upper", "reverse", "pop", "shift", "sort", "trim", "reverse_str":
-			argCount = 1
-			fastPath = true
-		case "starts_with", "ends_with", "repeat", "find", "index_of", "last_index_of":
-			argCount = 2
-			fastPath = false
-		case "replace":
-			argCount = 3
-			fastPath = false
-		case "str_pad":
-			argCount = 3
-			fastPath = false
-		// Database functions
-		case "db_execute_batch":
-			argCount = 2 // connection, operations_array
-			fastPath = false
-		case "db_execute_async":
-			argCount = -1 // variadic: connection, query, params...
-			fastPath = false
-		case "db_get_async_status":
-			argCount = 1 // operation_id
-			fastPath = false
-		case "db_cancel_async":
-			argCount = 1 // operation_id
-			fastPath = false
-		case "db_list_async_operations":
-			argCount = 0 // no arguments
-			fastPath = false
-		case "db_cleanup_async_operations":
-			argCount = -1 // optional max_age parameter
-			fastPath = false
-		}
-
-		dispatcher.RegisterBuiltinFunction(name, builtin.Function, argCount, fastPath)
+		// Get metadata from map (returns defaults if not found)
+		metadata := getBuiltinMetadata(name)
+		dispatcher.RegisterBuiltinFunction(name, builtin.Function, metadata.ArgCount, metadata.FastPath)
 	}
 }
