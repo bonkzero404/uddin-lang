@@ -30,9 +30,31 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 		if cap(*list)-len(*list) < len(toAppend) {
 			// Need to grow slice, allocate with exact capacity
 			newCap := len(*list) + len(toAppend)
-			newList := make([]Value, len(*list), newCap)
-			copy(newList, *list)
-			*list = SmartAppend(newList, toAppend...)
+			// Use pooled arrays for large allocations (> 100 elements)
+			if newCap > 100 {
+				pooled := GetPooledArray(newCap)
+				defer PutPooledArray(pooled)
+				// Ensure we have enough capacity
+				var newList []Value
+				if cap(pooled) < newCap {
+					// Pool didn't have enough capacity, use direct allocation
+					newList = make([]Value, len(*list), newCap)
+				} else {
+					// Reslice to current length (safe because capacity is sufficient)
+					newList = pooled[:len(*list)]
+				}
+				copy(newList, *list)
+				newList = SmartAppend(newList, toAppend...)
+				// Copy result back to original list (pool already returned via defer)
+				result := make([]Value, len(newList))
+				copy(result, newList)
+				*list = result
+			} else {
+				// Small allocations: use direct allocation
+				newList := make([]Value, len(*list), newCap)
+				copy(newList, *list)
+				*list = SmartAppend(newList, toAppend...)
+			}
 		} else {
 			// Sufficient capacity, direct append
 			*list = SmartAppend(*list, toAppend...)
@@ -92,20 +114,43 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) == 1 {
 		// Single argument: range(n) -> [0, 1, ..., n-1]
 		if n, ok := args[0].(int); ok {
-			if n < 0 {
-				panic(valueError(pos, "range() argument must not be negative"))
+		if n < 0 {
+			panic(valueError(pos, "range() argument must not be negative"))
+		}
+		// Fast path for small ranges
+		if n == 0 {
+			nums := make([]Value, 0)
+			return Value(&nums)
+		}
+		// Use pooled arrays for ranges > 100 elements
+		var nums []Value
+		if n > 100 {
+			pooled := GetPooledArray(n)
+			defer PutPooledArray(pooled)
+			// Ensure we have enough capacity, then grow length
+			if cap(pooled) < n {
+				// Pool didn't have enough capacity, use direct allocation
+				nums = make([]Value, n)
+			} else {
+				// Reslice to required length (safe because capacity is sufficient)
+				nums = pooled[:n]
 			}
-			// Fast path for small ranges
-			if n == 0 {
-				nums := make([]Value, 0)
-				return Value(&nums)
-			}
-			nums := make([]Value, n)
-			// Optimized loop with fewer type conversions
+			// Fill array
 			for i := 0; i < n; i++ {
 				nums[i] = Value(i)
 			}
-			return Value(&nums)
+			// Return a copy (caller owns it, pool already returned via defer)
+			result := make([]Value, n)
+			copy(result, nums)
+			return Value(&result)
+		}
+		// Small ranges: use direct allocation (faster for small sizes)
+		nums = make([]Value, n)
+		// Optimized loop with fewer type conversions
+		for i := 0; i < n; i++ {
+			nums[i] = Value(i)
+		}
+		return Value(&nums)
 		}
 		panic(typeError(pos, "range() requires an integer"))
 	} else if len(args) == 2 {
@@ -124,7 +169,30 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 
 		size := stop - start
-		nums := make([]Value, size)
+		// Use pooled arrays for ranges > 100 elements
+		var nums []Value
+		if size > 100 {
+			pooled := GetPooledArray(size)
+			defer PutPooledArray(pooled)
+			// Ensure we have enough capacity, then grow length
+			if cap(pooled) < size {
+				// Pool didn't have enough capacity, use direct allocation
+				nums = make([]Value, size)
+			} else {
+				// Reslice to required length (safe because capacity is sufficient)
+				nums = pooled[:size]
+			}
+			// Optimized loop with direct assignment
+			for i := 0; i < size; i++ {
+				nums[i] = Value(start + i)
+			}
+			// Return a copy (caller owns it, pool already returned via defer)
+			result := make([]Value, size)
+			copy(result, nums)
+			return Value(&result)
+		}
+		// Small ranges: use direct allocation (faster for small sizes)
+		nums = make([]Value, size)
 		// Optimized loop with direct assignment
 		for i := 0; i < size; i++ {
 			nums[i] = Value(start + i)
@@ -145,16 +213,52 @@ func rangeFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 
 		// Calculate the size of the result array
+		// Estimate size for step-based ranges
+		var estimatedSize int
+		if step > 0 {
+			estimatedSize = (stop - start + step - 1) / step
+		} else {
+			estimatedSize = (start - stop - step - 1) / (-step)
+		}
+		if estimatedSize < 0 {
+			estimatedSize = 0
+		}
+
 		var nums []Value
+		// Use pooled arrays for ranges > 100 elements
+		if estimatedSize > 100 {
+			pooled := GetPooledArray(estimatedSize)
+			defer PutPooledArray(pooled)
+			// Reset length to 0, keep capacity
+			nums = pooled[:0]
+			
+			if step > 0 {
+				// Positive step: start < stop
+				for i := start; i < stop; i += step {
+					nums = append(nums, Value(i))
+				}
+			} else {
+				// Negative step: start > stop
+				for i := start; i > stop; i += step {
+					nums = append(nums, Value(i))
+				}
+			}
+			// Return a copy (caller owns it, pool already returned via defer)
+			result := make([]Value, len(nums))
+			copy(result, nums)
+			return Value(&result)
+		}
+		
+		// Small ranges: use direct allocation with SmartAppend
 		if step > 0 {
 			// Positive step: start < stop
 			for i := start; i < stop; i += step {
-				nums = append(nums, Value(i))
+				nums = SmartAppend(nums, Value(i))
 			}
 		} else {
 			// Negative step: start > stop
 			for i := start; i > stop; i += step {
-				nums = append(nums, Value(i))
+				nums = SmartAppend(nums, Value(i))
 			}
 		}
 
@@ -196,8 +300,30 @@ func sliceFunc(interp *interpreter, pos Position, args []Value) Value {
 		if start < 0 || end > len(*s) || start > end {
 			panic(valueError(pos, "slice() start or end out of bounds"))
 		}
-		// Create a new array with the sliced elements
-		result := make([]Value, end-start)
+		
+		sliceSize := end - start
+		// Use pooled arrays for slices > 100 elements
+		if sliceSize > 100 {
+			pooled := GetPooledArray(sliceSize)
+			defer PutPooledArray(pooled)
+			// Ensure we have enough capacity, then grow length
+			var result []Value
+			if cap(pooled) < sliceSize {
+				// Pool didn't have enough capacity, use direct allocation
+				result = make([]Value, sliceSize)
+			} else {
+				// Reslice to required length (safe because capacity is sufficient)
+				result = pooled[:sliceSize]
+			}
+			copy(result, (*s)[start:end])
+			// Return a copy (caller owns it, pool already returned via defer)
+			final := make([]Value, sliceSize)
+			copy(final, result)
+			return Value(&final)
+		}
+		
+		// Small slices: use direct allocation (faster for small sizes)
+		result := make([]Value, sliceSize)
 		copy(result, (*s)[start:end])
 		return Value(&result)
 	default:
