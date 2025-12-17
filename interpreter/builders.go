@@ -103,23 +103,17 @@ type MapBuilder struct {
 	pool *sync.Pool
 }
 
-// Global map pool for reuse
-var mapPool = sync.Pool{
-	New: func() any {
-		return make(map[string]Value)
-	},
-}
+// NOTE: Map pooling is now handled by UnifiedPoolManager in pool_manager.go
+// This variable is kept for backward compatibility but no longer used
+// var mapPool deprecated - use GetPooledMap() instead
 
 // NewMapBuilder creates a new optimized map builder
+// OPTIMIZED: Use unified pool manager with lazy clearing
 func NewMapBuilder(estimatedSize int) *MapBuilder {
-	m := mapPool.Get().(map[string]Value)
-	// Clear the map
-	for k := range m {
-		delete(m, k)
-	}
+	m := GetPooledMap() // Use unified pool manager
 	return &MapBuilder{
 		data: m,
-		pool: &mapPool,
+		pool: nil, // Not used anymore, unified pool handles it
 	}
 }
 
@@ -142,10 +136,10 @@ func (mb *MapBuilder) Result() map[string]Value {
 	return result
 }
 
-// Release returns the map to the pool for reuse
+// Release returns the map to the unified pool for reuse
 func (mb *MapBuilder) Release() {
 	if mb.data != nil {
-		mb.pool.Put(mb.data)
+		PutPooledMap(mb.data) // Use unified pool manager
 		mb.data = nil
 	}
 }

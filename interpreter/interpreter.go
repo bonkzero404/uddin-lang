@@ -41,12 +41,8 @@ type interpreter struct {
 	// Optimization caches
 	memoCache           map[string]Value
 	productionMemoCache *ProductionMemoCache
-	// String builder pool for efficient memory allocation
-	stringBuilderPool sync.Pool
-	// Array pool for efficient memory allocation
-	arrayPool sync.Pool
-	// Map pool for efficient memory allocation
-	mapPool sync.Pool
+	// NOTE: Pools are now managed globally via UnifiedPoolManager in pool_manager.go
+	// Removed duplicate pools (stringBuilderPool, arrayPool, mapPool) to use unified pools
 	// Variable lookup cache for performance optimization
 	variableLookupCache *VariableLookupCache
 	// Expression optimizer
@@ -327,13 +323,13 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 			// Optimized array concatenation using advanced batch processing for large arrays
 			llen, rlen := len(*larr), len(*rarr)
 			if llen+rlen > 1000 {
-				// Use batch processing for large arrays
-				result := globalComplexPool.GetArray()
+				// Use batch processing for large arrays with unified pool manager
+				result := GetPooledArray(llen + rlen)
+				defer PutPooledArray(result)
 				result = SmartAppend(result, *larr...)
 				result = SmartAppend(result, *rarr...)
 				final := make([]Value, len(result))
 				copy(final, result)
-				globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -378,14 +374,14 @@ func evalTimes(pos Position, l, r Value) Value {
 			if li < 0 {
 				panic(valueError(pos, "can't multiply string by a negative number"))
 			}
-			// Use optimized string repetition for large strings
+			// Use optimized string repetition for large strings with unified pool manager
 			if len(rs)*li > 1000 {
-				sb := globalComplexPool.GetStringBuilder()
+				sb := GetPooledStringBuilder()
+				defer PutPooledStringBuilder(sb)
 				for i := 0; i < li; i++ {
 					sb.WriteString(rs)
 				}
 				result := sb.String()
-				globalComplexPool.PutStringBuilder(sb)
 				return Value(result)
 			} else {
 				return Value(strings.Repeat(rs, li))
@@ -398,14 +394,14 @@ func evalTimes(pos Position, l, r Value) Value {
 			// Optimized array repetition with batch processing for large arrays
 			totalSize := len(*rarr) * li
 			if totalSize > 1000 {
-				// Use batch processing for large arrays
-				result := globalComplexPool.GetArray()
+				// Use batch processing for large arrays with unified pool manager
+				result := GetPooledArray(totalSize)
+				defer PutPooledArray(result)
 				for i := 0; i < li; i++ {
 					result = SmartAppend(result, *rarr...)
 				}
 				final := make([]Value, len(result))
 				copy(final, result)
-				globalComplexPool.PutArray(&result)
 				return Value(&final)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
@@ -1353,16 +1349,8 @@ func newInterpreter(config *Config) *interpreter {
 	} else {
 		interp.memoCache = make(map[string]Value)
 	}
-	interp.stringBuilderPool = sync.Pool{
-		New: func() any {
-			return &strings.Builder{}
-		},
-	}
-	interp.arrayPool = sync.Pool{
-		New: func() any {
-			return make([]Value, 0, 16) // Pre-allocate with capacity 16
-		},
-	}
+	// Pools are now managed globally via UnifiedPoolManager
+	// No need to initialize per-interpreter pools
 	// Initialize variable lookup cache if enabled
 	if IsVariableLookupCacheEnabled() {
 		interp.variableLookupCache = NewVariableLookupCache(GetVariableLookupCacheSize())
@@ -1538,21 +1526,19 @@ func CopyScope(scope map[string]Value) map[string]Value {
 	return newScope
 }
 
-// getStringBuilder gets a string builder from the pool
+// getStringBuilder gets a string builder from the unified pool
 func (interp *interpreter) getStringBuilder() *strings.Builder {
-	return interp.stringBuilderPool.Get().(*strings.Builder)
+	return GetPooledStringBuilder()
 }
 
-// putStringBuilder returns a string builder to the pool
+// putStringBuilder returns a string builder to the unified pool
 func (interp *interpreter) putStringBuilder(sb *strings.Builder) {
-	sb.Reset()
-	interp.stringBuilderPool.Put(sb)
+	PutPooledStringBuilder(sb)
 }
 
-// getArray gets an array from the pool
+// getArray gets an array from the unified pool
 func (interp *interpreter) getArray() []Value {
-	arr := interp.arrayPool.Get().([]Value)
-	return arr[:0] // Reset length but keep capacity
+	return GetPooledArray(16) // Default small array
 }
 
 // getMemoKey generates a memoization key for function calls
@@ -1595,10 +1581,7 @@ func (interp *interpreter) setMemoValue(key string, value Value) {
 	}
 }
 
-// Map pool helpers
+// Map pool helpers - use unified pool manager
 func (interp *interpreter) getMap() map[string]Value {
-	if m := interp.mapPool.Get(); m != nil {
-		return m.(map[string]Value)
-	}
-	return make(map[string]Value)
+	return GetPooledMap()
 }
