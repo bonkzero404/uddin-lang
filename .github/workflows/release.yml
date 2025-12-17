@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git describe
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+      
+      - name: Build binary
+        run: |
+          make build VERSION=${{ steps.get_version.outputs.version }}
+      
+      - name: Create release archive
+        run: |
+          tar -czf uddinlang-linux-amd64.tar.gz uddinlang
+          shasum -a 256 uddinlang-linux-amd64.tar.gz > uddinlang-linux-amd64.tar.gz.sha256
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            uddinlang
+            uddinlang-linux-amd64.tar.gz
+            uddinlang-linux-amd64.tar.gz.sha256
+          body: |
+            ## Release ${{ steps.get_version.outputs.version }}
+            
+            ### Installation
+            
+            ```bash
+            # Install as CLI tool
+            go install github.com/bonkzero404/uddin-lang/cmd/uddin-lang@${{ steps.get_version.outputs.version }}
+            
+            # Use as library
+            go get github.com/bonkzero404/uddin-lang@${{ steps.get_version.outputs.version }}
+            ```
+            
+            ### Binary Download
+            
+            Download the pre-built binary for Linux (amd64):
+            - `uddinlang` - Standalone binary
+            - `uddinlang-linux-amd64.tar.gz` - Archive with checksum
+            
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

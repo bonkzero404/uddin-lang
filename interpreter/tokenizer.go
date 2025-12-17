@@ -321,11 +321,9 @@ func isNameStart(ch rune) bool {
 	return ch == '_' || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 }
 
-// Language constants and version information
+// Language constants
 const (
-	// Version information
-	LanguageName    = "Uddin-Lang"
-	LanguageVersion = "1.0.0"
+	LanguageName = "Uddin-Lang"
 
 	// Default values
 	DefaultFileExtension = ".din"
@@ -340,8 +338,19 @@ const (
 )
 
 // GetVersionInfo returns version information about the interpreter
+// This function now uses the version package for build-time version information
 func GetVersionInfo() string {
-	return fmt.Sprintf("%s v%s", LanguageName, LanguageVersion)
+	// Import version package dynamically to avoid circular dependencies
+	// We'll use a build tag approach or import it directly
+	// For now, we'll use the version package
+	return getVersionInfo()
+}
+
+// getVersionInfo is the actual implementation
+// This will be set by version_init.go during build
+var getVersionInfo = func() string {
+	// Default fallback - this will be replaced by version package in version_init.go
+	return "Uddin-Lang dev"
 }
 
 // IsValidFileExtension checks if a filename has the correct extension

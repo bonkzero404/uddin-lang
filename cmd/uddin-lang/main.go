@@ -108,6 +108,7 @@ func (c *CLI) printUsage() {
 }
 
 func (c *CLI) printVersion() {
+	// Use version package for consistent version display
 	fmt.Println(interpreter.GetVersionInfo())
 }
 

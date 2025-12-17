@@ -1,4 +1,6 @@
-# Binaries for programs and plugins
+# Binaries
+uddinlang
+uddin-lang
 *.exe
 *.exe~
 *.dll
@@ -8,88 +10,37 @@
 # Test binary, built with `go test -c`
 *.test
 
-# Output of the go coverage tool, specifically when used with LiteIDE
+# Output of the go coverage tool
 *.out
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Dependency directories
+vendor/
 
 # Go workspace file
 go.work
 
-# IDE and editor files
-.vscode/
+# IDE files
 .idea/
+.vscode/
 *.swp
 *.swo
 *~
 
-# OS generated files
+# OS files
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
 
 # Build artifacts
-/build/
-/dist/
-/bin/
-
-# Project specific executables
-uddinlang
-uddin-lang
-
-# Log files
-*.log
+dist/
+build/
+*.tar.gz
+*.zip
 
 # Temporary files
-*.tmp
-*.temp
+test_*.json
+test_*_back.din
+tmp/
+temp/
 
-# Coverage reports
-coverage.out
-coverage.html
-*.cover
-
-# Profiling data
-*.prof
-*.pprof
-
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Documentation build
-/docs/build/
-/docs/.docusaurus/
-
-# Cache directories
-.cache/
-*.cache
-
-# Backup files
-*.bak
-*.backup
-
-# Config files that might contain secrets
-config.local.*
-secrets.*
-
-# Test artifacts
-testdata/output/
-test_output/
-
-docs/node_modules/
-docs/.docusaurus/
-
-uddin/
-
-!cmd/uddin-lang
-
+# test files
 test-lang/
