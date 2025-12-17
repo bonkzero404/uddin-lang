@@ -91,3 +91,5 @@ docs/.docusaurus/
 uddin/
 
 !cmd/uddin-lang
+
+test-lang/

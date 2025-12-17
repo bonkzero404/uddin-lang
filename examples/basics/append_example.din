@@ -1,0 +1,108 @@
+// =============================================================================
+// Contoh Penggunaan append() di UDDIN-LANG
+// =============================================================================
+
+fun main():
+    print("=== Contoh Penggunaan append() ===\n")
+    
+    // 1. Append satu elemen
+    print("1. Append satu elemen:")
+    numbers = [1, 2, 3]
+    print("Sebelum:", numbers)
+    append(numbers, 4)
+    print("Sesudah:", numbers)
+    print()
+    
+    // 2. Append multiple elemen sekaligus
+    print("2. Append multiple elemen sekaligus:")
+    fruits = ["apel", "jeruk"]
+    print("Sebelum:", fruits)
+    append(fruits, "mangga", "pisang", "anggur")
+    print("Sesudah:", fruits)
+    print()
+    
+    // 3. Append dalam loop
+    print("3. Append dalam loop:")
+    squares = []
+    for (i in range(1, 6)):
+        append(squares, i * i)
+    end
+    print("Kuadrat 1-5:", squares)
+    print()
+    
+    // 4. Append dengan kondisi
+    print("4. Append dengan kondisi (hanya bilangan genap):")
+    evens = []
+    for (num in range(1, 11)):
+        if (num % 2 == 0) then:
+            append(evens, num)
+        end
+    end
+    print("Bilangan genap 1-10:", evens)
+    print()
+    
+    // 5. Append array ke dalam array
+    print("5. Append nested array:")
+    matrix = []
+    row1 = [1, 2, 3]
+    row2 = [4, 5, 6]
+    append(matrix, row1)
+    append(matrix, row2)
+    print("Matrix:", matrix)
+    print()
+    
+    // 6. Append string ke array string
+    print("6. Append string ke array:")
+    names = []
+    append(names, "Alice")
+    append(names, "Bob")
+    append(names, "Charlie")
+    print("Names:", names)
+    print()
+    
+    // 7. Contoh praktis: Mengumpulkan data
+    print("7. Contoh praktis - Mengumpulkan nilai di atas threshold:")
+    scores = [45, 78, 92, 67, 85, 91, 56]
+    high_scores = []
+    threshold = 80
+    
+    for (score in scores):
+        if (score >= threshold) then:
+            append(high_scores, score)
+        end
+    end
+    print("Semua scores:", scores)
+    print("High scores (>= " + str(threshold) + "):", high_scores)
+    print()
+    
+    // 8. Menunjukkan bahwa append mengubah array asli (in-place)
+    print("8. Append mengubah array asli (in-place):")
+    original = [10, 20]
+    print("Original:", original)
+    append(original, 30)
+    print("Setelah append:", original)
+    print("Note: Array 'original' berubah, bukan membuat array baru")
+    print()
+    
+    // 9. Append berbagai tipe data
+    print("9. Append berbagai tipe data:")
+    mixed = []
+    append(mixed, 42)           // integer
+    append(mixed, "hello")      // string
+    append(mixed, 3.14)         // float
+    append(mixed, true)         // boolean
+    append(mixed, [1, 2, 3])    // array
+    print("Mixed array:", mixed)
+    print()
+    
+    // 10. Contoh: Build array secara dinamis
+    print("10. Build array secara dinamis:")
+    result = []
+    for (i in range(1, 6)):
+        if (i % 2 == 1) then:
+            append(result, "Odd: " + str(i))
+        end
+    end
+    print("Dynamic result:", result)
+end
+
