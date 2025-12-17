@@ -7,13 +7,13 @@ import (
 func TestBuiltinDispatchIntegration(t *testing.T) {
 	// Initialize builtin dispatcher before test
 	InitializeBuiltinDispatcher()
-	
+
 	// Reset dispatcher call counts
 	dispatcher := GetGlobalBuiltinDispatcher()
 	dispatcher.mutex.Lock()
 	dispatcher.callCounts = make(map[string]int64)
 	dispatcher.mutex.Unlock()
-	
+
 	// Test script yang menggunakan fungsi-fungsi yang didaftarkan di dispatcher
 	code := `
 		// Test fungsi-fungsi yang didaftarkan di dispatcher
@@ -86,13 +86,13 @@ func TestBuiltinDispatchIntegration(t *testing.T) {
 func TestBuiltinDispatchPerformance(t *testing.T) {
 	// Initialize builtin dispatcher before test
 	InitializeBuiltinDispatcher()
-	
+
 	// Reset dispatcher call counts
 	dispatcher := GetGlobalBuiltinDispatcher()
 	dispatcher.mutex.Lock()
 	dispatcher.callCounts = make(map[string]int64)
 	dispatcher.mutex.Unlock()
-	
+
 	// Test untuk memverifikasi bahwa dispatcher memberikan performa yang baik
 	code := `
 		// Test multiple calls untuk mengukur performa
