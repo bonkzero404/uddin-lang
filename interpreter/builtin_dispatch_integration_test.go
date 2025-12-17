@@ -5,6 +5,15 @@ import (
 )
 
 func TestBuiltinDispatchIntegration(t *testing.T) {
+	// Initialize builtin dispatcher before test
+	InitializeBuiltinDispatcher()
+	
+	// Reset dispatcher call counts
+	dispatcher := GetGlobalBuiltinDispatcher()
+	dispatcher.mutex.Lock()
+	dispatcher.callCounts = make(map[string]int64)
+	dispatcher.mutex.Unlock()
+	
 	// Test script yang menggunakan fungsi-fungsi yang didaftarkan di dispatcher
 	code := `
 		// Test fungsi-fungsi yang didaftarkan di dispatcher
@@ -41,8 +50,7 @@ func TestBuiltinDispatchIntegration(t *testing.T) {
 		t.Error("Expected builtin calls to be recorded, but got 0")
 	}
 
-	// Verifikasi dispatcher statistics
-	dispatcher := GetGlobalBuiltinDispatcher()
+	// Verifikasi dispatcher statistics (dispatcher sudah dideklarasikan di atas)
 
 	// Test beberapa fungsi yang seharusnya dipanggil
 	functionTests := []struct {
@@ -76,6 +84,15 @@ func TestBuiltinDispatchIntegration(t *testing.T) {
 }
 
 func TestBuiltinDispatchPerformance(t *testing.T) {
+	// Initialize builtin dispatcher before test
+	InitializeBuiltinDispatcher()
+	
+	// Reset dispatcher call counts
+	dispatcher := GetGlobalBuiltinDispatcher()
+	dispatcher.mutex.Lock()
+	dispatcher.callCounts = make(map[string]int64)
+	dispatcher.mutex.Unlock()
+	
 	// Test untuk memverifikasi bahwa dispatcher memberikan performa yang baik
 	code := `
 		// Test multiple calls untuk mengukur performa
@@ -110,9 +127,7 @@ func TestBuiltinDispatchPerformance(t *testing.T) {
 		t.Errorf("Expected at least 300 builtin calls, got %d", stats.BuiltinCalls)
 	}
 
-	dispatcher := GetGlobalBuiltinDispatcher()
-
-	// Verifikasi call counts untuk fungsi yang sering dipanggil
+	// Verifikasi call counts untuk fungsi yang sering dipanggil (dispatcher sudah dideklarasikan di atas)
 	lenCalls := dispatcher.GetCallCount("len")
 	typeofCalls := dispatcher.GetCallCount("typeof")
 	strCalls := dispatcher.GetCallCount("str")

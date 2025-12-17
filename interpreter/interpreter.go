@@ -20,7 +20,11 @@ type Value any
 // It maintains variable scopes, I/O streams, and execution statistics.
 type interpreter struct {
 	// vars is a stack of variable scopes, with the most local scope at the end
+	// Used in normal mode (when CompactEnvironment is disabled)
 	vars []map[string]Value
+	// compactEnv is used when CompactEnvironment optimization is enabled
+	// Only one of vars or compactEnv will be used at a time
+	compactEnv *CompactEnvironment
 	// mutex protects concurrent access to vars from HTTP handlers
 	mutex sync.RWMutex
 	// args holds command-line arguments for the args() builtin
@@ -633,11 +637,14 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	if bf, ok := f.(builtinFunction); ok {
 		// Try builtin dispatcher first for optimized dispatch
 		dispatcher := GetGlobalBuiltinDispatcher()
-		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.name(), interp, pos, args); dispatched {
+		// Use bf.Name (the actual function name) not bf.name() (formatted string)
+		if result, dispatched := dispatcher.DispatchBuiltinFunction(bf.Name, interp, pos, args); dispatched {
 			interp.stats.BuiltinCalls++
 			return result
 		}
 		// Fallback to original method if not in dispatcher
+		interp.stats.BuiltinCalls++
+		return bf.call(interp, pos, args)
 	}
 
 	defer func() {
@@ -789,7 +796,18 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		panic(nameError(e.Position(), "name %q not found", e.Name))
 	case *List:
-		// Use array pool for better memory management
+		// Use CacheFriendlyArray if enabled, otherwise use pooled arrays
+		if IsCacheFriendlyStructuresEnabled() && len(e.Values) > 100 {
+			// Use CacheFriendlyArray for large arrays
+			cfa := NewCacheFriendlyArray(int32(len(e.Values)))
+			for _, expr := range e.Values {
+				cfa.Append(interp.evaluate(expr))
+			}
+			// Convert to regular slice for return (maintain compatibility)
+			result := cfa.ToSlice()
+			return Value(&result)
+		}
+		// Use array pool for better memory management (normal or small arrays)
 		values := interp.getArray()
 		if cap(values) < len(e.Values) {
 			values = make([]Value, len(e.Values))
@@ -801,6 +819,23 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		return Value(&values)
 	case *Map:
+		// Use CacheFriendlyMap if enabled, otherwise use pooled maps
+		if IsCacheFriendlyStructuresEnabled() && len(e.Items) > 50 {
+			// Use CacheFriendlyMap for large maps
+			cfm := NewCacheFriendlyMap(int32(len(e.Items)))
+			for _, item := range e.Items {
+				key := interp.evaluate(item.Key)
+				if k, ok := key.(string); ok {
+					cfm.Set(k, interp.evaluate(item.Value))
+				} else {
+					panic(typeError(item.Key.Position(), "object key must be string, not %s", typeName(key)))
+				}
+			}
+			// Convert to regular map for return (maintain compatibility)
+			result := cfm.ToMap()
+			return Value(result)
+		}
+		// Use pooled map (normal or small maps)
 		value := interp.getMap()
 		for _, item := range e.Items {
 			key := interp.evaluate(item.Key)
@@ -816,7 +851,26 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		subscript := interp.evaluate(e.Subscript)
 		return evalSubscript(e.Subscript.Position(), container, subscript)
 	case *FunctionExpression:
-		closure := interp.vars[len(interp.vars)-1]
+		// Get current closure scope (support both normal and compact environment)
+		var closure map[string]Value
+		if interp.compactEnv != nil {
+			interp.compactEnv.mu.RLock()
+			if len(interp.compactEnv.vars) > 0 {
+				// Copy the current scope
+				closure = make(map[string]Value)
+				for k, v := range interp.compactEnv.vars[len(interp.compactEnv.vars)-1] {
+					closure[k] = v
+				}
+			}
+			interp.compactEnv.mu.RUnlock()
+		} else {
+			interp.mutex.RLock()
+			closure = interp.vars[len(interp.vars)-1]
+			interp.mutex.RUnlock()
+		}
+		if closure == nil {
+			closure = make(map[string]Value)
+		}
 		return &userFunction{"", e.Parameters, e.Ellipsis, e.Body, closure, false}
 	default:
 		// Parser should never get us here
@@ -825,6 +879,21 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 }
 
 func (interp *interpreter) pushScope(scope map[string]Value) {
+	// Use CompactEnvironment if enabled
+	if interp.compactEnv != nil {
+		interp.compactEnv.PushScope()
+		// Copy scope data to compact environment
+		for k, v := range scope {
+			interp.compactEnv.Assign(k, v)
+		}
+		// Invalidate cache when scope changes
+		if interp.variableLookupCache != nil {
+			interp.variableLookupCache.InvalidateScope(interp.compactEnv.GetScopeCount() - 1)
+		}
+		return
+	}
+
+	// Normal mode: use vars slice
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	interp.vars = SmartAppendMapValue(interp.vars, scope)
@@ -835,6 +904,18 @@ func (interp *interpreter) pushScope(scope map[string]Value) {
 }
 
 func (interp *interpreter) popScope() {
+	// Use CompactEnvironment if enabled
+	if interp.compactEnv != nil {
+		scopeLevel := interp.compactEnv.GetScopeCount() - 1
+		// Invalidate cache for the scope being removed
+		if interp.variableLookupCache != nil {
+			interp.variableLookupCache.InvalidateScope(scopeLevel)
+		}
+		interp.compactEnv.PopScope()
+		return
+	}
+
+	// Normal mode: use vars slice
 	interp.mutex.Lock()
 	defer interp.mutex.Unlock()
 	scopeLevel := len(interp.vars) - 1
@@ -846,21 +927,37 @@ func (interp *interpreter) popScope() {
 }
 
 func (interp *interpreter) assign(name string, value Value) {
-	interp.mutex.Lock()
-	defer interp.mutex.Unlock()
-
 	// Use tagged values if enabled for memory optimization, but not for functions
+	var finalValue Value
 	if IsTaggedValuesEnabled() && !IsFunction(value) {
 		if tv, err := CreateSafeTaggedValue(value); err == nil {
-			// Store the tagged value - creation is already tracked in CreateSafeTaggedValue
-			interp.vars[len(interp.vars)-1][name] = tv
+			finalValue = tv
 		} else {
 			// Fallback to regular value on error
-			interp.vars[len(interp.vars)-1][name] = value
+			finalValue = value
 		}
 	} else {
-		interp.vars[len(interp.vars)-1][name] = value
+		finalValue = value
 	}
+
+	// Use CompactEnvironment if enabled
+	if interp.compactEnv != nil {
+		interp.compactEnv.Assign(name, finalValue)
+		// Invalidate cache for this variable since it's been reassigned
+		if interp.variableLookupCache != nil {
+			interp.variableLookupCache.InvalidateVariable(name)
+		}
+		return
+	}
+
+	// Normal mode: use vars slice
+	interp.mutex.Lock()
+	defer interp.mutex.Unlock()
+	// Ensure vars slice is not empty
+	if len(interp.vars) == 0 {
+		interp.vars = append(interp.vars, make(map[string]Value))
+	}
+	interp.vars[len(interp.vars)-1][name] = finalValue
 
 	// Invalidate cache for this variable since it's been reassigned
 	if interp.variableLookupCache != nil {
@@ -869,9 +966,6 @@ func (interp *interpreter) assign(name string, value Value) {
 }
 
 func (interp *interpreter) lookup(name string) (Value, bool) {
-	interp.mutex.RLock()
-	defer interp.mutex.RUnlock()
-
 	// Helper function to convert tagged value back to regular value
 	convertValue := func(v Value) Value {
 		if IsTaggedValuesEnabled() {
@@ -889,6 +983,71 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 		}
 		return v
 	}
+
+	// Use CompactEnvironment if enabled
+	if interp.compactEnv != nil {
+		// Use variable lookup cache if enabled
+		if interp.variableLookupCache != nil {
+			// Check cache first
+			if cached, exists := interp.variableLookupCache.cache[name]; exists {
+				// Verify the cached value is still valid for the current scope
+				scopeCount := interp.compactEnv.GetScopeCount()
+				if cached.ScopeLevel < scopeCount {
+					// Need to verify with CompactEnvironment
+					interp.compactEnv.mu.RLock()
+					if cached.ScopeLevel < len(interp.compactEnv.vars) {
+						if value, found := interp.compactEnv.vars[cached.ScopeLevel][name]; found && safeValueEqual(value, cached.Value) {
+							interp.compactEnv.mu.RUnlock()
+							interp.variableLookupCache.hits++
+							converted := convertValue(cached.Value)
+							return converted, true
+						}
+					}
+					interp.compactEnv.mu.RUnlock()
+				}
+				// Cache is stale, remove it
+				interp.variableLookupCache.InvalidateVariable(name)
+			}
+
+			interp.variableLookupCache.misses++
+		}
+
+		// Perform lookup using CompactEnvironment
+		value, found := interp.compactEnv.Lookup(name)
+		if found {
+			// Cache the result if cache is enabled
+			if interp.variableLookupCache != nil {
+				// Find the scope level where it was found
+				interp.compactEnv.mu.RLock()
+				scopeLevel := -1
+				for i := len(interp.compactEnv.vars) - 1; i >= 0; i-- {
+					if _, exists := interp.compactEnv.vars[i][name]; exists {
+						scopeLevel = i
+						break
+					}
+				}
+				interp.compactEnv.mu.RUnlock()
+				if scopeLevel >= 0 {
+					interp.variableLookupCache.CacheVariable(name, value, scopeLevel)
+				}
+			}
+			converted := convertValue(value)
+			return converted, true
+		}
+
+		// Check builtin dispatcher for functions not in environment
+		dispatcher := GetGlobalBuiltinDispatcher()
+		if _, exists := dispatcher.dispatchTable[name]; exists {
+			// Builtin function found
+			return nil, false
+		}
+
+		return nil, false
+	}
+
+	// Normal mode: use vars slice
+	interp.mutex.RLock()
+	defer interp.mutex.RUnlock()
 
 	// Use variable lookup cache if enabled
 	if interp.variableLookupCache != nil {
@@ -916,32 +1075,13 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 				return converted, true
 			}
 		}
-
-		// Check builtin dispatcher for functions not in environment
-		dispatcher := GetGlobalBuiltinDispatcher()
-		if _, exists := dispatcher.dispatchTable[name]; exists {
-			// Create a builtin function wrapper for dispatcher functions
-			builtinFunc := builtinFunction{
-				Name: name,
-				Function: func(interp *interpreter, pos Position, args []Value) Value {
-					if result, dispatched := dispatcher.DispatchBuiltinFunction(name, interp, pos, args); dispatched {
-						return result
-					}
-					panic(nameError(pos, "builtin function '%s' not found in dispatcher", name))
-				},
+	} else {
+		// No cache: perform direct lookup
+		for i := len(interp.vars) - 1; i >= 0; i-- {
+			if value, found := interp.vars[i][name]; found {
+				converted := convertValue(value)
+				return converted, true
 			}
-			return builtinFunc, true
-		}
-
-		return nil, false
-	}
-
-	// Fallback to standard lookup
-	for i := len(interp.vars) - 1; i >= 0; i-- {
-		thisVars := interp.vars[i]
-		if v, ok := thisVars[name]; ok {
-			converted := convertValue(v)
-			return converted, true
 		}
 	}
 
@@ -1279,18 +1419,35 @@ func (interp *interpreter) executeStatement(s Statement) {
 		// Assign function to current scope so it can be found recursively
 		interp.assign(s.Name, userFunc)
 		// Now create closure that includes all accessible variables from all scopes
-		interp.mutex.RLock()
 		closure := make(map[string]Value)
-		// Copy variables from all scopes (from global to local)
-		for i := 0; i < len(interp.vars); i++ {
-			for k, v := range interp.vars[i] {
-				// Only add if not already present (local scope takes precedence)
-				if _, exists := closure[k]; !exists {
-					closure[k] = v
+
+		// Use CompactEnvironment if enabled
+		if interp.compactEnv != nil {
+			interp.compactEnv.mu.RLock()
+			// Copy variables from all scopes (from global to local)
+			for i := 0; i < len(interp.compactEnv.vars); i++ {
+				for k, v := range interp.compactEnv.vars[i] {
+					// Only add if not already present (local scope takes precedence)
+					if _, exists := closure[k]; !exists {
+						closure[k] = v
+					}
 				}
 			}
+			interp.compactEnv.mu.RUnlock()
+		} else {
+			// Normal mode: use vars slice
+			interp.mutex.RLock()
+			// Copy variables from all scopes (from global to local)
+			for i := 0; i < len(interp.vars); i++ {
+				for k, v := range interp.vars[i] {
+					// Only add if not already present (local scope takes precedence)
+					if _, exists := closure[k]; !exists {
+						closure[k] = v
+					}
+				}
+			}
+			interp.mutex.RUnlock()
 		}
-		interp.mutex.RUnlock()
 		// Update the function's closure to include all accessible variables
 		userFunc.Closure = closure
 	case *Return:
@@ -1361,17 +1518,46 @@ func newInterpreter(config *Config) *interpreter {
 	// Initialize builtin dispatcher
 	InitializeBuiltinDispatcher()
 
-	interp.pushScope(make(map[string]Value))
-
-	// Add mathematical constants
-	interp.assign("PI", Value(math.Pi))
-	interp.assign("E", Value(math.E))
-	interp.assign("TAU", Value(2*math.Pi))
-	interp.assign("PHI", Value((1+math.Sqrt(5))/2)) // Golden ratio
-	interp.assign("LN2", Value(math.Ln2))
-	interp.assign("LN10", Value(math.Ln10))
-	interp.assign("SQRT2", Value(math.Sqrt2))
-	interp.assign("SQRT3", Value(math.Sqrt(3)))
+	// Use CompactEnvironment if enabled, otherwise use regular vars
+	if IsCompactEnvironmentEnabled() {
+		interp.compactEnv = NewCompactEnvironment()
+		// Initialize with empty global scope
+		// Note: CompactEnvironment already has one scope from NewCompactEnvironment()
+		// Add builtin functions to the global scope
+		for name, builtin := range builtins {
+			interp.compactEnv.Assign(name, builtin)
+		}
+		// Add mathematical constants
+		interp.compactEnv.Assign("PI", Value(math.Pi))
+		interp.compactEnv.Assign("E", Value(math.E))
+		interp.compactEnv.Assign("TAU", Value(2*math.Pi))
+		interp.compactEnv.Assign("PHI", Value((1+math.Sqrt(5))/2))
+		interp.compactEnv.Assign("LN2", Value(math.Ln2))
+		interp.compactEnv.Assign("LN10", Value(math.Ln10))
+		interp.compactEnv.Assign("SQRT2", Value(math.Sqrt2))
+		interp.compactEnv.Assign("SQRT3", Value(math.Sqrt(3)))
+		// Add predefined variables from config
+		for k, v := range config.Vars {
+			interp.compactEnv.Assign(k, v)
+		}
+	} else {
+		interp.pushScope(make(map[string]Value))
+		// Add builtin functions directly to the first scope
+		interp.mutex.Lock()
+		for k, v := range builtins {
+			interp.vars[0][k] = v
+		}
+		// Add mathematical constants
+		interp.vars[0]["PI"] = Value(math.Pi)
+		interp.vars[0]["E"] = Value(math.E)
+		interp.vars[0]["TAU"] = Value(2 * math.Pi)
+		interp.vars[0]["PHI"] = Value((1 + math.Sqrt(5)) / 2) // Golden ratio
+		interp.vars[0]["LN2"] = Value(math.Ln2)
+		interp.vars[0]["LN10"] = Value(math.Ln10)
+		interp.vars[0]["SQRT2"] = Value(math.Sqrt2)
+		interp.vars[0]["SQRT3"] = Value(math.Sqrt(3))
+		interp.mutex.Unlock()
+	}
 
 	for k, v := range config.Vars {
 		interp.assign(k, v)
