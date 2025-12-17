@@ -160,11 +160,12 @@ func (f builtinFunction) name() string {
 
 var builtins = map[string]builtinFunction{
 	// Core System Functions
-	"import": {importFunc, "import"},
-	"exit":   {exitFunc, "exit"},
-	"print":  {printFunc, "print"},
-	"input":  {inputFunc, "input"},
-	"typeof": {typeofFunc, "typeof"},
+	"import":  {importFunc, "import"},
+	"exit":    {exitFunc, "exit"},
+	"print":   {printFunc, "print"},
+	"println": {printlnFunc, "println"},
+	"input":   {inputFunc, "input"},
+	"typeof":  {typeofFunc, "typeof"},
 
 	// Type Conversion Functions
 	"int":   {intFunc, "int"},
@@ -199,19 +200,19 @@ var builtins = map[string]builtinFunction{
 	"reverse_str": {reverseStrFunc, "reverse_str"},
 
 	// Array/Collection Methods - Advanced
-	"map":           {mapFunc, "map"},
-	"filter":        {filterFunc, "filter"},
-	"reduce":        {reduceFunc, "reduce"},
+	"map":               {mapFunc, "map"},
+	"filter":            {filterFunc, "filter"},
+	"reduce":            {reduceFunc, "reduce"},
 	"concurrent_map":    {concurrentMapFunc, "concurrent_map"},
 	"concurrent_filter": {concurrentFilterFunc, "concurrent_filter"},
 	"concurrent_reduce": {concurrentReduceFunc, "concurrent_reduce"},
-	"reverse":       {reverseFunc, "reverse"},
-	"push":          {pushFunc, "push"},
-	"pop":           {popFunc, "pop"},
-	"shift":         {shiftFunc, "shift"},
-	"unshift":       {unshiftFunc, "unshift"},
-	"index_of":      {indexOfFunc, "index_of"},
-	"last_index_of": {lastIndexOfFunc, "last_index_of"},
+	"reverse":           {reverseFunc, "reverse"},
+	"push":              {pushFunc, "push"},
+	"pop":               {popFunc, "pop"},
+	"shift":             {shiftFunc, "shift"},
+	"unshift":           {unshiftFunc, "unshift"},
+	"index_of":          {indexOfFunc, "index_of"},
+	"last_index_of":     {lastIndexOfFunc, "last_index_of"},
 
 	// Data Structures - Set Operations
 	"set_new":      {setNewFunc, "set_new"},

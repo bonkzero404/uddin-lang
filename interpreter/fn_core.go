@@ -182,6 +182,19 @@ func printFunc(interp *interpreter, pos Position, args []Value) Value {
 	return Value(nil)
 }
 
+// printlnFunc implements the println() built-in function
+// Prints values to standard output followed by a newline (same as print)
+// Parameters:
+//   - args: Any number of values to print
+//
+// Returns null
+// Example: println("hello", 42) -> hello 42
+// Note: println is identical to print, both add a newline at the end
+func printlnFunc(interp *interpreter, pos Position, args []Value) Value {
+	// println has the same implementation as print (both add newline)
+	return printFunc(interp, pos, args)
+}
+
 // writeDirectStdout performs direct syscall write to stdout
 func writeDirectStdout(data []byte) {
 	if len(data) == 0 {
