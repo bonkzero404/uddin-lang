@@ -1,47 +1,47 @@
 // =============================================================================
-// Contoh Penggunaan append() di UDDIN-LANG
+// Examples of Using append() in UDDIN-LANG
 // =============================================================================
 
 fun main():
-    print("=== Contoh Penggunaan append() ===\n")
+    print("=== Examples of Using append() ===\n")
     
-    // 1. Append satu elemen
-    print("1. Append satu elemen:")
+    // 1. Append a single element
+    print("1. Append a single element:")
     numbers = [1, 2, 3]
-    print("Sebelum:", numbers)
+    print("Before:", numbers)
     append(numbers, 4)
-    print("Sesudah:", numbers)
+    print("After:", numbers)
     print()
     
-    // 2. Append multiple elemen sekaligus
-    print("2. Append multiple elemen sekaligus:")
-    fruits = ["apel", "jeruk"]
-    print("Sebelum:", fruits)
-    append(fruits, "mangga", "pisang", "anggur")
-    print("Sesudah:", fruits)
+    // 2. Append multiple elements at once
+    print("2. Append multiple elements at once:")
+    fruits = ["apple", "orange"]
+    print("Before:", fruits)
+    append(fruits, "mango", "banana", "grape")
+    print("After:", fruits)
     print()
     
-    // 3. Append dalam loop
-    print("3. Append dalam loop:")
+    // 3. Append within a loop
+    print("3. Append within a loop:")
     squares = []
     for (i in range(1, 6)):
         append(squares, i * i)
     end
-    print("Kuadrat 1-5:", squares)
+    print("Squares of 1-5:", squares)
     print()
     
-    // 4. Append dengan kondisi
-    print("4. Append dengan kondisi (hanya bilangan genap):")
+    // 4. Append with condition
+    print("4. Append with condition (only even numbers):")
     evens = []
     for (num in range(1, 11)):
         if (num % 2 == 0) then:
             append(evens, num)
         end
     end
-    print("Bilangan genap 1-10:", evens)
+    print("Even numbers 1-10:", evens)
     print()
     
-    // 5. Append array ke dalam array
+    // 5. Append array into array
     print("5. Append nested array:")
     matrix = []
     row1 = [1, 2, 3]
@@ -51,8 +51,8 @@ fun main():
     print("Matrix:", matrix)
     print()
     
-    // 6. Append string ke array string
-    print("6. Append string ke array:")
+    // 6. Append string to string array
+    print("6. Append string to array:")
     names = []
     append(names, "Alice")
     append(names, "Bob")
@@ -60,8 +60,8 @@ fun main():
     print("Names:", names)
     print()
     
-    // 7. Contoh praktis: Mengumpulkan data
-    print("7. Contoh praktis - Mengumpulkan nilai di atas threshold:")
+    // 7. Practical example: Collecting data
+    print("7. Practical example - Collecting values above threshold:")
     scores = [45, 78, 92, 67, 85, 91, 56]
     high_scores = []
     threshold = 80
@@ -71,21 +71,21 @@ fun main():
             append(high_scores, score)
         end
     end
-    print("Semua scores:", scores)
+    print("All scores:", scores)
     print("High scores (>= " + str(threshold) + "):", high_scores)
     print()
     
-    // 8. Menunjukkan bahwa append mengubah array asli (in-place)
-    print("8. Append mengubah array asli (in-place):")
+    // 8. Demonstrating that append modifies the original array (in-place)
+    print("8. Append modifies the original array (in-place):")
     original = [10, 20]
     print("Original:", original)
     append(original, 30)
-    print("Setelah append:", original)
-    print("Note: Array 'original' berubah, bukan membuat array baru")
+    print("After append:", original)
+    print("Note: Array 'original' is modified, not creating a new array")
     print()
     
-    // 9. Append berbagai tipe data
-    print("9. Append berbagai tipe data:")
+    // 9. Append different data types
+    print("9. Append different data types:")
     mixed = []
     append(mixed, 42)           // integer
     append(mixed, "hello")      // string
@@ -95,8 +95,8 @@ fun main():
     print("Mixed array:", mixed)
     print()
     
-    // 10. Contoh: Build array secara dinamis
-    print("10. Build array secara dinamis:")
+    // 10. Example: Build array dynamically
+    print("10. Build array dynamically:")
     result = []
     for (i in range(1, 6)):
         if (i % 2 == 1) then:
