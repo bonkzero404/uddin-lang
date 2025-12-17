@@ -27,11 +27,12 @@ Documentation for all built-in functions including:
 - Utility functions
 
 ### [Memory Optimization](./memory-optimization)
-Experimental memory optimization features including:
-- Tagged value types and compact structures
-- Expression memoization and caching
-- Performance optimization techniques
-- Compatibility guidelines and limitations
+Production-ready memory layout optimization features including:
+- Tagged value types for reduced memory footprint
+- Compact environment for thread-safe variable storage
+- Cache-friendly structures for large arrays and maps
+- Memory leak detection for long-running applications
+- Performance optimization techniques and best practices
 
 ### [Database Streaming](./database-streaming)
 Reference guide for real-time database streaming capabilities including:

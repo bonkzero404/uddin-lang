@@ -268,7 +268,9 @@ func main() {
     engine := uddin.New()
 
     // Enable memory optimizations for better performance
-    engine.EnableMemoryOptimization()
+    // Note: EnableMemoryOptimization() doesn't actually enable optimizations
+    // Use NewWithConfig(interpreter.StableConfig()) instead
+    engine := uddin.NewWithConfig(interpreter.StableConfig())
 
     // Execute memory-intensive operations
     _, err := engine.ExecuteString(`
@@ -371,52 +373,57 @@ func main() {
 ### Engine Methods
 
 #### Creation and Configuration
-- `New() *Engine` - Create a new engine with default configuration
-- `NewWithConfig(config *Config) *Engine` - Create a new engine with custom configuration
-- `SetStdout(w io.Writer)` - Set standard output
-- `SetStdin(r io.Reader)` - Set standard input
-- `SetArgs(args []string)` - Set command-line arguments
-- `EnableMemoryOptimization()` - Enable memory optimizations
-- `SetUnitTestMode(isUnitTest bool)` - Set unit test mode
+
+-   `New() *Engine` - Create a new engine with default configuration
+-   `NewWithConfig(config *Config) *Engine` - Create a new engine with custom configuration
+-   `SetStdout(w io.Writer)` - Set standard output
+-   `SetStdin(r io.Reader)` - Set standard input
+-   `SetArgs(args []string)` - Set command-line arguments
+-   `EnableMemoryOptimization()` - Note: This method exists but doesn't enable optimizations (sets default config). Use `NewWithConfig(interpreter.StableConfig())` instead for stable optimizations.
+-   `SetUnitTestMode(isUnitTest bool)` - Set unit test mode
 
 #### Variable Management
-- `SetVariable(name string, value any)` - Set a single variable
-- `SetVariables(vars map[string]any)` - Set multiple variables
+
+-   `SetVariable(name string, value any)` - Set a single variable
+-   `SetVariables(vars map[string]any)` - Set multiple variables
 
 #### Parsing
-- `ParseExpression(source []byte) (Expression, error)` - Parse an expression
-- `ParseProgram(source []byte) (*Program, error)` - Parse a program
+
+-   `ParseExpression(source []byte) (Expression, error)` - Parse an expression
+-   `ParseProgram(source []byte) (*Program, error)` - Parse a program
 
 #### Execution
-- `EvaluateExpression(expr Expression) (Value, *Stats, error)` - Evaluate a parsed expression
-- `ExecuteProgram(prog *Program) (*Stats, error)` - Execute a parsed program
-- `ExecuteString(source string) (*Stats, error)` - Parse and execute source code
-- `ExecuteFile(filename string) (*Stats, error)` - Parse and execute a file
-- `EvaluateString(source string) (Value, *Stats, error)` - Parse and evaluate an expression
+
+-   `EvaluateExpression(expr Expression) (Value, *Stats, error)` - Evaluate a parsed expression
+-   `ExecuteProgram(prog *Program) (*Stats, error)` - Execute a parsed program
+-   `ExecuteString(source string) (*Stats, error)` - Parse and execute source code
+-   `ExecuteFile(filename string) (*Stats, error)` - Parse and execute a file
+-   `EvaluateString(source string) (Value, *Stats, error)` - Parse and evaluate an expression
 
 #### AST Conversion
-- `ConvertToJSON(source []byte) ([]byte, error)` - Convert UDDIN-LANG source to JSON AST
-- `ConvertFromJSON(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG source
-- `ConvertStringToJSON(source string) ([]byte, error)` - Convert UDDIN-LANG string to JSON AST
-- `ConvertJSONToString(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG string
+
+-   `ConvertToJSON(source []byte) ([]byte, error)` - Convert UDDIN-LANG source to JSON AST
+-   `ConvertFromJSON(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG source
+-   `ConvertStringToJSON(source string) ([]byte, error)` - Convert UDDIN-LANG string to JSON AST
+-   `ConvertJSONToString(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG string
 
 ### Convenience Functions
 
-- `ParseExpression(source []byte) (Expression, error)` - Parse an expression with default settings
-- `ParseProgram(source []byte) (*Program, error)` - Parse a program with default settings
-- `ExecuteString(source string) (*Stats, error)` - Execute source code with default settings
-- `ExecuteFile(filename string) (*Stats, error)` - Execute a file with default settings
-- `EvaluateString(source string) (Value, *Stats, error)` - Evaluate an expression with default settings
-- `ConvertToJSON(source []byte) ([]byte, error)` - Convert UDDIN-LANG source to JSON AST
-- `ConvertFromJSON(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG source
-- `ConvertStringToJSON(source string) ([]byte, error)` - Convert UDDIN-LANG string to JSON AST
-- `ConvertJSONToString(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG string
+-   `ParseExpression(source []byte) (Expression, error)` - Parse an expression with default settings
+-   `ParseProgram(source []byte) (*Program, error)` - Parse a program with default settings
+-   `ExecuteString(source string) (*Stats, error)` - Execute source code with default settings
+-   `ExecuteFile(filename string) (*Stats, error)` - Execute a file with default settings
+-   `EvaluateString(source string) (Value, *Stats, error)` - Evaluate an expression with default settings
+-   `ConvertToJSON(source []byte) ([]byte, error)` - Convert UDDIN-LANG source to JSON AST
+-   `ConvertFromJSON(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG source
+-   `ConvertStringToJSON(source string) ([]byte, error)` - Convert UDDIN-LANG string to JSON AST
+-   `ConvertJSONToString(jsonData []byte) (string, error)` - Convert JSON AST back to UDDIN-LANG string
 
 ### Configuration Functions
 
-- `DefaultConfig() *Config` - Get default configuration
-- `TestConfig() *Config` - Get configuration suitable for testing
-- `PrintStats(stats Stats, output io.Writer)` - Print execution statistics
+-   `DefaultConfig() *Config` - Get default configuration
+-   `TestConfig() *Config` - Get configuration suitable for testing
+-   `PrintStats(stats Stats, output io.Writer)` - Print execution statistics
 
 ## AST Conversion Examples
 
@@ -569,7 +576,7 @@ func main() {
 ## Performance Tips
 
 1. **Reuse Engine Instances**: Create an engine once and reuse it for multiple executions
-2. **Enable Memory Optimization**: Use `EnableMemoryOptimization()` for memory-intensive operations
+2. **Enable Memory Optimization**: Use `NewWithConfig(interpreter.StableConfig())` for memory-intensive operations (note: `EnableMemoryOptimization()` doesn't actually enable optimizations)
 3. **Parse Once, Execute Many**: Parse programs once and execute them multiple times
 4. **Use Unit Test Mode**: Enable unit test mode when you don't need automatic main() execution
 5. **Capture Output**: Use custom stdout/stderr to avoid console I/O overhead in production
@@ -577,10 +584,11 @@ func main() {
 ## Error Handling
 
 The library provides detailed error information including:
-- Syntax errors with line and column numbers
-- Runtime errors with context
-- Type errors with expected vs actual types
-- Name errors for undefined variables/functions
+
+-   Syntax errors with line and column numbers
+-   Runtime errors with context
+-   Type errors with expected vs actual types
+-   Name errors for undefined variables/functions
 
 All errors implement the standard Go `error` interface and can be handled using normal Go error handling patterns.
 

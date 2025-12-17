@@ -249,13 +249,22 @@ stats, err := interpreter.Execute(program, config)
 
 ### Using Engine API
 
+For stable mode, use `NewWithConfig()` with `StableConfig()`:
+
 ```go
 import "github.com/bonkzero404/uddin-lang"
+import "github.com/bonkzero404/uddin-lang/interpreter"
 
-engine := uddin.New()
-engine.EnableMemoryOptimization() // Enables stable mode
+// Stable mode
+engine := uddin.NewWithConfig(interpreter.StableConfig())
+result, err := engine.ExecuteString(code)
+
+// Experimental mode (testing only)
+engine := uddin.NewWithConfig(interpreter.ExperimentalConfig())
 result, err := engine.ExecuteString(code)
 ```
+
+**Note**: The `EnableMemoryOptimization()` method exists but does not enable optimizations (it sets default config). Use `NewWithConfig()` with `StableConfig()` or `ExperimentalConfig()` instead.
 
 ## Performance Comparison
 
