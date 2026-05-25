@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"net"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -63,11 +64,13 @@ func wafHeaderFunc(interp *interpreter, pos Position, args []Value) Value {
 	if !ok {
 		return Value(nil)
 	}
-	val, found := headers[strings.ToLower(name)]
-	if !found {
-		return Value(nil)
+	lowerName := strings.ToLower(name)
+	for k, v := range headers {
+		if strings.ToLower(k) == lowerName {
+			return Value(v)
+		}
 	}
-	return Value(val)
+	return Value(nil)
 }
 
 // wafQueryFunc implements waf_query(name) → string|null
@@ -88,11 +91,15 @@ func wafQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 	if query == "" {
 		return Value(nil)
 	}
-	// Parse "key=value&key2=value2" format
+	// Parse and URL-decode query params
 	for pair := range strings.SplitSeq(query, "&") {
 		parts := strings.SplitN(pair, "=", 2)
-		if len(parts) == 2 && parts[0] == name {
-			return Value(parts[1])
+		if len(parts) == 2 {
+			key, _ := url.QueryUnescape(parts[0])
+			if key == name {
+				val, _ := url.QueryUnescape(parts[1])
+				return Value(val)
+			}
 		}
 	}
 	return Value(nil)
