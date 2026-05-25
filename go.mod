@@ -1,6 +1,6 @@
 module github.com/bonkzero404/uddin-lang
 
-go 1.24.0
+go 1.25.4
 
 require (
 	github.com/go-mysql-org/go-mysql v1.13.0
@@ -11,6 +11,8 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/coregx/ahocorasick v0.2.1 // indirect
+	github.com/coregx/coregex v0.12.21 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/klauspost/compress v1.18.2 // indirect
 	github.com/pingcap/errors v0.11.5-0.20250523034308-74f78ae071ee // indirect
@@ -20,6 +22,7 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
+	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 )
