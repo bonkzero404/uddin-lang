@@ -35,7 +35,9 @@ func DefaultMemoizationConfig() *MemoizationConfig {
 	}
 }
 
-// StableMemoizationConfig returns stable memoization configuration for production
+// StableMemoizationConfig returns memoization configuration for long-lived single-Engine use.
+// WARNING: Memoization is NOT thread-safe. Do not enable on Engines shared across goroutines.
+// The production-ready cache (UseProductionCache=true) is stable for single-threaded scripts.
 func StableMemoizationConfig() *MemoizationConfig {
 	return &MemoizationConfig{
 		EnableMemoization:  true,

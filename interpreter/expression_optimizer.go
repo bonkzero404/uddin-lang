@@ -5,9 +5,9 @@ import (
 	"sync"
 )
 
-// ExpressionOptimizer provides optimization for expressions
-// EXPERIMENTAL: This optimizer is experimental and part of memory optimization features
-// WARNING: Caching behavior may not be suitable for all use cases
+// ExpressionOptimizer provides constant folding and CSE optimization.
+// EXPERIMENTAL(caching): Subexpression cache may return stale results if the same
+// expression node appears in different evaluation contexts. Disable in concurrent scripts.
 type ExpressionOptimizer struct {
 	constantCache    map[string]Value
 	subexprCache     map[string]Value

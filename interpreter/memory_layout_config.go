@@ -1,7 +1,6 @@
 package interpreter
 
 // MemoryLayoutConfig controls the memory layout optimization features
-// EXPERIMENTAL: This configuration is experimental and may have stability issues
 type MemoryLayoutConfig struct {
 	// EnableTaggedValues enables the use of TaggedValue instead of Value
 	EnableTaggedValues bool

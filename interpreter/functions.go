@@ -15,15 +15,14 @@ type functionType interface {
 }
 
 // userFunction represents a function defined by the user in the script
-// EXPERIMENTAL: Memoization feature is experimental and not recommended for production
 type userFunction struct {
 	Name       string           // Function name (can be empty for anonymous functions)
 	Parameters []string         // Parameter names
 	Ellipsis   bool             // Whether the last parameter is variadic
 	Body       Block            // Function body statements
 	Closure    map[string]Value // Captured variables from outer scopes
-	// EXPERIMENTAL: Whether this function should use memoization (not production-ready)
-	// WARNING: Memoization may consume significant memory and is not thread-safe
+	// EXPERIMENTAL(thread-safety): memoized functions share the global memo cache.
+	// Not safe for concurrent Engine use. Safe for sequential single-Engine scripts.
 	Memoized bool
 }
 
