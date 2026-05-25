@@ -6,7 +6,7 @@ import (
 )
 
 // makeTestInterp creates an interpreter with _waf_ctx set to the given context map.
-func makeTestInterp(ctx map[string]interface{}) *interpreter {
+func makeTestInterp(ctx map[string]any) *interpreter {
 	var buf bytes.Buffer
 	config := &Config{
 		Vars:       map[string]Value{"_waf_ctx": ctx},
@@ -90,7 +90,7 @@ func TestPathGlobMatch_InvalidPattern(t *testing.T) {
 // -- waf_header ---------------------------------------------------------------
 
 func TestWAFHeader_Exists(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"headers": map[string]string{
 			"content-type": "application/json",
 		},
@@ -103,7 +103,7 @@ func TestWAFHeader_Exists(t *testing.T) {
 }
 
 func TestWAFHeader_CaseInsensitive(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"headers": map[string]string{
 			"x-forwarded-for": "1.2.3.4",
 		},
@@ -117,7 +117,7 @@ func TestWAFHeader_CaseInsensitive(t *testing.T) {
 }
 
 func TestWAFHeader_Missing(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"headers": map[string]string{},
 	}
 	interp := makeTestInterp(ctx)
@@ -138,7 +138,7 @@ func TestWAFHeader_NoCtx(t *testing.T) {
 // -- waf_query ----------------------------------------------------------------
 
 func TestWAFQuery_Exists(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"query": "id=42&foo=bar",
 	}
 	interp := makeTestInterp(ctx)
@@ -149,7 +149,7 @@ func TestWAFQuery_Exists(t *testing.T) {
 }
 
 func TestWAFQuery_SecondParam(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"query": "id=1&foo=bar",
 	}
 	interp := makeTestInterp(ctx)
@@ -160,7 +160,7 @@ func TestWAFQuery_SecondParam(t *testing.T) {
 }
 
 func TestWAFQuery_Missing(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"query": "id=1",
 	}
 	interp := makeTestInterp(ctx)
@@ -171,7 +171,7 @@ func TestWAFQuery_Missing(t *testing.T) {
 }
 
 func TestWAFQuery_EmptyQuery(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"query": "",
 	}
 	interp := makeTestInterp(ctx)
@@ -184,7 +184,7 @@ func TestWAFQuery_EmptyQuery(t *testing.T) {
 // -- waf_body_contains --------------------------------------------------------
 
 func TestWAFBodyContains_Found(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"body": `{"username":"admin","password":"' OR 1=1--"}`,
 	}
 	interp := makeTestInterp(ctx)
@@ -195,7 +195,7 @@ func TestWAFBodyContains_Found(t *testing.T) {
 }
 
 func TestWAFBodyContains_NotFound(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"body": `{"username":"alice"}`,
 	}
 	interp := makeTestInterp(ctx)
@@ -206,7 +206,7 @@ func TestWAFBodyContains_NotFound(t *testing.T) {
 }
 
 func TestWAFBodyContains_EmptyBody(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"body": "",
 	}
 	interp := makeTestInterp(ctx)
@@ -219,7 +219,7 @@ func TestWAFBodyContains_EmptyBody(t *testing.T) {
 // -- waf_detected -------------------------------------------------------------
 
 func TestWAFDetected_Found(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"detected": []string{"sql", "xss"},
 	}
 	interp := makeTestInterp(ctx)
@@ -230,7 +230,7 @@ func TestWAFDetected_Found(t *testing.T) {
 }
 
 func TestWAFDetected_NotFound(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"detected": []string{"sql"},
 	}
 	interp := makeTestInterp(ctx)
@@ -241,7 +241,7 @@ func TestWAFDetected_NotFound(t *testing.T) {
 }
 
 func TestWAFDetected_CaseInsensitive(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"detected": []string{"SQL", "XSS"},
 	}
 	interp := makeTestInterp(ctx)
@@ -254,7 +254,7 @@ func TestWAFDetected_CaseInsensitive(t *testing.T) {
 // -- waf_detected_any ---------------------------------------------------------
 
 func TestWAFDetectedAny_Empty(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"detected": []string{},
 	}
 	interp := makeTestInterp(ctx)
@@ -265,7 +265,7 @@ func TestWAFDetectedAny_Empty(t *testing.T) {
 }
 
 func TestWAFDetectedAny_NonEmpty(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"detected": []string{"cmd"},
 	}
 	interp := makeTestInterp(ctx)
@@ -278,7 +278,7 @@ func TestWAFDetectedAny_NonEmpty(t *testing.T) {
 // -- waf_score ----------------------------------------------------------------
 
 func TestWAFScore_ReturnsFloat(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"score": float64(7.5),
 	}
 	interp := makeTestInterp(ctx)
@@ -289,7 +289,7 @@ func TestWAFScore_ReturnsFloat(t *testing.T) {
 }
 
 func TestWAFScore_DefaultsToZero(t *testing.T) {
-	ctx := map[string]interface{}{}
+	ctx := map[string]any{}
 	interp := makeTestInterp(ctx)
 	result := wafScoreFunc(interp, noPos, []Value{})
 	if result != Value(float64(0)) {
@@ -300,7 +300,7 @@ func TestWAFScore_DefaultsToZero(t *testing.T) {
 // -- waf_action ---------------------------------------------------------------
 
 func TestWAFAction_ReturnsString(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"action": "BLOCK",
 	}
 	interp := makeTestInterp(ctx)
@@ -311,7 +311,7 @@ func TestWAFAction_ReturnsString(t *testing.T) {
 }
 
 func TestWAFAction_Allow(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"action": "ALLOW",
 	}
 	interp := makeTestInterp(ctx)
@@ -326,7 +326,7 @@ func TestWAFAction_Allow(t *testing.T) {
 func TestWAFReturn_Block(t *testing.T) {
 	var buf bytes.Buffer
 	config := &Config{
-		Vars:   map[string]Value{"_waf_ctx": map[string]interface{}{}},
+		Vars:   map[string]Value{"_waf_ctx": map[string]any{}},
 		Stdout: &buf,
 	}
 	interp := newInterpreter(config)
@@ -354,7 +354,7 @@ func TestWAFReturn_Block(t *testing.T) {
 func TestWAFReturn_NormalizesLowercase(t *testing.T) {
 	var buf bytes.Buffer
 	config := &Config{
-		Vars:   map[string]Value{"_waf_ctx": map[string]interface{}{}},
+		Vars:   map[string]Value{"_waf_ctx": map[string]any{}},
 		Stdout: &buf,
 	}
 	interp := newInterpreter(config)
@@ -379,7 +379,7 @@ func TestWAFReturn_NormalizesLowercase(t *testing.T) {
 func TestWAFReturn_InvalidAction(t *testing.T) {
 	var buf bytes.Buffer
 	config := &Config{
-		Vars:   map[string]Value{"_waf_ctx": map[string]interface{}{}},
+		Vars:   map[string]Value{"_waf_ctx": map[string]any{}},
 		Stdout: &buf,
 	}
 	interp := newInterpreter(config)
@@ -400,7 +400,7 @@ func TestWAFReturn_InvalidAction(t *testing.T) {
 // -- waf_cidr_match (via interpreter) -----------------------------------------
 
 func TestWAFCIDRMatch_Via_Builtin(t *testing.T) {
-	ctx := map[string]interface{}{}
+	ctx := map[string]any{}
 	interp := makeTestInterp(ctx)
 	result := wafCIDRMatchFunc(interp, noPos, []Value{"10.0.0.5", "10.0.0.0/8"})
 	if result != Value(true) {
@@ -411,7 +411,7 @@ func TestWAFCIDRMatch_Via_Builtin(t *testing.T) {
 // -- waf_path_match (via interpreter) -----------------------------------------
 
 func TestWAFPathMatch_Via_Builtin(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"path": "/admin/settings",
 	}
 	interp := makeTestInterp(ctx)
@@ -422,7 +422,7 @@ func TestWAFPathMatch_Via_Builtin(t *testing.T) {
 }
 
 func TestWAFPathMatch_NoMatch_Via_Builtin(t *testing.T) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"path": "/api/users",
 	}
 	interp := makeTestInterp(ctx)

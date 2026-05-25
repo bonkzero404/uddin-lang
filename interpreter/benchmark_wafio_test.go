@@ -12,28 +12,25 @@ func BenchmarkCoregexWAFPattern(b *testing.B) {
 		b.Fatalf("coregex.Compile error: %v", err)
 	}
 	input := "GET /api/users?id=1 UNION SELECT * FROM users--"
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		re.MatchString(input)
 	}
 }
 
 func BenchmarkCIDRMatchHelper(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		CIDRMatchHelper("185.220.101.45", "185.220.0.0/16")
 	}
 }
 
 func BenchmarkPathGlobMatch(b *testing.B) {
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		PathGlobMatch("/api/*/users", "/api/v1/users")
 	}
 }
 
 func BenchmarkWAFHeaderLookup(b *testing.B) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"headers": map[string]string{
 			"content-type":    "application/json",
 			"x-forwarded-for": "185.220.101.45",
@@ -43,28 +40,25 @@ func BenchmarkWAFHeaderLookup(b *testing.B) {
 		},
 	}
 	interp := makeTestInterp(ctx)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		wafHeaderFunc(interp, noPos, []Value{"x-forwarded-for"})
 	}
 }
 
 func BenchmarkWAFCIDRMatch_Builtin(b *testing.B) {
-	ctx := map[string]interface{}{}
+	ctx := map[string]any{}
 	interp := makeTestInterp(ctx)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		wafCIDRMatchFunc(interp, noPos, []Value{"185.220.101.45", "185.220.0.0/16"})
 	}
 }
 
 func BenchmarkWAFDetected(b *testing.B) {
-	ctx := map[string]interface{}{
+	ctx := map[string]any{
 		"detected": []string{"sql", "xss", "cmd"},
 	}
 	interp := makeTestInterp(ctx)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		wafDetectedFunc(interp, noPos, []Value{"xss"})
 	}
 }

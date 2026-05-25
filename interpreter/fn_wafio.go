@@ -9,12 +9,12 @@ import (
 
 // wafCtx extracts the _waf_ctx map from the interpreter variables.
 // Returns nil if not set or not the correct type.
-func wafCtx(interp *interpreter) map[string]interface{} {
+func wafCtx(interp *interpreter) map[string]any {
 	ctxVal, ok := interp.lookup("_waf_ctx")
 	if !ok {
 		return nil
 	}
-	ctx, ok := ctxVal.(map[string]interface{})
+	ctx, ok := ctxVal.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -89,7 +89,7 @@ func wafQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(nil)
 	}
 	// Parse "key=value&key2=value2" format
-	for _, pair := range strings.Split(query, "&") {
+	for pair := range strings.SplitSeq(query, "&") {
 		parts := strings.SplitN(pair, "=", 2)
 		if len(parts) == 2 && parts[0] == name {
 			return Value(parts[1])
