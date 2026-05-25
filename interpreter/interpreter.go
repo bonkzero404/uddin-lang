@@ -721,69 +721,22 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 	case *Call:
 		function := interp.evaluate(e.Function)
-		// Check for direct functionType
-		if f, ok := function.(functionType); ok {
-			args := []Value{}
-			for _, a := range e.Arguments {
-				args = SmartAppend(args, interp.evaluate(a))
-			}
-			if e.Ellipsis {
-				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-				args = args[:len(args)-1]
-				for iterator.HasNext() {
-					args = SmartAppend(args, iterator.Value())
-				}
-			}
-			return interp.callFunction(e.Function.Position(), f, args)
+		f, ok := function.(functionType)
+		if !ok {
+			panic(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
 		}
-		// Check for *userFunction specifically
-		if uf, ok := function.(*userFunction); ok {
-			args := []Value{}
-			for _, a := range e.Arguments {
-				args = SmartAppend(args, interp.evaluate(a))
-			}
-			if e.Ellipsis {
-				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-				args = args[:len(args)-1]
-				for iterator.HasNext() {
-					args = SmartAppend(args, iterator.Value())
-				}
-			}
-			return interp.callFunction(e.Function.Position(), uf, args)
+		args := []Value{}
+		for _, a := range e.Arguments {
+			args = SmartAppend(args, interp.evaluate(a))
 		}
-		// Check for builtinFunction specifically
-		if bf, ok := function.(builtinFunction); ok {
-			args := []Value{}
-			for _, a := range e.Arguments {
-				args = SmartAppend(args, interp.evaluate(a))
-			}
-			if e.Ellipsis {
-				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-				args = args[:len(args)-1]
-				for iterator.HasNext() {
-					args = SmartAppend(args, iterator.Value())
-				}
-			}
-			return interp.callFunction(e.Function.Position(), bf, args)
-		}
-		// Check if it's a function type wrapped in any (from tagged values)
-		if interfaceVal, ok := function.(any); ok {
-			if f, ok := interfaceVal.(functionType); ok {
-				args := []Value{}
-				for _, a := range e.Arguments {
-					args = SmartAppend(args, interp.evaluate(a))
-				}
-				if e.Ellipsis {
-					iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-					args = args[:len(args)-1]
-					for iterator.HasNext() {
-						args = SmartAppend(args, iterator.Value())
-					}
-				}
-				return interp.callFunction(e.Function.Position(), f, args)
+		if e.Ellipsis {
+			iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
+			args = args[:len(args)-1]
+			for iterator.HasNext() {
+				args = SmartAppend(args, iterator.Value())
 			}
 		}
-		panic(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
+		return interp.callFunction(e.Function.Position(), f, args)
 	case *Literal:
 		return Value(e.Value)
 	case *Variable:
