@@ -334,14 +334,13 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 			// Optimized array concatenation using advanced batch processing for large arrays
 			llen, rlen := len(*larr), len(*rarr)
 			if llen+rlen > 1000 {
-				// Use batch processing for large arrays with unified pool manager
-				result := GetPooledArray(llen + rlen)
-				defer PutPooledArray(result)
-				result = SmartAppend(result, *larr...)
-				result = SmartAppend(result, *rarr...)
-				final := make([]Value, len(result))
-				copy(final, result)
-				return Value(&final)
+				// Allocate a fresh buffer — do NOT pool intermediate concat buffers,
+				// because SmartAppend may reallocate the slice, making the deferred
+				// PutPooledArray return a stale header and corrupt the pool.
+				result := make([]Value, 0, llen+rlen)
+				result = append(result, *larr...)
+				result = append(result, *rarr...)
+				return Value(&result)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
 				concat := NewArrayConcatenator(llen + rlen)
