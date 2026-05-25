@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"reflect"
 	"sync"
 )
 
@@ -35,16 +34,39 @@ func NewVariableLookupCache(maxSize int) *VariableLookupCache {
 // EXPERIMENTAL: Global instance for experimental variable lookup caching
 var globalVariableLookupCache = NewVariableLookupCache(500)
 
-// safeValueEqual safely compares two values, handling uncomparable types
+// safeValueEqual safely compares two values using an explicit type switch over
+// the concrete types used in uddin-lang. This avoids reflect.DeepEqual overhead
+// (~200-400 ns/op) and is allocation-free for all scalar types.
 func safeValueEqual(a, b Value) bool {
-	defer func() {
-		if recover() != nil {
-			// If comparison panics, consider them different
+	switch av := a.(type) {
+	case nil:
+		return b == nil
+	case bool:
+		bv, ok := b.(bool)
+		return ok && av == bv
+	case int:
+		bv, ok := b.(int)
+		return ok && av == bv
+	case float64:
+		bv, ok := b.(float64)
+		return ok && av == bv
+	case string:
+		bv, ok := b.(string)
+		return ok && av == bv
+	case *[]Value:
+		bv, ok := b.(*[]Value)
+		return ok && av == bv
+	case map[string]Value:
+		_, ok := b.(map[string]Value)
+		if !ok {
+			return false
 		}
-	}()
-
-	// Use reflect.DeepEqual for safe comparison
-	return reflect.DeepEqual(a, b)
+		// Maps are not pointer-comparable through interfaces; return false
+		// so cache is conservatively invalidated on map variables (safe).
+		return false
+	default:
+		return false
+	}
 }
 
 // FastLookup performs optimized variable lookup with caching
