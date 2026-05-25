@@ -383,18 +383,10 @@ func TestWAFReturn_InvalidAction(t *testing.T) {
 		Stdout: &buf,
 	}
 	interp := newInterpreter(config)
-
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Error("expected panic for invalid action")
-		}
-		// Should be a typeError (error), not a returnResult
-		if _, ok := r.(returnResult); ok {
-			t.Error("expected typeError panic, not returnResult")
-		}
-	}()
-	wafReturnFunc(interp, noPos, []Value{"DENY"})
+	result := wafReturnFunc(interp, noPos, []Value{"DENY"})
+	if _, ok := result.(error); !ok {
+		t.Errorf("expected error return for invalid action DENY, got %T(%v)", result, result)
+	}
 }
 
 // -- waf_cidr_match (via interpreter) -----------------------------------------

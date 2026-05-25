@@ -54,7 +54,7 @@ func wafHeaderFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	name, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_header() requires a string argument"))
+		return Value(fmt.Errorf("waf_header() requires a string argument, not %s", typeName(args[0])))
 	}
 	ctx := wafCtx(interp)
 	if ctx == nil {
@@ -81,7 +81,7 @@ func wafQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	name, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_query() requires a string argument"))
+		return Value(fmt.Errorf("waf_query() requires a string argument, not %s", typeName(args[0])))
 	}
 	ctx := wafCtx(interp)
 	if ctx == nil {
@@ -113,7 +113,7 @@ func wafBodyContainsFunc(interp *interpreter, pos Position, args []Value) Value 
 	}
 	needle, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_body_contains() requires a string argument"))
+		return Value(fmt.Errorf("waf_body_contains() requires a string argument, not %s", typeName(args[0])))
 	}
 	ctx := wafCtx(interp)
 	if ctx == nil {
@@ -131,11 +131,11 @@ func wafCIDRMatchFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	ip, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_cidr_match() requires string arguments"))
+		return Value(fmt.Errorf("waf_cidr_match() requires string arguments, not %s", typeName(args[0])))
 	}
 	cidr, ok := args[1].(string)
 	if !ok {
-		panic(typeError(pos, "waf_cidr_match() requires string arguments"))
+		return Value(fmt.Errorf("waf_cidr_match() requires string arguments, not %s", typeName(args[1])))
 	}
 	return Value(CIDRMatchHelper(ip, cidr))
 }
@@ -148,7 +148,7 @@ func wafPathMatchFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	pattern, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_path_match() requires a string argument"))
+		return Value(fmt.Errorf("waf_path_match() requires a string argument, not %s", typeName(args[0])))
 	}
 	ctx := wafCtx(interp)
 	if ctx == nil {
@@ -194,7 +194,7 @@ func wafDetectedFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	category, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_detected() requires a string argument"))
+		return Value(fmt.Errorf("waf_detected() requires a string argument, not %s", typeName(args[0])))
 	}
 	ctx := wafCtx(interp)
 	if ctx == nil {
@@ -251,14 +251,14 @@ func wafReturnFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 	action, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_return() requires a string argument"))
+		return Value(fmt.Errorf("waf_return() requires a string argument, not %s", typeName(args[0])))
 	}
 	normalized := strings.ToUpper(strings.TrimSpace(action))
 	switch normalized {
 	case "ALLOW", "LOG", "BLOCK":
 		// valid
 	default:
-		panic(typeError(pos, "waf_return() invalid action %q: must be ALLOW, LOG, or BLOCK", action))
+		return Value(fmt.Errorf("waf_return() invalid action %q: must be ALLOW, LOG, or BLOCK", action))
 	}
 	fmt.Fprintf(interp.stdout, "%s", normalized)
 	panic(returnResult{pos: pos, value: Value(normalized)})
