@@ -94,24 +94,23 @@ var binaryEvalFuncs = map[Token]binaryEvalFunc{
 }
 
 // ensureIntToFloats converts integer or float operands to float64 for arithmetic operations.
-// If either operand is not a numeric type (int or float64), it returns error values.
+// If either operand is not a numeric type (int or float64), it returns (0, 0, false).
 //
 // Parameters:
-//   - pos: Position in source code for error reporting
 //   - l: Left operand value
 //   - r: Right operand value
-//   - operation: String description of the operation for error messages
 //
 // Returns:
-//   - Two float64 values representing the converted operands, or (0, 0) on error
-func ensureIntToFloats(l, r Value) (float64, float64) {
+//   - Two float64 values representing the converted operands, and a bool that is
+//     true on success or false when either operand is not a numeric type.
+func ensureIntToFloats(l, r Value) (float64, float64, bool) {
 	// Try to convert left operand to float64
 	lf, lok := l.(float64)
 	if !lok {
 		if li, lok := l.(int); lok {
 			lf = float64(li) // Convert int to float64
 		} else {
-			return 0, 0 // Return error values that can be detected by caller
+			return 0, 0, false // Type error: left operand is not numeric
 		}
 	}
 
@@ -121,11 +120,11 @@ func ensureIntToFloats(l, r Value) (float64, float64) {
 		if ri, rok := r.(int); rok {
 			rf = float64(ri) // Convert int to float64
 		} else {
-			return 0, 0 // Return error values
+			return 0, 0, false // Type error: right operand is not numeric
 		}
 	}
 
-	return lf, rf
+	return lf, rf, true
 }
 
 // evalEqual evaluates equality between two values of any type.
@@ -459,8 +458,8 @@ func evalDivide(pos Position, l, r Value) Value {
 	}
 
 	// Fallback to original logic
-	li, ri := ensureIntToFloats(l, r)
-	if li == 0 && ri == 0 {
+	li, ri, ok := ensureIntToFloats(l, r)
+	if !ok {
 		panic(typeError(pos, "/ requires two floats or integers"))
 	}
 	if ri == 0 {
@@ -476,8 +475,8 @@ func evalModulo(pos Position, l, r Value) Value {
 	}
 
 	// Fallback to original logic
-	li, ri := ensureIntToFloats(l, r)
-	if li == 0 && ri == 0 {
+	li, ri, ok := ensureIntToFloats(l, r)
+	if !ok {
 		panic(typeError(pos, "modulo operator requires two floats or integers"))
 	}
 	if ri == 0 {
@@ -495,8 +494,8 @@ func evalPower(pos Position, l, r Value) Value {
 	}
 
 	// Fallback to original logic with math.Pow
-	li, ri := ensureIntToFloats(l, r)
-	if li == 0 && ri == 0 {
+	li, ri, ok := ensureIntToFloats(l, r)
+	if !ok {
 		panic(typeError(pos, "** requires two floats or integers"))
 	}
 	result := math.Pow(li, ri)
