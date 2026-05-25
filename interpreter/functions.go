@@ -2,17 +2,6 @@ package interpreter
 
 import (
 	"fmt"
-	"sync"
-)
-
-// Global variables for Rule Engine features
-var (
-	factDatabase = make(map[string]any)
-	factMutex    = sync.RWMutex{}
-
-	eventStore    = make([]map[string]any, 0)
-	eventPatterns = make(map[string]any)
-	eventMutex    = sync.RWMutex{}
 )
 
 // functionType is the interface for all callable functions in the interpreter

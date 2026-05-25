@@ -53,6 +53,13 @@ type interpreter struct {
 	optimizer *ConstantFolder
 	// DirectOutput controls whether print() writes directly to os.Stdout
 	DirectOutput bool
+
+	// Per-engine rule engine state (was package-level global — isolated per Engine)
+	factDatabase  map[string]any
+	factMutex     sync.RWMutex
+	eventStore    []map[string]any
+	eventPatterns map[string]any
+	eventMutex    sync.RWMutex
 }
 
 // returnResult is used to handle return statements in functions.
@@ -1483,6 +1490,11 @@ func (interp *interpreter) execute(prog *Program) {
 
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
+
+	// Initialize per-engine rule engine state (isolated from other Engine instances)
+	interp.factDatabase = make(map[string]any)
+	interp.eventStore = make([]map[string]any, 0)
+	interp.eventPatterns = make(map[string]any)
 
 	// Set global memory layout configuration
 	if config.MemoryLayout != nil {

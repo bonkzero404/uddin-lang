@@ -22,18 +22,18 @@ func factAssertFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "fact_assert() requires second argument to be a key string"))
 	}
 
-	factMutex.Lock()
-	defer factMutex.Unlock()
+	interp.factMutex.Lock()
+	defer interp.factMutex.Unlock()
 
 	// Create category if it doesn't exist
 	fullKey := category + ":" + key
 
 	if len(args) == 2 {
 		// Simple boolean fact
-		factDatabase[fullKey] = true
+		interp.factDatabase[fullKey] = true
 	} else {
 		// Fact with value
-		factDatabase[fullKey] = args[2]
+		interp.factDatabase[fullKey] = args[2]
 	}
 
 	return Value(true)
@@ -51,16 +51,16 @@ func factRetractFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("fact_retract: first argument must be a category string"))
 	}
 
-	factMutex.Lock()
-	defer factMutex.Unlock()
+	interp.factMutex.Lock()
+	defer interp.factMutex.Unlock()
 
 	if len(args) == 1 {
 		// Remove all facts in category
 		prefix := category + ":"
 		count := 0
-		for key := range factDatabase {
+		for key := range interp.factDatabase {
 			if strings.HasPrefix(key, prefix) {
-				delete(factDatabase, key)
+				delete(interp.factDatabase, key)
 				count++
 			}
 		}
@@ -73,8 +73,8 @@ func factRetractFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 
 		fullKey := category + ":" + key
-		if _, exists := factDatabase[fullKey]; exists {
-			delete(factDatabase, fullKey)
+		if _, exists := interp.factDatabase[fullKey]; exists {
+			delete(interp.factDatabase, fullKey)
 			return Value(true)
 		}
 		return Value(false)
@@ -93,14 +93,14 @@ func factQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("fact_query: first argument must be a category string"))
 	}
 
-	factMutex.RLock()
-	defer factMutex.RUnlock()
+	interp.factMutex.RLock()
+	defer interp.factMutex.RUnlock()
 
 	if len(args) == 1 {
 		// Return all facts in category
 		prefix := category + ":"
 		results := make(map[string]any)
-		for key, value := range factDatabase {
+		for key, value := range interp.factDatabase {
 			if strings.HasPrefix(key, prefix) {
 				actualKey := key[len(prefix):]
 				results[actualKey] = value
@@ -121,7 +121,7 @@ func factQueryFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 
 		fullKey := category + ":" + key
-		if value, exists := factDatabase[fullKey]; exists {
+		if value, exists := interp.factDatabase[fullKey]; exists {
 			return Value(value)
 		}
 		return Value(nil)
@@ -145,23 +145,23 @@ func factExistsFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("fact_exists: second argument must be a key string"))
 	}
 
-	factMutex.RLock()
-	defer factMutex.RUnlock()
+	interp.factMutex.RLock()
+	defer interp.factMutex.RUnlock()
 
 	fullKey := category + ":" + key
-	_, exists := factDatabase[fullKey]
+	_, exists := interp.factDatabase[fullKey]
 	return Value(exists)
 }
 
 // factCountFunc returns the number of facts in a category or total
 // Usage: fact_count("customer") or fact_count()
 func factCountFunc(interp *interpreter, pos Position, args []Value) Value {
-	factMutex.RLock()
-	defer factMutex.RUnlock()
+	interp.factMutex.RLock()
+	defer interp.factMutex.RUnlock()
 
 	if len(args) == 0 {
 		// Return total count
-		return Value(len(factDatabase)) // int, not int64
+		return Value(len(interp.factDatabase)) // int, not int64
 	}
 
 	category, ok := args[0].(string)
@@ -172,7 +172,7 @@ func factCountFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Count facts in category
 	prefix := category + ":"
 	count := 0
-	for key := range factDatabase {
+	for key := range interp.factDatabase {
 		if strings.HasPrefix(key, prefix) {
 			count++
 		}
@@ -183,13 +183,13 @@ func factCountFunc(interp *interpreter, pos Position, args []Value) Value {
 // factClearFunc clears all facts or facts in a specific category
 // Usage: fact_clear() or fact_clear("customer")
 func factClearFunc(interp *interpreter, pos Position, args []Value) Value {
-	factMutex.Lock()
-	defer factMutex.Unlock()
+	interp.factMutex.Lock()
+	defer interp.factMutex.Unlock()
 
 	if len(args) == 0 {
 		// Clear all facts
-		count := len(factDatabase)
-		factDatabase = make(map[string]any)
+		count := len(interp.factDatabase)
+		interp.factDatabase = make(map[string]any)
 		return Value(int64(count))
 	}
 
@@ -201,9 +201,9 @@ func factClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Clear facts in category
 	prefix := category + ":"
 	count := 0
-	for key := range factDatabase {
+	for key := range interp.factDatabase {
 		if strings.HasPrefix(key, prefix) {
-			delete(factDatabase, key)
+			delete(interp.factDatabase, key)
 			count++
 		}
 	}
@@ -213,11 +213,11 @@ func factClearFunc(interp *interpreter, pos Position, args []Value) Value {
 // factGetAllFunc returns all facts in the knowledge base
 // Usage: fact_get_all()
 func factGetAllFunc(interp *interpreter, pos Position, args []Value) Value {
-	factMutex.RLock()
-	defer factMutex.RUnlock()
+	interp.factMutex.RLock()
+	defer interp.factMutex.RUnlock()
 
 	results := make(map[string]Value)
-	for key, value := range factDatabase {
+	for key, value := range interp.factDatabase {
 		results[key] = Value(value)
 	}
 
