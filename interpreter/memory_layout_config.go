@@ -41,11 +41,12 @@ func DefaultMemoryLayoutConfig() *MemoryLayoutConfig {
 	}
 }
 
-// StableMemoryLayoutConfig returns a configuration with stable memory layout optimizations enabled
-// These optimizations are production-ready and thread-safe
+// StableMemoryLayoutConfig returns production-ready memory layout configuration
+// TaggedValues are disabled (161ns overhead per assignment outweighs type-tag benefits).
+// CompactEnvironment and CacheFriendlyStructures are enabled — both are thread-safe.
 func StableMemoryLayoutConfig() *MemoryLayoutConfig {
 	return &MemoryLayoutConfig{
-		EnableTaggedValues:            true,  // Production-ready
+		EnableTaggedValues:            false, // Disabled — 161ns/assign overhead not worth it
 		EnableCompactEnvironment:      true,  // Production-ready
 		EnableCacheFriendlyStructures: true,  // Production-ready
 		EnableVariableLookupCache:     false, // Still experimental
