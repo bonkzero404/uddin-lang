@@ -1592,6 +1592,18 @@ func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
 	}
 
 	vm.Execute(fn)
+
+	// Auto-call main() if defined and not in a unit test (mirrors tree-walker behavior).
+	if config == nil || !config.IsUnitTest {
+		if reg, ok := c.locals["main"]; ok {
+			if int(reg) < len(vm.regs) {
+				if mainFn, ok := vm.regs[reg].(*vmFunction); ok {
+					mainFn.call(interp, Position{}, nil)
+				}
+			}
+		}
+	}
+
 	return &interp.stats, nil
 }
 

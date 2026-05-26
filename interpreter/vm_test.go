@@ -477,3 +477,42 @@ func TestVMAnonFunc(t *testing.T) {
 		t.Errorf("expected 7, got %v", result)
 	}
 }
+
+var fibSource = []byte(`
+fun fib(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fib(n-1) + fib(n-2)
+    end
+end
+fib(10)
+`)
+
+func BenchmarkVMNestedFunctionCalls(b *testing.B) {
+	prog, err := ParseProgram(fibSource)
+	if err != nil {
+		b.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		b.Fatal("compile:", err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(TestConfig()).Execute(fn)
+	}
+}
+
+func BenchmarkTreeWalkerNestedFunctionCalls(b *testing.B) {
+	twCfg := TestConfig()
+	twCfg.VMEnabled = false
+	prog, err := ParseProgram(fibSource)
+	if err != nil {
+		b.Fatal("parse:", err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		Execute(prog, twCfg)
+	}
+}
