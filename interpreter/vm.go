@@ -240,10 +240,10 @@ func (vm *VM) run() Value {
 		case OP_CALL:
 			fnVal := regs[instr.Src1]
 			argc := int(instr.Src2)
-			// ArgStart encoded in Dst of the next meta-instruction.
+			// Meta-instruction: Dst=argc, Src1:Src2=argBase (mirrors OP_CALL_BUILTIN).
 			metaInstr := frame.fn.Code[frame.pc]
 			frame.pc++
-			argBase := int(metaInstr.Dst)
+			argBase := int(metaInstr.Src1)<<8 | int(metaInstr.Src2)
 
 			args := make([]Value, argc)
 			for i := 0; i < argc; i++ {

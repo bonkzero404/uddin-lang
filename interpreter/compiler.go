@@ -396,8 +396,12 @@ func (c *Compiler) compileCall(e *Call) (uint8, error) {
 		argRegs[i] = r
 	}
 
+	// Widen argStart to uint16 before encoding so that Src1:Src2 carries the
+	// full 16-bit base register index. Shifting a uint8 by 8 always yields 0,
+	// so the widening must happen before the shift.
+	argStart := uint16(c.nextReg)
+
 	// Copy args into a contiguous window starting at argStart.
-	argStart := c.nextReg
 	for _, r := range argRegs {
 		dst := c.allocReg()
 		c.emit(Instruction{Op: OP_STORE_VAR, Dst: dst, Src1: r})
@@ -414,10 +418,12 @@ func (c *Compiler) compileCall(e *Call) (uint8, error) {
 	}
 
 	// User-defined function call.
+	// Encoding matches OP_CALL_BUILTIN: Src1:Src2=argBase, Dst=argc in meta-instruction.
 	dst := c.allocReg()
 	c.emit(Instruction{Op: OP_CALL, Dst: dst, Src1: fnReg, Src2: uint8(len(e.Arguments))})
-	// Meta-instruction: argStart in Dst.
-	c.emit(Instruction{Op: OP_LOAD_VAR, Dst: uint8(argStart)})
+	// Meta-instruction: argc in Dst, argStart in Src1:Src2 (mirrors OP_CALL_BUILTIN).
+	c.emit(Instruction{Op: OP_LOAD_CONST, Dst: uint8(len(e.Arguments)),
+		Src1: uint8(argStart >> 8), Src2: uint8(argStart)})
 	return dst, nil
 }
 
