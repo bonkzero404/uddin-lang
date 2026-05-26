@@ -140,6 +140,20 @@ func (vm *VM) run() Value {
 		case OP_XOR:
 			regs[instr.Dst] = IsTruthy(regs[instr.Src1]) != IsTruthy(regs[instr.Src2])
 
+		// Control flow — jumps use signed 16-bit offset in Dst:Src2
+		case OP_JUMP:
+			frame.pc += instr.jumpOffset()
+
+		case OP_JUMP_FALSE:
+			if !IsTruthy(regs[instr.Src1]) {
+				frame.pc += instr.jumpOffset()
+			}
+
+		case OP_JUMP_TRUE:
+			if IsTruthy(regs[instr.Src1]) {
+				frame.pc += instr.jumpOffset()
+			}
+
 		default:
 			panic(runtimeError(Position{}, "VM: unimplemented opcode %s", opName(instr.Op)))
 		}

@@ -95,6 +95,10 @@ func (c *Compiler) compileStatement(stmt Statement) error {
 		return err
 	case *Return:
 		return c.compileReturn(s)
+	case *If:
+		return c.compileIf(s)
+	case *While:
+		return c.compileWhile(s)
 	default:
 		return fmt.Errorf("compiler: unsupported statement type %T", stmt)
 	}
@@ -213,4 +217,90 @@ func (c *Compiler) compileUnary(e *Unary) (uint8, error) {
 	dst := c.allocReg()
 	c.emit(Instruction{Op: op, Dst: dst, Src1: src})
 	return dst, nil
+}
+
+// emitJump emits a jump instruction with a placeholder offset (0).
+// Returns the index of the emitted instruction for later patching.
+func (c *Compiler) emitJump(op OpCode, condReg uint8) int {
+	return c.emit(Instruction{Op: op, Src1: condReg, Dst: 0, Src2: 0})
+}
+
+// patchJump fills in the signed 16-bit forward jump offset for a previously
+// emitted jump. The offset is relative to the instruction after the jump.
+func (c *Compiler) patchJump(jumpIdx int) {
+	offset := len(c.fn.Code) - jumpIdx - 1
+	if offset > 32767 || offset < -32768 {
+		panic("jump offset overflow")
+	}
+	o := int16(offset)
+	c.fn.Code[jumpIdx].Dst = uint8(uint16(o) >> 8)
+	c.fn.Code[jumpIdx].Src2 = uint8(o)
+}
+
+// compileIf compiles an if/else statement.
+// *If fields: Condition Expression, Body Block, Else Block
+func (c *Compiler) compileIf(s *If) error {
+	cond, err := c.compileExpr(s.Condition)
+	if err != nil {
+		return err
+	}
+	// Jump past "then" block if condition is false.
+	jumpFalse := c.emitJump(OP_JUMP_FALSE, cond)
+
+	for _, stmt := range s.Body {
+		if err := c.compileStatement(stmt); err != nil {
+			return err
+		}
+	}
+
+	if len(s.Else) == 0 {
+		// No else — patch the false-jump to here.
+		c.patchJump(jumpFalse)
+		return nil
+	}
+
+	// Emit unconditional jump to skip the else block after then-block executes.
+	jumpEnd := c.emit(Instruction{Op: OP_JUMP})
+	// The false-jump lands at the start of the else block.
+	c.patchJump(jumpFalse)
+
+	for _, stmt := range s.Else {
+		if err := c.compileStatement(stmt); err != nil {
+			return err
+		}
+	}
+	// The then-path jump lands here, past the else block.
+	c.patchJump(jumpEnd)
+	return nil
+}
+
+// compileWhile compiles a while loop.
+// *While fields: Condition Expression, Body Block
+func (c *Compiler) compileWhile(s *While) error {
+	loopStart := len(c.fn.Code)
+
+	cond, err := c.compileExpr(s.Condition)
+	if err != nil {
+		return err
+	}
+	// Jump past loop body when condition is false.
+	exitJump := c.emitJump(OP_JUMP_FALSE, cond)
+
+	for _, stmt := range s.Body {
+		if err := c.compileStatement(stmt); err != nil {
+			return err
+		}
+	}
+
+	// Unconditional back-jump to loop start.
+	offset := int16(loopStart - len(c.fn.Code) - 1)
+	c.emit(Instruction{
+		Op:   OP_JUMP,
+		Dst:  uint8(uint16(offset) >> 8),
+		Src2: uint8(offset),
+	})
+
+	// Patch exit jump to here (past the back-jump).
+	c.patchJump(exitJump)
+	return nil
 }

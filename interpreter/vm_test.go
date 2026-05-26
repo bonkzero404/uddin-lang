@@ -86,3 +86,51 @@ func TestVMComparisons(t *testing.T) {
 		})
 	}
 }
+
+func TestVMIfElse(t *testing.T) {
+	src := `
+x = 0
+if (1 == 1) then:
+    x = 42
+else:
+    x = 99
+end
+x
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 42 {
+		t.Errorf("expected 42, got %v", result)
+	}
+}
+
+func TestVMWhileLoop(t *testing.T) {
+	src := `
+i = 0
+sum = 0
+while (i < 10):
+    sum = sum + i
+    i = i + 1
+end
+sum
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 45 {
+		t.Errorf("expected 45, got %v", result)
+	}
+}
