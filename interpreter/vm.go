@@ -194,6 +194,9 @@ func (vm *VM) run() Value {
 				if idx < 0 {
 					idx = len(*cv) + idx
 				}
+				if idx < 0 || idx >= len(*cv) {
+					panic(runtimeError(Position{}, "VM: array index %d out of bounds (len=%d)", idx, len(*cv)))
+				}
 				(*cv)[idx] = val
 			case map[string]Value:
 				k, ok := key.(string)
