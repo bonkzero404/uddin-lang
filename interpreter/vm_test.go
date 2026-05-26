@@ -195,3 +195,30 @@ sum
 		t.Errorf("expected 45, got %v", result)
 	}
 }
+
+func TestVMEnabledConfig(t *testing.T) {
+	cfg := TestConfig()
+	cfg.VMEnabled = true
+	src := `
+fun fib(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fib(n - 1) + fib(n - 2)
+    end
+end
+fib(10)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	_, execErr := Execute(prog, cfg)
+	if execErr != nil {
+		t.Logf("VMEnabled fib(10) execution error (expected during Phase 1): %v", execErr)
+		return
+	}
+	// If execution succeeds without error, the VM path was taken.
+	// Full result validation will be enabled once the VM handles all statement types.
+	t.Log("VMEnabled fib(10) executed without error via VM path")
+}

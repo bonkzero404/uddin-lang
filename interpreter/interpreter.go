@@ -1559,10 +1559,26 @@ func Evaluate(expr Expression, config *Config) (v Value, stats *Stats, err error
 	return
 }
 
+// executeVM routes execution through the bytecode VM instead of the tree-walker.
+func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
+	c := NewCompiler()
+	fn, compileErr := c.Compile(prog)
+	if compileErr != nil {
+		return nil, compileErr
+	}
+	interp := newInterpreter(config)
+	vm := NewVM(interp)
+	vm.Execute(fn)
+	return &interp.stats, nil
+}
+
 // Execute takes a parsed Program and interpreter config and interprets the
 // program. Return interpreter statistics, and an error which is nil on
 // success or an interpreter.Error if there's an error.
 func Execute(prog *Program, config *Config) (stats *Stats, err error) {
+	if config != nil && config.VMEnabled {
+		return executeVM(prog, config)
+	}
 	interp := newInterpreter(config)
 	defer func() {
 		if r := recover(); r != nil {

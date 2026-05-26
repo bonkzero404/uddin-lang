@@ -99,6 +99,10 @@ type Config struct {
 	// Memoization configures memoization behavior
 	// If nil, defaults to DefaultMemoizationConfig()
 	Memoization *MemoizationConfig
+
+	// VMEnabled routes execution through the bytecode VM instead of the tree-walker.
+	// Default false during Phase 1 rollout. Enable after full test suite passes.
+	VMEnabled bool
 }
 
 // DefaultConfig returns a configuration with sensible defaults
