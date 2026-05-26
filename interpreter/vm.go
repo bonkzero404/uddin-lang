@@ -3,6 +3,30 @@ package interpreter
 const vmInitialRegCount = 256
 const vmMaxFrames = 512
 
+// vmFunction wraps a compiled Function so it satisfies the functionType interface.
+type vmFunction struct {
+	fn *Function
+	vm *VM
+}
+
+func (f *vmFunction) call(interp *interpreter, pos Position, args []Value) Value {
+	newBase := 0
+	if len(f.vm.frames) > 0 {
+		top := f.vm.frames[len(f.vm.frames)-1]
+		newBase = top.baseReg + int(top.fn.MaxRegs) + 1
+	}
+	f.vm.pushFrame(f.fn, newBase, 0)
+	newRegs := f.vm.regs[newBase:]
+	for i, arg := range args {
+		if i < int(f.fn.MaxRegs) {
+			newRegs[i] = arg
+		}
+	}
+	return f.vm.run()
+}
+
+func (f *vmFunction) name() string { return f.fn.Name }
+
 // VM executes compiled bytecode Functions.
 type VM struct {
 	regs   []Value
@@ -207,6 +231,54 @@ func (vm *VM) run() Value {
 			default:
 				panic(runtimeError(Position{}, "VM: SET_INDEX on non-container"))
 			}
+
+		case OP_MAKE_FUNC:
+			subIdx := int(instr.Src1)<<8 | int(instr.Src2)
+			subfn := frame.fn.SubFunctions[subIdx]
+			regs[instr.Dst] = &vmFunction{fn: subfn, vm: vm}
+
+		case OP_CALL:
+			fnVal := regs[instr.Src1]
+			argc := int(instr.Src2)
+			// ArgStart encoded in Dst of the next meta-instruction.
+			metaInstr := frame.fn.Code[frame.pc]
+			frame.pc++
+			argBase := int(metaInstr.Dst)
+
+			args := make([]Value, argc)
+			for i := 0; i < argc; i++ {
+				args[i] = regs[argBase+i]
+			}
+
+			switch f := fnVal.(type) {
+			case *vmFunction:
+				// Inline dispatch: push a new frame. The loop will re-fetch frame/regs/consts.
+				newBase := frame.baseReg + int(frame.fn.MaxRegs) + 1
+				vm.pushFrame(f.fn, newBase, int(instr.Dst))
+				newRegs := vm.regs[newBase:]
+				for i, arg := range args {
+					if i < int(f.fn.MaxRegs) {
+						newRegs[i] = arg
+					}
+				}
+			case functionType:
+				regs[instr.Dst] = f.call(vm.interp, Position{}, args)
+			default:
+				panic(runtimeError(Position{}, "VM: cannot call non-function %T", fnVal))
+			}
+
+		case OP_CALL_BUILTIN:
+			builtinIdx := int(instr.Src1)<<8 | int(instr.Src2)
+			metaInstr := frame.fn.Code[frame.pc]
+			frame.pc++
+			argc := int(metaInstr.Dst)
+			argBase := int(metaInstr.Src1)<<8 | int(metaInstr.Src2)
+			args := make([]Value, argc)
+			for i := 0; i < argc; i++ {
+				args[i] = regs[argBase+i]
+			}
+			entry := vmBuiltinTable[builtinIdx]
+			regs[instr.Dst] = entry.fn(vm.interp, Position{}, args)
 
 		default:
 			panic(runtimeError(Position{}, "VM: unimplemented opcode %s", opName(instr.Op)))

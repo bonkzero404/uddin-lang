@@ -87,6 +87,15 @@ func (bfd *BuiltinFunctionDispatcher) DispatchBuiltinFunction(name string, inter
 	return result, true
 }
 
+// DispatchOrPanic calls a builtin by name, panicking if not found.
+func (bfd *BuiltinFunctionDispatcher) DispatchOrPanic(name string, interp *interpreter, pos Position, args []Value) Value {
+	result, ok := bfd.DispatchBuiltinFunction(name, interp, pos, args)
+	if !ok {
+		panic(runtimeError(pos, "unknown builtin %q", name))
+	}
+	return result
+}
+
 // CallBuiltinWithDispatcher is a helper function to call builtin functions with dispatcher fallback
 // This consolidates the dispatcher logic and ensures consistent behavior across the codebase
 // It tries the fast dispatcher path first, then falls back to the standard builtinFunction.call() method

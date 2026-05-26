@@ -137,6 +137,41 @@ func TestVMMapLiteral(t *testing.T) {
 	}
 }
 
+func TestVMUserFunction(t *testing.T) {
+	src := `
+fun add(a, b): return a + b end
+add(3, 4)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 7 {
+		t.Errorf("expected 7, got %v", result)
+	}
+}
+
+func TestVMBuiltinLen(t *testing.T) {
+	src := `len([1, 2, 3])`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 3 {
+		t.Errorf("expected 3, got %v", result)
+	}
+}
+
 func TestVMWhileLoop(t *testing.T) {
 	src := `
 i = 0

@@ -99,6 +99,8 @@ func (c *Compiler) compileStatement(stmt Statement) error {
 		return c.compileIf(s)
 	case *While:
 		return c.compileWhile(s)
+	case *FunctionDefinition:
+		return c.compileFunctionDef(s)
 	default:
 		return fmt.Errorf("compiler: unsupported statement type %T", stmt)
 	}
@@ -220,6 +222,9 @@ func (c *Compiler) compileExpr(expr Expression) (uint8, error) {
 		c.emit(Instruction{Op: OP_SUBSCRIPT, Dst: dst, Src1: container, Src2: key})
 		return dst, nil
 
+	case *Call:
+		return c.compileCall(e)
+
 	default:
 		return 0, fmt.Errorf("compiler: unsupported expression type %T", expr)
 	}
@@ -315,6 +320,105 @@ func (c *Compiler) compileIf(s *If) error {
 	// The then-path jump lands here, past the else block.
 	c.patchJump(jumpEnd)
 	return nil
+}
+
+// compileFunctionDef compiles a function definition into a sub-Function and emits OP_MAKE_FUNC.
+func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
+	sub := &Compiler{
+		fn:     &Function{Name: s.Name, Params: s.Parameters},
+		locals: make(map[string]uint8),
+	}
+	// Parameters occupy the first registers in the sub-function's window.
+	for i, param := range s.Parameters {
+		sub.locals[param] = uint8(i)
+		sub.nextReg++
+	}
+	sub.fn.MaxRegs = sub.nextReg
+
+	for _, stmt := range s.Body {
+		if err := sub.compileStatement(stmt); err != nil {
+			return err
+		}
+	}
+
+	// Implicit nil return.
+	nilIdx := sub.addConst(nil)
+	r := sub.allocReg()
+	sub.emit(Instruction{Op: OP_LOAD_CONST, Dst: r, Src1: uint8(nilIdx >> 8), Src2: uint8(nilIdx)})
+	sub.emit(Instruction{Op: OP_RETURN, Src1: r})
+	sub.fn.MaxRegs = sub.nextReg
+
+	// Register the sub-function in the parent and bind it to a local register.
+	subIdx := uint16(len(c.fn.SubFunctions))
+	c.fn.SubFunctions = append(c.fn.SubFunctions, sub.fn)
+	dst := c.localReg(s.Name)
+	c.emit(Instruction{Op: OP_MAKE_FUNC, Dst: dst, Src1: uint8(subIdx >> 8), Src2: uint8(subIdx)})
+	return nil
+}
+
+// compileCall compiles a function call expression.
+// Builtin calls emit OP_CALL_BUILTIN; user-defined calls emit OP_CALL.
+// Both use a following meta-instruction to encode argc/argBase.
+//
+// Each argument is compiled and its result copied (via OP_STORE_VAR) into a
+// contiguous argument window starting at argStart, so the callee sees a
+// clean sequential block of registers regardless of how many intermediate
+// registers each argument expression consumed.
+func (c *Compiler) compileCall(e *Call) (uint8, error) {
+	// Determine if this is a direct builtin call.
+	builtinCall := false
+	var builtinIdx uint16
+	if fnExpr, isVar := e.Function.(*Variable); isVar {
+		if idx, ok := vmBuiltinIndex[fnExpr.Name]; ok {
+			builtinCall = true
+			builtinIdx = idx
+		}
+	}
+
+	// For user calls, compile the function expression first so its register
+	// does not overlap with the argument window.
+	var fnReg uint8
+	if !builtinCall {
+		var err error
+		fnReg, err = c.compileExpr(e.Function)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// Compile each argument; collect result registers.
+	argRegs := make([]uint8, len(e.Arguments))
+	for i, arg := range e.Arguments {
+		r, err := c.compileExpr(arg)
+		if err != nil {
+			return 0, err
+		}
+		argRegs[i] = r
+	}
+
+	// Copy args into a contiguous window starting at argStart.
+	argStart := c.nextReg
+	for _, r := range argRegs {
+		dst := c.allocReg()
+		c.emit(Instruction{Op: OP_STORE_VAR, Dst: dst, Src1: r})
+	}
+
+	if builtinCall {
+		dst := c.allocReg()
+		c.emit(Instruction{Op: OP_CALL_BUILTIN, Dst: dst,
+			Src1: uint8(builtinIdx >> 8), Src2: uint8(builtinIdx)})
+		// Meta-instruction: argc in Dst, argStart in Src1:Src2.
+		c.emit(Instruction{Op: OP_LOAD_CONST, Dst: uint8(len(e.Arguments)),
+			Src1: uint8(argStart >> 8), Src2: uint8(argStart)})
+		return dst, nil
+	}
+
+	// User-defined function call.
+	dst := c.allocReg()
+	c.emit(Instruction{Op: OP_CALL, Dst: dst, Src1: fnReg, Src2: uint8(len(e.Arguments))})
+	// Meta-instruction: argStart in Dst.
+	c.emit(Instruction{Op: OP_LOAD_VAR, Dst: uint8(argStart)})
+	return dst, nil
 }
 
 // compileWhile compiles a while loop.
