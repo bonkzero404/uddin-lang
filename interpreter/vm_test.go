@@ -222,3 +222,258 @@ fib(10)
 	// Full result validation will be enabled once the VM handles all statement types.
 	t.Log("VMEnabled fib(10) executed without error via VM path")
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Phase 1 Task 9 — new statement/expression types
+// ──────────────────────────────────────────────────────────────────────────────
+
+// TestVMRecursion verifies that recursive function calls (forward references)
+// compile and execute correctly.
+func TestVMRecursion(t *testing.T) {
+	src := `
+fun fib(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fib(n - 1) + fib(n - 2)
+    end
+end
+fib(10)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 55 {
+		t.Errorf("expected 55, got %v (%T)", result, result)
+	}
+}
+
+// TestVMBreak verifies that 'break' exits a while loop at the right point.
+func TestVMBreak(t *testing.T) {
+	src := `
+i = 0
+while (i < 100):
+    if (i == 5) then:
+        break
+    end
+    i = i + 1
+end
+i
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 5 {
+		t.Errorf("expected 5, got %v", result)
+	}
+}
+
+// TestVMContinue verifies that 'continue' skips the rest of the loop body and
+// re-evaluates the condition.
+func TestVMContinue(t *testing.T) {
+	// Sum only odd numbers 1..9: 1+3+5+7+9 = 25
+	src := `
+sum = 0
+i = 0
+while (i < 10):
+    i = i + 1
+    if (i % 2 == 0) then:
+        continue
+    end
+    sum = sum + i
+end
+sum
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 25 {
+		t.Errorf("expected 25, got %v", result)
+	}
+}
+
+// TestVMForIn verifies basic for-in loop over an array literal.
+func TestVMForIn(t *testing.T) {
+	src := `
+sum = 0
+for (x in [1, 2, 3, 4, 5]):
+    sum = sum + x
+end
+sum
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 15 {
+		t.Errorf("expected 15, got %v", result)
+	}
+}
+
+// TestVMForInBreak verifies that break exits a for-in loop early.
+func TestVMForInBreak(t *testing.T) {
+	src := `
+count = 0
+for (x in [10, 20, 30, 40, 50]):
+    if (x == 30) then:
+        break
+    end
+    count = count + 1
+end
+count
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 2 {
+		t.Errorf("expected 2, got %v", result)
+	}
+}
+
+// TestVMTernaryTrue verifies that the ternary operator selects the true branch.
+func TestVMTernaryTrue(t *testing.T) {
+	src := "x = (1 == 1) ? 42 : 99\nx"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 42 {
+		t.Errorf("expected 42, got %v", result)
+	}
+}
+
+// TestVMTernaryFalse verifies that the ternary operator selects the false branch.
+func TestVMTernaryFalse(t *testing.T) {
+	src := "x = (1 == 2) ? 42 : 99\nx"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 99 {
+		t.Errorf("expected 99, got %v", result)
+	}
+}
+
+// TestVMCompoundAssignPlus verifies += on a variable.
+func TestVMCompoundAssignPlus(t *testing.T) {
+	src := "x = 5\nx += 3\nx"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 8 {
+		t.Errorf("expected 8, got %v", result)
+	}
+}
+
+// TestVMCompoundAssignMinus verifies -= on a variable.
+func TestVMCompoundAssignMinus(t *testing.T) {
+	src := "x = 10\nx -= 4\nx"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 6 {
+		t.Errorf("expected 6, got %v", result)
+	}
+}
+
+// TestVMSubscriptAssign verifies direct subscript assignment (a[i] = v).
+func TestVMSubscriptAssign(t *testing.T) {
+	src := "a = [1, 2, 3]\na[1] = 99\na[1]"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 99 {
+		t.Errorf("expected 99, got %v", result)
+	}
+}
+
+// TestVMSubscriptCompoundAssign verifies compound subscript assignment (a[i] += v).
+func TestVMSubscriptCompoundAssign(t *testing.T) {
+	src := "a = [10, 20, 30]\na[0] += 5\na[0]"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 15 {
+		t.Errorf("expected 15, got %v", result)
+	}
+}
+
+// TestVMAnonFunc verifies that anonymous function expressions compile and call correctly.
+func TestVMAnonFunc(t *testing.T) {
+	src := "add = fun(a, b): return a + b end\nadd(3, 4)"
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse error:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile error:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 7 {
+		t.Errorf("expected 7, got %v", result)
+	}
+}
