@@ -116,6 +116,7 @@ func DefaultConfig() *Config {
 		IsUnitTest:   false,
 		MemoryLayout: DefaultMemoryLayoutConfig(),
 		Memoization:  DefaultMemoizationConfig(),
+		VMEnabled:    true,
 	}
 }
 
@@ -130,6 +131,7 @@ func TestConfig() *Config {
 		IsUnitTest:   true,
 		MemoryLayout: DefaultMemoryLayoutConfig(),
 		Memoization:  DefaultMemoizationConfig(),
+		VMEnabled:    true,
 	}
 }
 

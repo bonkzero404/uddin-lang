@@ -1562,12 +1562,35 @@ func Evaluate(expr Expression, config *Config) (v Value, stats *Stats, err error
 // executeVM routes execution through the bytecode VM instead of the tree-walker.
 func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
 	c := NewCompiler()
+
+	// Pre-seed variable names from Config.Vars so the compiler allocates registers
+	// for them. The actual values are written into those registers before execution.
+	if config != nil {
+		for k := range config.Vars {
+			c.preSeededVars = append(c.preSeededVars, k)
+		}
+	}
+
 	fn, compileErr := c.Compile(prog)
 	if compileErr != nil {
 		return nil, compileErr
 	}
 	interp := newInterpreter(config)
 	vm := NewVM(interp)
+
+	// Load pre-defined variable values into the VM register window before execution.
+	if config != nil {
+		for k, v := range config.Vars {
+			if reg, ok := c.locals[k]; ok {
+				needed := int(reg) + 1
+				for len(vm.regs) < needed {
+					vm.regs = append(vm.regs, make([]Value, needed-len(vm.regs))...)
+				}
+				vm.regs[reg] = v
+			}
+		}
+	}
+
 	vm.Execute(fn)
 	return &interp.stats, nil
 }

@@ -18,6 +18,11 @@ type Compiler struct {
 	// selfName is the name of the function currently being compiled, used to
 	// resolve recursive self-calls within compileFunctionDef.
 	selfName string
+
+	// preSeededVars lists variable names that should be pre-allocated as locals
+	// at the start of Compile (before any source statements are compiled).
+	// This allows Config.Vars to be visible to the compiler.
+	preSeededVars []string
 }
 
 // NewCompiler creates a fresh Compiler instance.
@@ -30,6 +35,12 @@ func (c *Compiler) Compile(prog *Program) (*Function, error) {
 	c.fn = &Function{Name: "<main>"}
 	c.locals = make(map[string]uint8)
 	c.nextReg = 0
+
+	// Pre-allocate registers for any externally-injected variables so that
+	// source code can reference them without an explicit assignment first.
+	for _, name := range c.preSeededVars {
+		c.localReg(name)
+	}
 
 	// lastExprReg tracks the register holding the last expression-statement
 	// result so the top-level program returns it implicitly (REPL semantics).
