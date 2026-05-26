@@ -75,6 +75,71 @@ func (vm *VM) run() Value {
 				return result
 			}
 
+		// Generic arithmetic (delegates to package-level eval functions or interpreter method)
+		case OP_ADD:
+			regs[instr.Dst] = vm.interp.evalPlus(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_SUB:
+			regs[instr.Dst] = evalMinus(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_MUL:
+			regs[instr.Dst] = evalTimes(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_DIV:
+			regs[instr.Dst] = evalDivide(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_MOD:
+			regs[instr.Dst] = evalModulo(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_POW:
+			regs[instr.Dst] = evalPower(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_NEG:
+			regs[instr.Dst] = evalNegative(Position{}, regs[instr.Src1])
+
+		// Typed integer arithmetic (no boxing, no type conversion)
+		case OP_ADD_INT:
+			regs[instr.Dst] = regs[instr.Src1].(int) + regs[instr.Src2].(int)
+		case OP_SUB_INT:
+			regs[instr.Dst] = regs[instr.Src1].(int) - regs[instr.Src2].(int)
+		case OP_MUL_INT:
+			regs[instr.Dst] = regs[instr.Src1].(int) * regs[instr.Src2].(int)
+		case OP_DIV_INT:
+			r := regs[instr.Src2].(int)
+			if r == 0 {
+				panic(runtimeError(Position{}, "VM: integer divide by zero"))
+			}
+			regs[instr.Dst] = regs[instr.Src1].(int) / r
+		case OP_MOD_INT:
+			r := regs[instr.Src2].(int)
+			if r == 0 {
+				panic(runtimeError(Position{}, "VM: integer modulo by zero"))
+			}
+			regs[instr.Dst] = regs[instr.Src1].(int) % r
+
+		// Comparisons
+		case OP_EQ:
+			regs[instr.Dst] = evalEqual(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_NEQ:
+			eq := evalEqual(Position{}, regs[instr.Src1], regs[instr.Src2])
+			regs[instr.Dst] = !eq.(bool)
+		case OP_LT:
+			regs[instr.Dst] = evalLess(Position{}, regs[instr.Src1], regs[instr.Src2])
+		case OP_LTE:
+			gt := evalLess(Position{}, regs[instr.Src2], regs[instr.Src1])
+			regs[instr.Dst] = !gt.(bool)
+		case OP_GT:
+			regs[instr.Dst] = evalLess(Position{}, regs[instr.Src2], regs[instr.Src1])
+		case OP_GTE:
+			lt := evalLess(Position{}, regs[instr.Src1], regs[instr.Src2])
+			regs[instr.Dst] = !lt.(bool)
+		case OP_IN:
+			regs[instr.Dst] = evalIn(Position{}, regs[instr.Src1], regs[instr.Src2])
+
+		// Logic
+		case OP_AND:
+			regs[instr.Dst] = IsTruthy(regs[instr.Src1]) && IsTruthy(regs[instr.Src2])
+		case OP_OR:
+			regs[instr.Dst] = IsTruthy(regs[instr.Src1]) || IsTruthy(regs[instr.Src2])
+		case OP_NOT:
+			regs[instr.Dst] = !IsTruthy(regs[instr.Src1])
+		case OP_XOR:
+			regs[instr.Dst] = IsTruthy(regs[instr.Src1]) != IsTruthy(regs[instr.Src2])
+
 		default:
 			panic(runtimeError(Position{}, "VM: unimplemented opcode %s", opName(instr.Op)))
 		}
