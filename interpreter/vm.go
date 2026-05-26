@@ -1,5 +1,7 @@
 package interpreter
 
+import "strconv"
+
 const vmInitialRegCount = 256
 const vmMaxFrames = 512
 
@@ -50,6 +52,9 @@ func (vm *VM) Execute(fn *Function) Value {
 }
 
 func (vm *VM) pushFrame(fn *Function, baseReg int, retReg int) {
+	if len(vm.frames) >= vmMaxFrames {
+		panic("VM: call stack overflow (max " + strconv.Itoa(vmMaxFrames) + " frames)")
+	}
 	needed := baseReg + int(fn.MaxRegs) + 1
 	for len(vm.regs) < needed {
 		vm.regs = append(vm.regs, make([]Value, needed-len(vm.regs))...)

@@ -18,14 +18,11 @@ type Compiler struct {
 	// selfName is the name of the function currently being compiled, used to
 	// resolve recursive self-calls within compileFunctionDef.
 	selfName string
-	// selfReg is the parent register that holds the function value for selfName.
-	// Set to -1 when not inside a named function being compiled.
-	selfReg int
 }
 
 // NewCompiler creates a fresh Compiler instance.
 func NewCompiler() *Compiler {
-	return &Compiler{selfReg: -1}
+	return &Compiler{}
 }
 
 // Compile compiles an entire program into a top-level Function.
@@ -468,9 +465,8 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 	_ = makeIdx // will be overwritten below (same index, same encoding)
 
 	sub := &Compiler{
-		fn:      &Function{Name: s.Name, Params: s.Parameters},
-		locals:  make(map[string]uint8),
-		selfReg: -1,
+		fn:     &Function{Name: s.Name, Params: s.Parameters},
+		locals: make(map[string]uint8),
 	}
 	// Parameters occupy the first registers in the sub-function's window.
 	for i, param := range s.Parameters {
@@ -804,9 +800,8 @@ func (c *Compiler) compileTernary(e *Ternary) (uint8, error) {
 // the function value.
 func (c *Compiler) compileFunctionExpr(e *FunctionExpression) (uint8, error) {
 	sub := &Compiler{
-		fn:      &Function{Name: "<anon>", Params: e.Parameters},
-		locals:  make(map[string]uint8),
-		selfReg: -1,
+		fn:     &Function{Name: "<anon>", Params: e.Parameters},
+		locals: make(map[string]uint8),
 	}
 	for i, param := range e.Parameters {
 		sub.locals[param] = uint8(i)
