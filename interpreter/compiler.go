@@ -20,16 +20,33 @@ func (c *Compiler) Compile(prog *Program) (*Function, error) {
 	c.locals = make(map[string]uint8)
 	c.nextReg = 0
 
+	// lastExprReg tracks the register holding the last expression-statement
+	// result so the top-level program returns it implicitly (REPL semantics).
+	lastExprReg := int(-1)
 	for _, stmt := range prog.Statements {
-		if err := c.compileStatement(stmt); err != nil {
-			return nil, err
+		if es, ok := stmt.(*ExpressionStatement); ok {
+			r, err := c.compileExpr(es.Expression)
+			if err != nil {
+				return nil, err
+			}
+			lastExprReg = int(r)
+		} else {
+			if err := c.compileStatement(stmt); err != nil {
+				return nil, err
+			}
+			lastExprReg = -1
 		}
 	}
 
-	// Implicit return nil
-	nilIdx := c.addConst(nil)
-	r := c.allocReg()
-	c.emit(Instruction{Op: OP_LOAD_CONST, Dst: r, Src1: uint8(nilIdx >> 8), Src2: uint8(nilIdx)})
+	// Implicit return: use last expression value if available, else nil.
+	var r uint8
+	if lastExprReg >= 0 {
+		r = uint8(lastExprReg)
+	} else {
+		nilIdx := c.addConst(nil)
+		r = c.allocReg()
+		c.emit(Instruction{Op: OP_LOAD_CONST, Dst: r, Src1: uint8(nilIdx >> 8), Src2: uint8(nilIdx)})
+	}
 	c.emit(Instruction{Op: OP_RETURN, Src1: r})
 	c.fn.MaxRegs = c.nextReg
 	return c.fn, nil
