@@ -111,6 +111,32 @@ x
 	}
 }
 
+func TestVMArrayLiteral(t *testing.T) {
+	src := "a = [1, 2, 3]\na[1]"
+	prog, _ := ParseProgram([]byte(src))
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 2 {
+		t.Errorf("expected 2, got %v", result)
+	}
+}
+
+func TestVMMapLiteral(t *testing.T) {
+	src := `m = {"name": "alice", "age": 30}` + "\n" + `m["age"]`
+	prog, _ := ParseProgram([]byte(src))
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 30 {
+		t.Errorf("expected 30, got %v", result)
+	}
+}
+
 func TestVMWhileLoop(t *testing.T) {
 	src := `
 i = 0

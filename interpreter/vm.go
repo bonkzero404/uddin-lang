@@ -154,6 +154,57 @@ func (vm *VM) run() Value {
 				frame.pc += instr.jumpOffset()
 			}
 
+		// Collections
+		case OP_MAKE_ARRAY:
+			n := int(instr.Src2)
+			arr := make([]Value, n)
+			for i := 0; i < n; i++ {
+				arr[i] = regs[int(instr.Src1)+i]
+			}
+			regs[instr.Dst] = &arr
+
+		case OP_MAKE_MAP:
+			n := int(instr.Src2)
+			m := make(map[string]Value, n)
+			base := int(instr.Src1)
+			for i := 0; i < n; i++ {
+				key := regs[base+i*2]
+				val := regs[base+i*2+1]
+				k, ok := key.(string)
+				if !ok {
+					panic(runtimeError(Position{}, "VM: map key must be string"))
+				}
+				m[k] = val
+			}
+			regs[instr.Dst] = m
+
+		case OP_SUBSCRIPT:
+			regs[instr.Dst] = evalSubscript(Position{}, regs[instr.Src1], regs[instr.Src2])
+
+		case OP_SET_INDEX:
+			container := regs[instr.Dst]
+			key := regs[instr.Src1]
+			val := regs[instr.Src2]
+			switch cv := container.(type) {
+			case *[]Value:
+				idx, ok := key.(int)
+				if !ok {
+					panic(runtimeError(Position{}, "VM: array index must be integer"))
+				}
+				if idx < 0 {
+					idx = len(*cv) + idx
+				}
+				(*cv)[idx] = val
+			case map[string]Value:
+				k, ok := key.(string)
+				if !ok {
+					panic(runtimeError(Position{}, "VM: map key must be string"))
+				}
+				cv[k] = val
+			default:
+				panic(runtimeError(Position{}, "VM: SET_INDEX on non-container"))
+			}
+
 		default:
 			panic(runtimeError(Position{}, "VM: unimplemented opcode %s", opName(instr.Op)))
 		}

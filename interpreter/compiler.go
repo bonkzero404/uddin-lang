@@ -177,6 +177,49 @@ func (c *Compiler) compileExpr(expr Expression) (uint8, error) {
 	case *Unary:
 		return c.compileUnary(e)
 
+	case *List:
+		startReg := c.nextReg
+		count := len(e.Values)
+		for _, elem := range e.Values {
+			_, err := c.compileExpr(elem)
+			if err != nil {
+				return 0, err
+			}
+		}
+		dst := c.allocReg()
+		c.emit(Instruction{Op: OP_MAKE_ARRAY, Dst: dst, Src1: uint8(startReg), Src2: uint8(count)})
+		return dst, nil
+
+	case *Map:
+		startReg := c.nextReg
+		count := len(e.Items)
+		for _, item := range e.Items {
+			_, err := c.compileExpr(item.Key)
+			if err != nil {
+				return 0, err
+			}
+			_, err = c.compileExpr(item.Value)
+			if err != nil {
+				return 0, err
+			}
+		}
+		dst := c.allocReg()
+		c.emit(Instruction{Op: OP_MAKE_MAP, Dst: dst, Src1: uint8(startReg), Src2: uint8(count)})
+		return dst, nil
+
+	case *Subscript:
+		container, err := c.compileExpr(e.Container)
+		if err != nil {
+			return 0, err
+		}
+		key, err := c.compileExpr(e.Subscript)
+		if err != nil {
+			return 0, err
+		}
+		dst := c.allocReg()
+		c.emit(Instruction{Op: OP_SUBSCRIPT, Dst: dst, Src1: container, Src2: key})
+		return dst, nil
+
 	default:
 		return 0, fmt.Errorf("compiler: unsupported expression type %T", expr)
 	}
