@@ -60,8 +60,8 @@ func TestCompileProgram_ReusedAcrossExecutions(t *testing.T) {
 }
 
 func TestCompileProgram_VMReset(t *testing.T) {
-	src := `x = 1
-x`
+	src := `x = 7
+x + 1`
 	prog, err := ParseProgram([]byte(src))
 	if err != nil {
 		t.Fatal("parse:", err)
@@ -74,15 +74,15 @@ x`
 	interp := newInterpreter(TestConfig())
 	vm := NewVM(interp)
 
-	// First execution
-	_, err = ExecuteCompiledVM(cp, TestConfig(), vm)
-	if err != nil {
-		t.Fatal("first exec:", err)
-	}
-
-	// Second execution with same VM (should be reset internally)
-	_, err = ExecuteCompiledVM(cp, TestConfig(), vm)
-	if err != nil {
-		t.Fatal("second exec:", err)
+	for i := 0; i < 3; i++ {
+		cfg := TestConfig()
+		// Pollute cfg.Vars with a large map to grow regs on first run.
+		if i == 0 {
+			cfg.Vars = map[string]Value{"a": 1, "b": 2, "c": 3}
+		}
+		_, err = ExecuteCompiledVM(cp, cfg, vm)
+		if err != nil {
+			t.Fatalf("exec %d: %v", i, err)
+		}
 	}
 }

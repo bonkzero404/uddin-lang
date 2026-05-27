@@ -423,6 +423,8 @@ func (vm *VM) reset(interp *interpreter) {
 	vm.frames   = vm.frames[:0]
 	vm.tryStack = vm.tryStack[:0]
 	vm.interp   = interp
+	// regs intentionally NOT cleared — bytecode overwrites each register before first read.
+	// Clearing would add O(n) overhead on every pool reuse.
 }
 
 // doReturn pops the top frame and, for non-top-level calls, writes the return
