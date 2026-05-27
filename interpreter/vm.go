@@ -83,14 +83,21 @@ func (vm *VM) pushFrame(fn *Function, baseReg int, retReg int, captured []Value)
 // run is the main dispatch loop. It processes one instruction at a time across
 // all frames, returning when the call stack is empty.
 func (vm *VM) run() (result Value) {
+	// Snapshot tryStack depth so we can restore it on returnResult re-panic.
+	// Each run() invocation owns only the tryFrames it adds; returning normally
+	// must not leave orphaned entries visible to a subsequent run() call.
+	tryDepth := len(vm.tryStack)
 	defer func() {
 		if r := recover(); r != nil {
 			// returnResult panics are NOT errors — they are normal return-statement
-			// control flow. Re-panic so the caller's frame sees them.
+			// control flow. Restore tryStack to our entry depth, then re-panic so
+			// the enclosing function's frame sees the return. This prevents orphaned
+			// tryFrames from accumulating when return fires inside a try block.
 			if _, isReturn := r.(returnResult); isReturn {
+				vm.tryStack = vm.tryStack[:tryDepth]
 				panic(r)
 			}
-			// If there is no try handler, re-panic so the error propagates normally.
+			// If there is no try handler at all, re-panic so the error propagates.
 			if len(vm.tryStack) == 0 {
 				panic(r)
 			}
@@ -98,7 +105,12 @@ func (vm *VM) run() (result Value) {
 			th := vm.tryStack[len(vm.tryStack)-1]
 			vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
 			// Unwind the call stack back to the frame that owned the OP_TRY.
-			vm.frames = vm.frames[:th.frameDepth]
+			// Guard against stale frameDepth being out of range.
+			depth := th.frameDepth
+			if depth > len(vm.frames) {
+				depth = len(vm.frames)
+			}
+			vm.frames = vm.frames[:depth]
 			// Store the error message into the catch-variable register.
 			frame := &vm.frames[len(vm.frames)-1]
 			regs := vm.regs[frame.baseReg:]
