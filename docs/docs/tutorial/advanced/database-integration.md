@@ -17,38 +17,46 @@ UDDIN-LANG provides powerful database integration capabilities with support for 
 
 ### Connection Management
 
+Requires `import "database"`.
+
 | Function | Description | Example | Return Type |
 |----------|-------------|---------|-------------|
-| `db_connect(driver, host, port, database, username, password)` | Connect to database | `conn = db_connect("postgres", "localhost", 5432, "mydb", "user", "pass")` | object |
-| `db_connect_with_pool(driver, host, port, database, username, password, pool_size)` | Connect with connection pool | `conn = db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", 10)` | object |
-| `db_configure_pool(connection, max_open, max_idle, max_lifetime)` | Configure connection pool | `db_configure_pool(conn, 20, 10, 3600)` | object |
-| `db_close(connection)` | Close database connection | `db_close(conn)` | void |
+| `database.connect(driver, host, port, database, username, password)` | Connect to database | `conn = database.connect("postgres", "localhost", 5432, "mydb", "user", "pass")` | object |
+| `database.connect_with_pool(driver, host, port, database, username, password, pool_size)` | Connect with connection pool | `conn = database.connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", 10)` | object |
+| `database.configure_pool(connection, max_open, max_idle, max_lifetime)` | Configure connection pool | `database.configure_pool(conn, 20, 10, 3600)` | object |
+| `database.close(connection)` | Close database connection | `database.close(conn)` | void |
 
 ### Query Operations
 
+Requires `import "database"`.
+
 | Function | Description | Example | Return Type |
 |----------|-------------|---------|-------------|
-| `db_query(connection, query, params...)` | Execute SELECT query | `result = db_query(conn, "SELECT * FROM users WHERE id = $1", 123)` | object |
-| `db_execute(connection, query, params...)` | Execute INSERT/UPDATE/DELETE | `result = db_execute(conn, "INSERT INTO users (name) VALUES ($1)", "John")` | object |
-| `db_execute_batch(connection, queries)` | Execute multiple queries in batch | `result = db_execute_batch(conn, [query1, query2, query3])` | object |
+| `database.query(connection, query, params...)` | Execute SELECT query | `result = database.query(conn, "SELECT * FROM users WHERE id = $1", 123)` | object |
+| `database.exec(connection, query, params...)` | Execute INSERT/UPDATE/DELETE | `result = database.exec(conn, "INSERT INTO users (name) VALUES ($1)", "John")` | object |
+| `database.execute_batch(connection, queries)` | Execute multiple queries in batch | `result = database.execute_batch(conn, [query1, query2, query3])` | object |
 
 ### Asynchronous Operations
 
+Requires `import "database"`.
+
 | Function | Description | Example | Return Type |
 |----------|-------------|---------|-------------|
-| `db_execute_async(connection, query, params...)` | Execute query asynchronously | `async_result = db_execute_async(conn, "SELECT * FROM large_table")` | object |
-| `db_get_async_status(operation_id)` | Get status of async operation | `status = db_get_async_status("op_123")` | object |
-| `db_cancel_async(operation_id)` | Cancel async operation | `cancel_result = db_cancel_async("op_123")` | object |
-| `db_list_async_operations()` | List all async operations | `ops = db_list_async_operations()` | object |
-| `db_cleanup_async_operations()` | Clean up completed async operations | `cleanup_result = db_cleanup_async_operations()` | object |
+| `database.execute_async(connection, query, params...)` | Execute query asynchronously | `async_result = database.execute_async(conn, "SELECT * FROM large_table")` | object |
+| `database.get_async_status(operation_id)` | Get status of async operation | `status = database.get_async_status("op_123")` | object |
+| `database.cancel_async(operation_id)` | Cancel async operation | `cancel_result = database.cancel_async("op_123")` | object |
+| `database.list_async()` | List all async operations | `ops = database.list_async()` | object |
+| `database.cleanup_async()` | Clean up completed async operations | `cleanup_result = database.cleanup_async()` | object |
 
 ### Real-time Streaming
+
+Requires `import "database"`.
 
 | Function | Description | Example |
 |----------|-------------|----------|
 | `stream_tables(connection, table_name, callback)` | Start real-time streaming for single table | `stream_tables(conn, "users", on_change)` |
 | `stream_tables(connection, [table_names], callback)` | Start real-time streaming for multiple tables | `stream_tables(conn, ["users", "orders"], on_multi_change)` |
-| `db_stop_stream(streamer_id)` | Stop real-time streaming | `db_stop_stream("streamer_123")` |
+| `database.stop_stream(conn)` | Stop real-time streaming | `database.stop_stream(conn)` |
 
 #### Callback Function Signatures
 
@@ -73,8 +81,10 @@ end
 ### Connecting to PostgreSQL
 
 ```uddin
+import "database"
+
 // Connect to PostgreSQL
-conn_result = db_connect(
+conn_result = database.connect(
     "postgres",     // driver
     "localhost",    // host
     5432,           // port
@@ -90,7 +100,7 @@ if (conn_result.success) then:
     // Use the connection...
 
     // Always close when done
-    db_close(conn)
+    database.close(conn)
 else:
     print("Connection failed: " + conn_result.error)
 end
@@ -99,8 +109,10 @@ end
 ### Connecting to MySQL
 
 ```uddin
+import "database"
+
 // Connect to MySQL
-conn_result = db_connect(
+conn_result = database.connect(
     "mysql",        // driver
     "localhost",    // host
     3306,           // port
@@ -115,7 +127,7 @@ if (conn_result.success) then:
 
     // Use the connection...
 
-    db_close(conn)
+    database.close(conn)
 else:
     print("MySQL connection failed: " + conn_result.error)
 end
@@ -128,8 +140,10 @@ end
 ### SELECT Queries
 
 ```uddin
+import "database"
+
 // Simple SELECT
-result = db_query(conn, "SELECT id, name, email FROM users")
+result = database.query(conn, "SELECT id, name, email FROM users")
 
 if (result.success) then:
     print("Found " + str(result.count) + " users:")
@@ -142,7 +156,7 @@ end
 
 // Parameterized SELECT
 user_id = 123
-result = db_query(conn, "SELECT * FROM users WHERE id = $1", user_id)
+result = database.query(conn, "SELECT * FROM users WHERE id = $1", user_id)
 
 if (result.success and result.count > 0) then:
     user = result.data[0]
@@ -155,8 +169,10 @@ end
 ### INSERT Operations
 
 ```uddin
+import "database"
+
 // Insert new record
-result = db_execute(conn,
+result = database.exec(conn,
     "INSERT INTO users (name, email, age) VALUES ($1, $2, $3)",
     "John Doe", "john@example.com", 30
 )
@@ -173,8 +189,10 @@ end
 ### UPDATE Operations
 
 ```uddin
+import "database"
+
 // Update existing record
-result = db_execute(conn,
+result = database.exec(conn,
     "UPDATE users SET email = $1 WHERE id = $2",
     "newemail@example.com", 123
 )
@@ -189,8 +207,10 @@ end
 ### DELETE Operations
 
 ```uddin
+import "database"
+
 // Delete record
-result = db_execute(conn,
+result = database.exec(conn,
     "DELETE FROM users WHERE id = $1",
     123
 )
@@ -209,8 +229,10 @@ end
 Connection pooling improves performance by reusing database connections:
 
 ```uddin
+import "database"
+
 // Connect with connection pool
-conn_result = db_connect_with_pool(
+conn_result = database.connect_with_pool(
     "postgres",     // driver
     "localhost",    // host
     5432,           // port
@@ -224,7 +246,7 @@ if (conn_result.success) then:
     conn = conn_result.conn
     
     // Configure pool settings
-    pool_config = db_configure_pool(
+    pool_config = database.configure_pool(
         conn,
         20,    // max_open_connections
         10,    // max_idle_connections
@@ -237,7 +259,7 @@ if (conn_result.success) then:
     
     // Use connection for queries...
     
-    db_close(conn)
+    database.close(conn)
 end
 ```
 
@@ -246,6 +268,8 @@ end
 Execute multiple queries efficiently in a single batch:
 
 ```uddin
+import "database"
+
 // Prepare batch operations
 batch_operations = [
     {
@@ -263,7 +287,7 @@ batch_operations = [
 ]
 
 // Execute batch
-batch_result = db_execute_batch(conn, batch_operations)
+batch_result = database.execute_batch(conn, batch_operations)
 
 if (batch_result.success) then:
     print("Batch executed successfully")
@@ -280,8 +304,11 @@ end
 Execute long-running queries without blocking:
 
 ```uddin
+import "database"
+import "datetime"
+
 // Start async operation
-async_result = db_execute_async(conn, 
+async_result = database.execute_async(conn, 
     "SELECT * FROM large_table WHERE created_at > $1",
     "2024-01-01"
 )
@@ -292,11 +319,11 @@ if (async_result.success) then:
     
     // Monitor progress
     while (true):
-        status = db_get_async_status(operation_id)
+        status = database.get_async_status(operation_id)
         
         if (status.status == "running") then:
             print("Operation still running...")
-            sleep(1000)  // Wait 1 second
+            datetime.sleep(1000)  // Wait 1 second
         elif (status.status == "completed") then:
             print("Operation completed!")
             print("Rows returned: " + str(status.result.count))
@@ -322,8 +349,10 @@ end
 ### Managing Async Operations
 
 ```uddin
+import "database"
+
 // List all async operations
-all_ops = db_list_async_operations()
+all_ops = database.list_async()
 
 if (all_ops.success) then:
     print("Total operations: " + str(all_ops.count))
@@ -333,7 +362,7 @@ if (all_ops.success) then:
         
         // Cancel long-running operations if needed
         if (op.status == "running" and op.duration > 30000) then:
-            cancel_result = db_cancel_async(op.operation_id)
+            cancel_result = database.cancel_async(op.operation_id)
             if (cancel_result.success) then:
                 print("Cancelled operation: " + op.operation_id)
             end
@@ -342,7 +371,7 @@ if (all_ops.success) then:
 end
 
 // Clean up completed operations
-cleanup_result = db_cleanup_async_operations()
+cleanup_result = database.cleanup_async()
 if (cleanup_result.success) then:
     print("Cleaned up " + str(cleanup_result.cleaned_count) + " operations")
 end
@@ -609,13 +638,15 @@ max_binlog_size=100M
 You can also configure binlog settings at runtime:
 
 ```uddin
+import "database"
+
 // Enable binlog configuration (if not set globally)
-db_execute(db_conn, "SET GLOBAL log_bin = ON")
-db_execute(db_conn, "SET GLOBAL binlog_format = 'ROW'")
-db_execute(db_conn, "SET GLOBAL binlog_row_image = 'FULL'")
+database.exec(db_conn, "SET GLOBAL log_bin = ON")
+database.exec(db_conn, "SET GLOBAL binlog_format = 'ROW'")
+database.exec(db_conn, "SET GLOBAL binlog_row_image = 'FULL'")
 
 // Verify configuration
-result = db_query(db_conn, "SHOW VARIABLES LIKE 'binlog_format'")
+result = database.query(db_conn, "SHOW VARIABLES LIKE 'binlog_format'")
 if (result.success and result.count > 0) then:
     print("Binlog format: " + result.data[0].Value)
 end

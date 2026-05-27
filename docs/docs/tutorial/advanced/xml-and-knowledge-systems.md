@@ -161,104 +161,110 @@ Sistem fact database memungkinkan Anda menyimpan dan query pengetahuan dalam ben
 ### Basic Fact Operations
 
 ```uddin
-// fact_assert - menambahkan fakta ke database
-fact_assert("person", "john", {"age": 30, "city": "Jakarta", "job": "engineer"})
-fact_assert("person", "alice", {"age": 25, "city": "Bandung", "job": "designer"})
-fact_assert("person", "bob", {"age": 35, "city": "Jakarta", "job": "manager"})
+import "fact"
 
-// fact_assert untuk relasi
-fact_assert("works_at", "john", {"company": "TechCorp", "department": "Engineering"})
-fact_assert("works_at", "alice", {"company": "DesignStudio", "department": "Creative"})
-fact_assert("works_at", "bob", {"company": "TechCorp", "department": "Management"})
+// fact.assert - menambahkan fakta ke database
+fact.assert("person", "john", {"age": 30, "city": "Jakarta", "job": "engineer"})
+fact.assert("person", "alice", {"age": 25, "city": "Bandung", "job": "designer"})
+fact.assert("person", "bob", {"age": 35, "city": "Jakarta", "job": "manager"})
 
-// fact_assert untuk hierarki
-fact_assert("reports_to", "john", {"manager": "bob"})
-fact_assert("skill", "john", {"name": "Python", "level": "expert"})
-fact_assert("skill", "john", {"name": "JavaScript", "level": "intermediate"})
-fact_assert("skill", "alice", {"name": "Photoshop", "level": "expert"})
+// fact.assert untuk relasi
+fact.assert("works_at", "john", {"company": "TechCorp", "department": "Engineering"})
+fact.assert("works_at", "alice", {"company": "DesignStudio", "department": "Creative"})
+fact.assert("works_at", "bob", {"company": "TechCorp", "department": "Management"})
+
+// fact.assert untuk hierarki
+fact.assert("reports_to", "john", {"manager": "bob"})
+fact.assert("skill", "john", {"name": "Python", "level": "expert"})
+fact.assert("skill", "john", {"name": "JavaScript", "level": "intermediate"})
+fact.assert("skill", "alice", {"name": "Photoshop", "level": "expert"})
 ```
 
 ### Querying Facts
 
 ```uddin
-// fact_query - query fakta dengan pattern
+import "fact"
+
+// fact.query - query fakta dengan pattern
 // Query semua person
-all_persons = fact_query("person", null, {})
+all_persons = fact.query("person", null, {})
 print("All persons: " + str(len(all_persons)))
 for person in all_persons:
     print(person.subject + ": age " + str(person.data.age) + ", " + person.data.city)
 end
 
 // Query dengan filter
-jakarta_people = fact_query("person", null, {"city": "Jakarta"})
+jakarta_people = fact.query("person", null, {"city": "Jakarta"})
 print("\nPeople in Jakarta:")
 for person in jakarta_people:
     print(person.subject + " (" + person.data.job + ")")
 end
 
 // Query specific subject
-john_facts = fact_query(null, "john", {})
+john_facts = fact.query(null, "john", {})
 print("\nFacts about John:")
 for fact in john_facts:
     print(fact.predicate + ": " + str(fact.data))
 end
 
 // fact_exists - mengecek keberadaan fakta
-if (fact_exists("person", "john", {"city": "Jakarta"})) then:
+if (fact.exists("person", "john", {"city": "Jakarta"})) then:
     print("John lives in Jakarta")
 end
 
 // fact_count - menghitung fakta
-total_facts = fact_count(null, null, {})
+total_facts = fact.count(null, null, {})
 print("Total facts in database: " + str(total_facts))
 
-person_count = fact_count("person", null, {})
+person_count = fact.count("person", null, {})
 print("Total persons: " + str(person_count))
 ```
 
 ### Advanced Fact Queries
 
 ```uddin
+import "fact"
+
 // Setup fact database with initial data
 print("Setting up fact database...")
 
-// fact_assert - add facts to database
-fact_assert("person", "john", {"age": 30, "city": "Jakarta", "job": "engineer"})
-fact_assert("person", "alice", {"age": 25, "city": "Bandung", "job": "designer"})
-fact_assert("person", "bob", {"age": 35, "city": "Jakarta", "job": "manager"})
-fact_assert("person", "charlie", {"age": 28, "city": "Surabaya", "job": "developer"})
+// fact.assert - add facts to database
+fact.assert("person", "john", {"age": 30, "city": "Jakarta", "job": "engineer"})
+fact.assert("person", "alice", {"age": 25, "city": "Bandung", "job": "designer"})
+fact.assert("person", "bob", {"age": 35, "city": "Jakarta", "job": "manager"})
+fact.assert("person", "charlie", {"age": 28, "city": "Surabaya", "job": "developer"})
 
-// fact_assert for work relations
-fact_assert("works_at", "john", {"company": "TechCorp", "department": "Engineering"})
-fact_assert("works_at", "alice", {"company": "DesignStudio", "department": "Creative"})
-fact_assert("works_at", "bob", {"company": "TechCorp", "department": "Management"})
-fact_assert("works_at", "charlie", {"company": "StartupXYZ", "department": "Development"})
+// fact.assert for work relations
+fact.assert("works_at", "john", {"company": "TechCorp", "department": "Engineering"})
+fact.assert("works_at", "alice", {"company": "DesignStudio", "department": "Creative"})
+fact.assert("works_at", "bob", {"company": "TechCorp", "department": "Management"})
+fact.assert("works_at", "charlie", {"company": "StartupXYZ", "department": "Development"})
 
 print("Fact database setup complete!\n")
 
 // fact_query - query facts with pattern
 // Query all persons
-all_persons = fact_query("person")
+all_persons = fact.query("person")
 print("All persons found: " + str(all_persons))
 if (all_persons != null) then:
     print("\nPerson details:")
     // Query individual persons
-    john_data = fact_query("person", "john")
+    john_data = fact.query("person", "john")
     if (john_data != null) then:
         print("john: age " + str(john_data["age"]) + ", " + str(john_data["city"]) + ", job: " + str(john_data["job"]))
     end
 
-    alice_data = fact_query("person", "alice")
+    alice_data = fact.query("person", "alice")
     if (alice_data != null) then:
         print("alice: age " + str(alice_data["age"]) + ", " + str(alice_data["city"]) + ", job: " + str(alice_data["job"]))
     end
 
-    bob_data = fact_query("person", "bob")
+    bob_data = fact.query("person", "bob")
     if (bob_data != null) then:
         print("bob: age " + str(bob_data["age"]) + ", " + str(bob_data["city"]) + ", job: " + str(bob_data["job"]))
     end
 
-    charlie_data = fact_query("person", "charlie")
+    charlie_data = fact.query("person", "charlie")
     if (charlie_data != null) then:
         print("charlie: age " + str(charlie_data["age"]) + ", " + str(charlie_data["city"]) + ", job: " + str(charlie_data["job"]))
     end
@@ -267,7 +273,7 @@ else:
 end
 
 // Query specific person
-john_data = fact_query("person", "john")
+john_data = fact.query("person", "john")
 if (john_data != null) then:
     print("\nJohn's data:")
     print("Age: " + str(john_data.age))
@@ -277,42 +283,42 @@ end
 
 // Query work relations
 print("\nWork relations:")
-work_relations = fact_query("works_at")
+work_relations = fact.query("works_at")
 if (work_relations != null) then:
-    john_work = fact_query("works_at", "john")
+    john_work = fact.query("works_at", "john")
     if (john_work != null) then:
         print("john works at " + str(john_work["company"]) + " in " + str(john_work["department"]))
     end
 
-    alice_work = fact_query("works_at", "alice")
+    alice_work = fact.query("works_at", "alice")
     if (alice_work != null) then:
         print("alice works at " + str(alice_work["company"]) + " in " + str(alice_work["department"]))
     end
 
-    bob_work = fact_query("works_at", "bob")
+    bob_work = fact.query("works_at", "bob")
     if (bob_work != null) then:
         print("bob works at " + str(bob_work["company"]) + " in " + str(bob_work["department"]))
     end
 
-    charlie_work = fact_query("works_at", "charlie")
+    charlie_work = fact.query("works_at", "charlie")
     if (charlie_work != null) then:
         print("charlie works at " + str(charlie_work["company"]) + " in " + str(charlie_work["department"]))
     end
 end
 
 // fact_exists - check if fact exists
-if (fact_exists("person", "john")) then:
+if (fact.exists("person", "john")) then:
     print("\nJohn exists in person database")
 end
 
 // fact_count - count facts
-total_facts = fact_count()
+total_facts = fact.count()
 print("Total facts in database: " + str(total_facts))
 
-person_count = fact_count("person")
+person_count = fact.count("person")
 print("Total persons: " + str(person_count))
 
-work_count = fact_count("works_at")
+work_count = fact.count("works_at")
 print("Total work relations: " + str(work_count))
 ```
 
@@ -323,21 +329,24 @@ Sistem event processing memungkinkan Anda mendeteksi pattern dalam stream event 
 ### Basic Event Operations
 
 ```uddin
-// event_emit - emit events
-event_emit("user_login", {"user_id": "john", "timestamp": date_now(), "ip": "192.168.1.100"})
-event_emit("user_login", {"user_id": "alice", "timestamp": date_now(), "ip": "192.168.1.101"})
-event_emit("page_view", {"user_id": "john", "page": "/dashboard", "timestamp": date_now()})
-event_emit("user_logout", {"user_id": "alice", "timestamp": date_now()})
+import "cdc"
+import "datetime"
+
+// cdc.emit - emit events
+cdc.emit("user_login", {"user_id": "john", "timestamp": datetime.now(), "ip": "192.168.1.100"})
+cdc.emit("user_login", {"user_id": "alice", "timestamp": datetime.now(), "ip": "192.168.1.101"})
+cdc.emit("page_view", {"user_id": "john", "page": "/dashboard", "timestamp": datetime.now()})
+cdc.emit("user_logout", {"user_id": "alice", "timestamp": datetime.now()})
 
 // event_count - count events
-total_events = event_count()  // No parameters to count all events
+total_events = cdc.count()  // No parameters to count all events
 print("Total events: " + str(total_events))
 
-login_events = event_count("user_login", {})
+login_events = cdc.count("user_login", {})
 print("Login events: " + str(login_events))
 
 // event_get_window - get events within time window
-recent_events = event_get_window("1h", "user_login")  // Last 1 hour
+recent_events = cdc.get_window("1h", "user_login")  // Last 1 hour
 if (recent_events != null) then:
     print("Recent logins: " + str(len(recent_events)))
     if (len(recent_events) > 0) then:
@@ -358,7 +367,10 @@ end
 ### Event Pattern Detection
 
 ```uddin
-// event_define_pattern - define pattern for detection
+import "cdc"
+import "datetime"
+
+// cdc.define_pattern - define pattern for detection
 // Pattern: 3 failed login attempts within 5 minutes
 pattern_id = "suspicious_login"
 pattern_config = {
@@ -368,20 +380,20 @@ pattern_config = {
     "group_by": "user_id"
 }
 
-event_define_pattern(pattern_id, pattern_config)
+cdc.define_pattern(pattern_id, pattern_config)
 
 // Simulate failed login attempts
 for (i in range(4)):
-    event_emit("login_failed", {
+    cdc.emit("login_failed", {
         "user_id": "suspicious_user",
-        "timestamp": date_now(),
+        "timestamp": datetime.now(),
         "ip": "192.168.1.200",
         "reason": "invalid_password"
     })
 end
 
 // Check pattern matches
-suspicious_patterns = event_get_window("1h", "login_failed")
+suspicious_patterns = cdc.get_window("1h", "login_failed")
 if (len(suspicious_patterns) > 0) then:
     print("ALERT: Suspicious login activity detected!")
     i = 0
@@ -396,6 +408,10 @@ end
 ### Advanced Event Processing
 
 ```uddin
+import "cdc"
+import "fact"
+import "datetime"
+
 // Global handlers storage
 login_handlers = []
 purchase_handlers = []
@@ -409,7 +425,7 @@ fun registerPurchaseHandler(handler):
 end
 
 fun emitLoginEvent(data):
-    event_emit("user_login", data)
+    cdc.emit("user_login", data)
     for (handler in login_handlers):
         try:
             handler(data)
@@ -420,7 +436,7 @@ fun emitLoginEvent(data):
 end
 
 fun emitPurchaseEvent(data):
-    event_emit("user_purchase", data)
+    cdc.emit("user_purchase", data)
     for (handler in purchase_handlers):
         try:
             handler(data)
@@ -444,7 +460,7 @@ fun createEventProcessor():
             activity_data = {
                 "user_id": user_id,
                 "activity": activity_type,
-                "timestamp": date_now(),
+                "timestamp": datetime.now(),
                 "details": details
             }
 
@@ -463,10 +479,10 @@ processor = createEventProcessor()
 
 // Register handlers
 processor.on("user_login", fun(data):
-    print("User " + data.user_id + " logged in at " + date_format(data.timestamp, "15:04:05"))
+    print("User " + data.user_id + " logged in at " + datetime.format(data.timestamp, "15:04:05"))
 
     // Update user facts
-    fact_assert("last_login", data.user_id, {
+    fact.assert("last_login", data.user_id, {
         "timestamp": data.timestamp,
         "ip": data.details.ip
     })
@@ -476,7 +492,7 @@ processor.on("user_purchase", fun(data):
     print("Purchase by " + data.user_id + ": $" + str(data.details.amount))
 
     // Update purchase history
-    fact_assert("purchase", data.user_id + "_" + str(data.timestamp), {
+    fact.assert("purchase", data.user_id + "_" + str(data.timestamp), {
         "user_id": data.user_id,
         "amount": data.details.amount,
         "product": data.details.product,
@@ -495,21 +511,23 @@ processor.processUserActivity("alice", "login", {"ip": "192.168.1.101"})
 ### Knowledge Base System
 
 ```uddin
+import "fact"
+
 fun createKnowledgeBase():
     return {
         "addRule": fun(rule_name, conditions, conclusion):
-            fact_assert("rule", rule_name, {
+            fact.assert("rule", rule_name, {
                 "conditions": conditions,
                 "conclusion": conclusion
             })
         end,
 
         "addFact": fun(subject, predicate, object):
-            fact_assert(predicate, subject, object)
+            fact.assert(predicate, subject, object)
         end,
 
         "query": fun(predicate, subject, filters):
-            return fact_query(predicate, subject, filters)
+            return fact.query(predicate, subject, filters)
         end,
 
         "infer": fun():
@@ -517,15 +535,15 @@ fun createKnowledgeBase():
 
             // Manually check the mortality rule since we know it exists
             // Check if socrates is human
-            socrates_human = fact_query("is_human", "socrates")
+            socrates_human = fact.query("is_human", "socrates")
 
             if (socrates_human != null) then:
                 // Check if socrates is already mortal
-                socrates_mortal = fact_query("is_mortal", "socrates")
+                socrates_mortal = fact.query("is_mortal", "socrates")
 
                 if (socrates_mortal == null) then:
                     // Assert that socrates is mortal
-                    fact_assert("is_mortal", "socrates", {"reason": "all humans are mortal"})
+                    fact.assert("is_mortal", "socrates", {"reason": "all humans are mortal"})
                     new_fact = {
                         "predicate": "is_mortal",
                         "subject": "socrates",
@@ -570,16 +588,20 @@ end
 ### Real-time Analytics Dashboard
 
 ```uddin
+import "cdc"
+import "fact"
+import "datetime"
+
 fun createAnalyticsDashboard():
     dashboard = {
         "trackEvent": fun(event_type, user_id, data):
             event_data = {
                 "user_id": user_id,
-                "timestamp": date_now(),
+                "timestamp": datetime.now(),
                 "data": data
             }
 
-            event_emit(event_type, event_data)
+            cdc.emit(event_type, event_data)
 
             // Update aggregated facts
             dashboard.updateAggregates(event_type, user_id, data)
@@ -587,18 +609,18 @@ fun createAnalyticsDashboard():
 
         "updateAggregates": fun(event_type, user_id, data):
             // Daily aggregates
-            today = date_format(date_now(), "2006-01-02")
+            today = datetime.format(datetime.now(), "2006-01-02")
             daily_key = event_type + "_" + today
 
-            existing = fact_query("daily_count", daily_key, {})
+            existing = fact.query("daily_count", daily_key, {})
             if (existing != null) then:
                 new_count = existing.count + 1
-                fact_retract("daily_count", daily_key, {})
+                fact.retract("daily_count", daily_key, {})
             else:
                 new_count = 1
             end
 
-            fact_assert("daily_count", daily_key, {
+            fact.assert("daily_count", daily_key, {
                 "event_type": event_type,
                 "date": today,
                 "count": new_count
@@ -606,15 +628,15 @@ fun createAnalyticsDashboard():
 
             // User aggregates
             user_key = user_id + "_" + event_type
-            user_existing = fact_query("user_count", user_key, {})
+            user_existing = fact.query("user_count", user_key, {})
             if (user_existing != null) then:
                 user_new_count = user_existing.count + 1
-                fact_retract("user_count", user_key, {})
+                fact.retract("user_count", user_key, {})
             else:
                 user_new_count = 1
             end
 
-            fact_assert("user_count", user_key, {
+            fact.assert("user_count", user_key, {
                 "user_id": user_id,
                 "event_type": event_type,
                 "count": user_new_count
@@ -622,22 +644,22 @@ fun createAnalyticsDashboard():
         end,
 
         "getDashboardData": fun():
-            today = date_format(date_now(), "2006-01-02")
+            today = datetime.format(datetime.now(), "2006-01-02")
 
             // Get today's events
-            daily_counts = fact_query("daily_count")
+            daily_counts = fact.query("daily_count")
 
             // Get top users
-            user_counts = fact_query("user_count")
+            user_counts = fact.query("user_count")
 
             // Get recent events
-            recent_events = event_get_window("1h")  // Last hour
+            recent_events = cdc.get_window("1h")  // Last hour
 
             return {
                 "daily_stats": daily_counts,
                 "user_stats": user_counts,
                 "recent_activity": recent_events,
-                "timestamp": date_now()
+                "timestamp": datetime.now()
             }
         end
     }

@@ -26,12 +26,14 @@ print("Program continues...")
 
 ```uddin
 fun safeFileOperation(filename):
+    import "fs"
+    import "json"
     try:
         // Attempt to read file
-        content = read_file(filename)
+        content = fs.read(filename)
 
         // Attempt to parse as JSON
-        data = json_parse(content)
+        data = json.parse(content)
 
         // Attempt to access property
         name = data.name
@@ -369,6 +371,7 @@ end
 
 ```uddin
 fun createLogger(level):
+    import "datetime"
     log_levels = {"DEBUG": 0, "INFO": 1, "WARN": 2, "ERROR": 3}
 
     // Set default level if not provided
@@ -383,28 +386,28 @@ fun createLogger(level):
 
         "debug": fun(message):
             if (log_levels["DEBUG"] >= current_level) then:
-                timestamp = date_now()
+                timestamp = datetime.now()
                 print("[" + str(timestamp) + "] DEBUG: " + str(message))
             end
         end,
 
         "info": fun(message):
             if (log_levels["INFO"] >= current_level) then:
-                timestamp = date_now()
+                timestamp = datetime.now()
                 print("[" + str(timestamp) + "] INFO: " + str(message))
             end
         end,
 
         "warn": fun(message):
             if (log_levels["WARN"] >= current_level) then:
-                timestamp = date_now()
+                timestamp = datetime.now()
                 print("[" + str(timestamp) + "] WARN: " + str(message))
             end
         end,
 
         "error": fun(message):
             if (log_levels["ERROR"] >= current_level) then:
-                timestamp = date_now()
+                timestamp = datetime.now()
                 print("[" + str(timestamp) + "] ERROR: " + str(message))
             end
         end
@@ -586,6 +589,7 @@ call_stack = []
 
 // Helper functions for stack management
 fun enterFunction(function_name, args):
+    import "datetime"
     if (args == null) then:
         args = []
     end
@@ -593,7 +597,7 @@ fun enterFunction(function_name, args):
     entry = {
         "function": function_name,
         "args": args,
-        "timestamp": date_now()
+        "timestamp": datetime.now()
     }
     append(call_stack, entry)
 end

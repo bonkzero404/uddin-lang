@@ -10,56 +10,47 @@ This reference guide covers all aspects of UddinLang's real-time database stream
 
 ### Connection Management
 
-#### `db_connect(driver, host, port, database, username, password)`
+#### `database.connect(dsn)`
 
-Establishes a database connection.
+Establishes a database connection. Requires `import "database"`.
 
 **Parameters:**
-- `driver` (string): Database driver ("postgres", "mysql")
-- `host` (string): Database host address
-- `port` (integer): Database port number
-- `database` (string): Database name
-- `username` (string): Database username
-- `password` (string): Database password
+- `dsn` (string): Connection string in the form `"driver://user:pass@host:port/dbname"`
 
 **Returns:** Object with `success` (boolean), `conn` (connection object), `id` (string), `driver` (string), `host` (string), `port` (integer), `database` (string)
 
 **Example:**
 ```uddin
-result = db_connect("postgres", "localhost", 5432, "mydb", "user", "pass")
+import "database"
+result = database.connect("postgres://user:pass@localhost/mydb")
 if (result.success) then:
     conn = result.conn
     print("Connected to " + result.driver + " database: " + result.database)
 end
 ```
 
-#### `db_connect_with_pool(driver, host, port, database, username, password, pool_config)`
+#### `database.connect_with_pool(dsn, pool_config)`
 
-Establishes a database connection with connection pooling.
+Establishes a database connection with connection pooling. Requires `import "database"`.
 
 **Parameters:**
-- `driver` (string): Database driver
-- `host` (string): Database host address
-- `port` (integer): Database port number
-- `database` (string): Database name
-- `username` (string): Database username
-- `password` (string): Database password
+- `dsn` (string): Connection string in the form `"driver://user:pass@host:port/dbname"`
 - `pool_config` (ConnectionPoolConfig): Pool configuration object
 
 **Returns:** Object with `success` (boolean), `conn` (connection object), `id` (string), `driver` (string), `host` (string), `port` (integer), `database` (string), `pool_config` (object)
 
 **Example:**
 ```uddin
-// Note: pool_config must be a ConnectionPoolConfig object
-// This is typically created internally or through specific pool configuration functions
-result = db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", pool_config)
+import "database"
+pool_config = {"max_open": 10, "max_idle": 5, "max_lifetime": 3600}
+result = database.connect_with_pool("postgres://user:pass@localhost/mydb", pool_config)
 if (result.success) then:
     conn = result.conn
     print("Pool config - Max Open: " + str(result.pool_config.max_open))
 end
 ```
 
-#### `db_configure_pool(connection, max_open, max_idle, max_lifetime)`
+#### `database.configure_pool(connection, max_open, max_idle, max_lifetime)`
 
 Configures connection pool settings for an existing connection.
 
@@ -71,9 +62,9 @@ Configures connection pool settings for an existing connection.
 
 **Returns:** Object with `success` (boolean) and `error` (string if failed)
 
-#### `db_close(connection)`
+#### `database.close(connection)`
 
-Closes a database connection.
+Closes a database connection. Requires `import "database"`.
 
 **Parameters:**
 - `connection` (object): Database connection object
@@ -114,9 +105,9 @@ Starts real-time streaming for multiple database tables.
 stream_tables(conn, ["users", "orders", "products"], onMultiTableChange)
 ```
 
-#### `db_stop_stream(stream_id)`
+#### `database.stop_stream(stream_id)`
 
-Stops an active database stream.
+Stops an active database stream. Requires `import "database"`.
 
 **Parameters:**
 - `stream_id` (string): Stream identifier returned by `stream_tables()`
@@ -125,14 +116,15 @@ Stops an active database stream.
 
 **Example:**
 ```uddin
-db_stop_stream("stream_123")
+import "database"
+database.stop_stream("stream_123")
 ```
 
 ### Query and Execution Functions
 
-#### `db_query(connection, sql, ...params)`
+#### `database.query(connection, sql, ...params)`
 
-Executes a SELECT query and returns results.
+Executes a SELECT query and returns results. Requires `import "database"`.
 
 **Parameters:**
 - `connection` (object): Database connection object
@@ -143,8 +135,9 @@ Executes a SELECT query and returns results.
 
 **Example:**
 ```uddin
+import "database"
 // PostgreSQL uses $1, $2, etc. for placeholders
-result = db_query(conn, "SELECT * FROM users WHERE age > $1", 18)
+result = database.query(conn, "SELECT * FROM users WHERE age > $1", 18)
 if (result.success) then:
     print("Found " + str(result.count) + " users")
     for (row in result.data):
@@ -153,12 +146,12 @@ if (result.success) then:
 end
 
 // MySQL uses ? for placeholders
-result = db_query(mysql_conn, "SELECT * FROM users WHERE age > ?", 18)
+result = database.query(mysql_conn, "SELECT * FROM users WHERE age > ?", 18)
 ```
 
-#### `db_execute(connection, sql, ...params)`
+#### `database.exec(connection, sql, ...params)`
 
-Executes an INSERT, UPDATE, or DELETE statement.
+Executes an INSERT, UPDATE, or DELETE statement. Requires `import "database"`.
 
 **Parameters:**
 - `connection` (object): Database connection object
@@ -169,20 +162,21 @@ Executes an INSERT, UPDATE, or DELETE statement.
 
 **Example:**
 ```uddin
+import "database"
 // PostgreSQL example
-result = db_execute(conn, "INSERT INTO users (name, email) VALUES ($1, $2)", "John", "john@example.com")
+result = database.exec(conn, "INSERT INTO users (name, email) VALUES ($1, $2)", "John", "john@example.com")
 if (result.success) then:
     print("Inserted " + str(result.rows_affected) + " rows")
     print("Last insert ID: " + str(result.last_insert_id))
 end
 
 // MySQL example
-result = db_execute(mysql_conn, "INSERT INTO users (name, email) VALUES (?, ?)", "John", "john@example.com")
+result = database.exec(mysql_conn, "INSERT INTO users (name, email) VALUES (?, ?)", "John", "john@example.com")
 ```
 
-#### `db_execute_batch(connection, operations)`
+#### `database.execute_batch(connection, operations)`
 
-Executes multiple statements in a batch for improved performance.
+Executes multiple statements in a batch for improved performance. Requires `import "database"`.
 
 **Parameters:**
 - `connection` (object): Database connection object
@@ -192,12 +186,13 @@ Executes multiple statements in a batch for improved performance.
 
 **Example:**
 ```uddin
+import "database"
 // PostgreSQL example
 operations = [
     {"query": "INSERT INTO users (name, email) VALUES ($1, $2)", "args": ["John", "john@example.com"]},
     {"query": "INSERT INTO users (name, email) VALUES ($1, $2)", "args": ["Jane", "jane@example.com"]}
 ]
-result = db_execute_batch(conn, operations)
+result = database.execute_batch(conn, operations)
 if (result.success) then:
     print("Total affected rows: " + str(result.total_affected))
 end
@@ -207,14 +202,14 @@ operations = [
     {"query": "INSERT INTO users (name, email) VALUES (?, ?)", "args": ["John", "john@example.com"]},
     {"query": "INSERT INTO users (name, email) VALUES (?, ?)", "args": ["Jane", "jane@example.com"]}
 ]
-result = db_execute_batch(mysql_conn, operations)
+result = database.execute_batch(mysql_conn, operations)
 ```
 
 ### Asynchronous Operations
 
-#### `db_execute_async(connection, sql, ...params)`
+#### `database.execute_async(connection, sql, ...params)`
 
-Executes a statement asynchronously.
+Executes a statement asynchronously. Requires `import "database"`.
 
 **Parameters:**
 - `connection` (object): Database connection object
@@ -223,33 +218,33 @@ Executes a statement asynchronously.
 
 **Returns:** Object with `success` (boolean), `operation_id` (string), and `error` (string)
 
-#### `db_get_async_status(operation_id)`
+#### `database.get_async_status(operation_id)`
 
-Gets the status of an asynchronous operation.
+Gets the status of an asynchronous operation. Requires `import "database"`.
 
 **Parameters:**
 - `operation_id` (string): Operation identifier
 
 **Returns:** Object with status information
 
-#### `db_list_async_operations()`
+#### `database.list_async()`
 
-Lists all active asynchronous operations.
+Lists all active asynchronous operations. Requires `import "database"`.
 
 **Returns:** Array of operation objects
 
-#### `db_cancel_async(operation_id)`
+#### `database.cancel_async(operation_id)`
 
-Cancels an asynchronous operation.
+Cancels an asynchronous operation. Requires `import "database"`.
 
 **Parameters:**
 - `operation_id` (string): Operation identifier
 
 **Returns:** Boolean indicating success
 
-#### `db_cleanup_async_operations()`
+#### `database.cleanup_async()`
 
-Cleans up completed asynchronous operations.
+Cleans up completed asynchronous operations. Requires `import "database"`.
 
 **Returns:** Integer indicating number of operations cleaned up
 
@@ -325,7 +320,8 @@ The callback function receives a JSON payload with the following structure:
 
 **Example:**
 ```uddin
-conn = db_connect("postgres", "localhost", 5432, "mydb", "postgres", "password").conn
+import "database"
+conn = database.connect("postgres://postgres:password@localhost/mydb")
 stream_tables(conn, "users", onUserChange)
 ```
 
@@ -361,7 +357,8 @@ GRANT SELECT ON mydb.* TO 'streaming_user'@'%';
 
 **Example:**
 ```uddin
-conn = db_connect("mysql", "localhost", 3306, "mydb", "streaming_user", "password").conn
+import "database"
+conn = database.connect("mysql://streaming_user:password@tcp(localhost:3306)/mydb")
 stream_tables(conn, "users", onUserChange)
 ```
 
@@ -506,9 +503,11 @@ GRANT SELECT ON mydb.* TO 'streaming_user'@'%';
 ### 1. Error Handling
 
 ```uddin
+import "json"
+
 fun safe_callback(channel, payload):
     try:
-        data = json_parse(payload)
+        data = json.parse(payload)
         process_change(data)
     catch (error):
         log_error("Callback error: " + str(error))
@@ -520,19 +519,22 @@ end
 ### 2. Connection Management
 
 ```uddin
+import "database"
+import "datetime"
+
 fun setup_resilient_connection(config):
     max_retries = 3
     for (i in range(max_retries)):
-        conn_result = db_connect(
-            config.driver, config.host, config.port,
-            config.database, config.username, config.password
+        conn_result = database.connect(
+            config.driver + "://" + config.username + ":" + config.password +
+            "@" + config.host + "/" + config.database
         )
 
         if (conn_result.success) then:
             return conn_result.conn
         end
 
-        sleep(5000)  // Wait before retry
+        datetime.sleep(5000)  // Wait before retry
     end
 
     return null
@@ -542,18 +544,21 @@ end
 ### 3. Performance Optimization
 
 ```uddin
+import "json"
+import "datetime"
+
 fun optimized_callback(channel, payload):
     // Use static variables for batching
     static batch = []
-    static last_process = time_now()
+    static last_process = datetime.time_now()
 
-    append(batch, json_parse(payload))
+    append(batch, json.parse(payload))
 
     // Process batch every second or when it reaches 100 items
-    if (len(batch) >= 100 or (time_now() - last_process) >= 1000) then:
+    if (len(batch) >= 100 or (datetime.time_now() - last_process) >= 1000) then:
         process_batch(batch)
         batch = []
-        last_process = time_now()
+        last_process = datetime.time_now()
     end
 end
 ```
@@ -561,15 +566,18 @@ end
 ### 4. Monitoring and Logging
 
 ```uddin
+import "json"
+import "datetime"
+
 fun monitored_callback(channel, payload):
-    start_time = time_now()
+    start_time = datetime.time_now()
 
     try:
-        data = json_parse(payload)
+        data = json.parse(payload)
         process_change(data)
 
         // Log successful processing
-        processing_time = time_now() - start_time
+        processing_time = datetime.time_now() - start_time
         if (processing_time > 1000) then:  // Log slow operations
             print("⚠️ Slow callback processing: " + str(processing_time) + "ms")
         end
@@ -585,10 +593,13 @@ end
 ### Basic Single Table Streaming
 
 ```uddin
-conn = db_connect("postgres", "localhost", 5432, "mydb", "user", "pass").conn
+import "database"
+import "json"
+
+conn = database.connect("postgres://user:pass@localhost/mydb")
 
 fun onUserChange(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
     print("User " + data.operation + ": " + data.data.name)
 end
 
@@ -598,10 +609,13 @@ stream_tables(conn, "users", onUserChange)
 ### Multi-Table E-commerce Monitoring
 
 ```uddin
-conn = db_connect("postgres", "localhost", 5432, "ecommerce", "user", "pass").conn
+import "database"
+import "json"
+
+conn = database.connect("postgres://user:pass@localhost/ecommerce")
 
 fun onEcommerceChange(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
 
     if (data.table == "orders" and data.operation == "INSERT") then:
         print("🛒 New order: $" + str(data.data.total))
@@ -616,14 +630,17 @@ stream_tables(conn, ["orders", "inventory", "users"], onEcommerceChange)
 ### Real-time Analytics Dashboard
 
 ```uddin
-conn = db_connect("postgres", "localhost", 5432, "analytics", "user", "pass").conn
+import "database"
+import "json"
+
+conn = database.connect("postgres://user:pass@localhost/analytics")
 
 // Global counters
 static daily_orders = 0
 static daily_revenue = 0.0
 
 fun onAnalyticsUpdate(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
 
     if (data.table == "orders" and data.operation == "INSERT") then:
         daily_orders = daily_orders + 1

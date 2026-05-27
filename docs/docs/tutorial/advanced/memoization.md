@@ -29,15 +29,16 @@ memo fun function_name(parameters):
 end
 ```
 
-## Performance Measurement with time_now()
+## Performance Measurement with datetime.time_now()
 
-To measure the performance benefits of memoization, Uddin-Lang provides the `time_now()` built-in function that returns the current timestamp in milliseconds since Unix epoch. This allows you to accurately measure execution time:
+To measure the performance benefits of memoization, Uddin-Lang provides the `datetime.time_now()` function (from the `datetime` stdlib module) that returns the current timestamp in milliseconds since Unix epoch. This allows you to accurately measure execution time:
 
 ```uddin
+import "datetime"
 // Basic performance measurement
-start_time = time_now()
+start_time = datetime.time_now()
 // ... your code here ...
-end_time = time_now()
+end_time = datetime.time_now()
 execution_time = end_time - start_time
 print("Execution time: " + str(execution_time) + "ms")
 ```
@@ -49,6 +50,7 @@ print("Execution time: " + str(execution_time) + "ms")
 One of the classic examples where memoization provides dramatic performance improvements:
 
 ```uddin
+import "datetime"
 // Function without memoization (exponential time complexity)
 fun fibonacci_slow(n):
     if (n <= 1) then:
@@ -70,13 +72,13 @@ fun test_fibonacci_performance():
     print("Testing Fibonacci performance...")
     
     // Test with n=35
-    start_time = time_now()
+    start_time = datetime.time_now()
     result1 = fibonacci_slow(35)
-    slow_time = time_now() - start_time
+    slow_time = datetime.time_now() - start_time
     
-    start_time = time_now()
+    start_time = datetime.time_now()
     result2 = fibonacci_fast(35)
-    fast_time = time_now() - start_time
+    fast_time = datetime.time_now() - start_time
     
     print("Without memoization: " + str(slow_time) + "ms")
     print("With memoization: " + str(fast_time) + "ms")
@@ -192,9 +194,9 @@ end
 
 ## Built-in Functions for Performance Testing
 
-### time_now() Function
+### datetime.time_now() Function
 
-The `time_now()` function is a built-in function specifically designed for performance measurement:
+The `datetime.time_now()` function (from `import "datetime"`) is designed for performance measurement:
 
 - **Returns**: Current Unix timestamp in milliseconds (integer)
 - **Parameters**: None
@@ -202,11 +204,12 @@ The `time_now()` function is a built-in function specifically designed for perfo
 - **Precision**: Millisecond-level accuracy
 
 ```uddin
+import "datetime"
 // Example: Measuring function execution time
 fun measure_execution_time(func_name, func_call):
-    start = time_now()
+    start = datetime.time_now()
     result = func_call
-    duration = time_now() - start
+    duration = datetime.time_now() - start
     print(func_name + " took " + str(duration) + "ms")
     return result
 end
@@ -263,6 +266,7 @@ Avoid memoization when:
 ## Example: Complete Performance Test
 
 ```uddin
+import "datetime"
 // Complete example demonstrating memoization benefits
 fun memoization_demo():
     print("=== Memoization Performance Demo ===")
@@ -270,13 +274,13 @@ fun memoization_demo():
     // Test 1: Fibonacci sequence
     print("\nTest 1: Fibonacci(35)")
     
-    start_time = time_now()
+    start_time = datetime.time_now()
     result1 = fibonacci_slow(35)
-    time1 = time_now() - start_time
+    time1 = datetime.time_now() - start_time
     
-    start_time = time_now()
+    start_time = datetime.time_now()
     result2 = fibonacci_fast(35)
-    time2 = time_now() - start_time
+    time2 = datetime.time_now() - start_time
     
     print("Without memoization: " + str(time1) + "ms")
     print("With memoization: " + str(time2) + "ms")
@@ -287,11 +291,11 @@ fun memoization_demo():
     
     numbers = [97, 101, 103, 107, 109, 97, 101, 103]  // Some repeated
     
-    start_time = time_now()
+    start_time = datetime.time_now()
     for (num in numbers):
         factors = calculate_prime_factors(num)
     end
-    total_time = time_now() - start_time
+    total_time = datetime.time_now() - start_time
     
     print("Total time for " + str(len(numbers)) + " calculations: " + str(total_time) + "ms")
     print("Average time per calculation: " + str(round(total_time / len(numbers), 2)) + "ms")
@@ -307,7 +311,7 @@ Memoization is a powerful optimization technique that can provide significant pe
 
 **Key takeaways:**
 - Use memoization for expensive, pure functions
-- Use `time_now()` function to measure and verify performance improvements
+- Use `datetime.time_now()` (from `import "datetime"`) to measure and verify performance improvements
 - Be aware of memory usage implications
 - Test thoroughly before using in production
 - Consider the experimental nature and potential limitations

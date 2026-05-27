@@ -257,9 +257,10 @@ return true        // Return true
 ```uddin
 // ✓ Good: Functions with single, well-defined purposes
 fun validate_email_format(email):
+    import "regex"
     // Only responsible for email format validation
     email_pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-    return is_regex_match(email_pattern, trim(email))
+    return regex.is_match(email_pattern, trim(email))
 end
 
 fun format_phone_number(phone):
@@ -303,10 +304,11 @@ end
 
 // ✗ Avoid: Functions that do too many things
 fun process_user_signup_bad(user_data):
+    import "regex"
     // This function violates SRP by doing too many things:
 
     // 1. Validates email format
-    if (not is_regex_match("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", user_data.email)) then:
+    if (not regex.is_match("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", user_data.email)) then:
         return {"error": "Invalid email"}
     end
 
@@ -361,7 +363,7 @@ fun create_user_account(name, email, password, preferences = {}):
         "email": lower(trim(email)),
         "password_hash": hash_password(password),
         "preferences": preferences,
-        "created_at": date_now(),
+        "created_at": datetime.now(),
         "status": "active"
     }
 end
@@ -398,7 +400,7 @@ fun create_advanced_user_account(user_config):
             "notifications": config.notifications,
             "theme": config.theme
         },
-        "created_at": date_now(),
+        "created_at": datetime.now(),
         "status": "active"
     }
 end
@@ -419,7 +421,7 @@ fun find_user_by_id(user_id):
         return {
             "success": true,
             "user": user,
-            "timestamp": date_now()
+            "timestamp": datetime.now()
         }
     else:
         return {
@@ -542,7 +544,7 @@ fun process_payment_transaction(payment_data):
                 "amount": payment_data.amount,
                 "currency": ("currency" in payment_data and payment_data.currency != null) ? payment_data.currency : "USD",
                 "customer_id": payment_data.customer_id,
-                "timestamp": date_now(),
+                "timestamp": datetime.now(),
                 "status": "completed"
             }
 
@@ -572,7 +574,7 @@ fun process_payment_transaction(payment_data):
                 "customer_id": payment_data.customer_id,
                 "currency": payment_data.currency
             },
-            "timestamp": date_now()
+            "timestamp": datetime.now()
         }
 
         log_error("Payment processing error", error_context)
@@ -588,9 +590,10 @@ end
 
 // ✓ Good: Retry logic with exponential backoff
 fun fetch_data_with_smart_retry(url, max_retries = 3):
+    import "http"
     for (attempt in range(1, max_retries + 1)):
         try:
-            response = http_get(url)
+            response = http.get(url)
 
             // Success - return immediately
             return {
@@ -644,6 +647,7 @@ end
 ```uddin
 // ✓ Good: Comprehensive input validation with proper error messages
 fun validate_user_registration(user_data):
+    import "regex"
     errors = []
 
     // Validate name
@@ -651,7 +655,7 @@ fun validate_user_registration(user_data):
         append(errors, "Full name is required")
     else if (len(user_data.name) > 100) then:
         append(errors, "Name cannot exceed 100 characters")
-    else if (not is_regex_match("^[a-zA-Z\s\-\.]+$", user_data.name)) then:
+    else if (not regex.is_match("^[a-zA-Z\s\-\.]+$", user_data.name)) then:
         append(errors, "Name contains invalid characters")
     end
 
@@ -701,19 +705,19 @@ fun validate_password_strength(password):
         append(errors, "Password must be at least 8 characters long")
     end
 
-    if (not is_regex_match(".*[A-Z].*", password)) then:
+    if (not regex.is_match(".*[A-Z].*", password)) then:
         append(errors, "Password must contain at least one uppercase letter")
     end
 
-    if (not is_regex_match(".*[a-z].*", password)) then:
+    if (not regex.is_match(".*[a-z].*", password)) then:
         append(errors, "Password must contain at least one lowercase letter")
     end
 
-    if (not is_regex_match(".*[0-9].*", password)) then:
+    if (not regex.is_match(".*[0-9].*", password)) then:
         append(errors, "Password must contain at least one number")
     end
 
-    if (not is_regex_match(".*[!@#$%^&*()_+\-=\[\]{};':"\|,.<>\?].*", password)) then:
+    if (not regex.is_match(".*[!@#$%^&*()_+\-=\[\]{};':"\|,.<>\?].*", password)) then:
         append(errors, "Password must contain at least one special character")
     end
 
@@ -731,6 +735,7 @@ end
 
 // ✓ Good: Input sanitization to prevent security issues
 fun sanitize_user_input(input, input_type = "general"):
+    import "regex"
     if (typeof(input) != "string") then:
         return ""
     end
@@ -936,16 +941,17 @@ end
 ```uddin
 // ✓ Good: Efficient file processing with streaming approach
 fun process_large_file_efficiently(filename, chunk_size = 1000):
-    if (not file_exists(filename)) then:
+    import "fs"
+    if (not fs.exists(filename)) then:
         panic("File not found: " + filename)
     end
 
-    file_size = file_size(filename)
+    file_size = fs.size(filename)
     print("Processing file: " + filename + " (" + str(file_size) + " bytes)")
 
     try:
         // Read and process file in chunks to avoid memory issues
-        file_content = read_file(filename)
+        file_content = fs.read(filename)
         lines = split(file_content, "
 ")
 
@@ -986,13 +992,14 @@ end
 
 // ✓ Good: Cache implementation with memory management
 fun create_smart_cache(max_size = 1000, ttl_seconds = 3600):
+    import "datetime"
     cache_data = {}
     cache_timestamps = {}
     cache_access_count = {}
 
     return {
         "get": fun(key):
-            current_time = date_now()
+            current_time = datetime.now()
 
             // Check if key exists and is not expired
             if (cache_data[key] and
@@ -1025,7 +1032,7 @@ fun create_smart_cache(max_size = 1000, ttl_seconds = 3600):
         end,
 
         "set": fun(key, value):
-            current_time = date_now()
+            current_time = datetime.now()
 
             // Evict old entries if cache is full
             if (len(cache_data) >= max_size and not cache_data[key]) then:
@@ -1102,7 +1109,7 @@ fun expensive_computation(input):
     result = {
         "input": input,
         "output": pow(input, 3) + (input * 2),
-        "computed_at": date_now()
+        "computed_at": datetime.now()
     }
 
     // Store in cache for future use
@@ -1207,7 +1214,7 @@ return ""
 
     // Remove potentially dangerous characters
     sanitized = input
-    sanitized = regex_replace(sanitized, `[<>"'&]`, "")
+    sanitized = regex.replace(sanitized, `[<>"'&]`, "")
 
     // Trim whitespace
     sanitized = trim(sanitized)
@@ -1410,7 +1417,7 @@ SESSION_TIMEOUT = 3600000  // 1 hour in milliseconds
 
 // Helper functions
 function generateUserId() {
-    return "user_" + str(date_now()) + "_" + str(floor(random() * 10000))
+    return "user_" + str(datetime.now()) + "_" + str(floor(random() * 10000))
 }
 
 function hashPassword(password) {
@@ -1606,7 +1613,7 @@ function testUserRegistrationFlow() {
         "password": "testpass123"
     }
 
-    register_response = http_post("/api/register", registration_data)
+    register_response = http.post("/api/register", registration_data)
     assert(register_response.status == 201, "Registration should return 201")
     assert(register_response.data.user.email == registration_data.email, "Should return user data")
 
@@ -1618,7 +1625,7 @@ function testUserRegistrationFlow() {
         "password": registration_data.password
     }
 
-    login_response = http_post("/api/login", login_data)
+    login_response = http.post("/api/login", login_data)
     assert(login_response.status == 200, "Login should succeed")
     assert(login_response.data.token != null, "Should return auth token")
 
@@ -1626,13 +1633,13 @@ function testUserRegistrationFlow() {
 
     // Step 3: Test authenticated endpoint
     headers = {"Authorization": "Bearer " + auth_token}
-    profile_response = http_get("/api/profile", headers)
+    profile_response = http.get("/api/profile", headers)
 
     assert(profile_response.status == 200, "Profile access should succeed")
     assert(profile_response.data.user.id == user_id, "Should return correct user profile")
 
     // Step 4: Cleanup - delete test user
-    delete_response = http_delete("/api/users/" + user_id, headers)
+    delete_response = http.delete("/api/users/" + user_id, headers)
     assert(delete_response.status == 200, "User deletion should succeed")
 
     print("✓ User registration flow test passed")
@@ -1648,12 +1655,12 @@ function testErrorHandling() {
         "password": "123"  // Too short password
     }
 
-    response = http_post("/api/register", invalid_data)
+    response = http.post("/api/register", invalid_data)
     assert(response.status == 400, "Should return 400 for invalid data")
     assert(len(response.data.errors) > 0, "Should return validation errors")
 
     // Test non-existent endpoint
-    not_found_response = http_get("/api/nonexistent")
+    not_found_response = http.get("/api/nonexistent")
     assert(not_found_response.status == 404, "Should return 404 for non-existent endpoint")
 
     print("✓ Error handling test passed")
@@ -1678,7 +1685,7 @@ function validateAndSanitizeInput(input, type) {
         case "email":
             // Email validation
             email_pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-            if (!regex_match(sanitized, email_pattern)) {
+            if (!regex.match(sanitized, email_pattern)) {
                 return {"valid": false, "error": "Invalid email format"}
             }
             break
@@ -1686,8 +1693,8 @@ function validateAndSanitizeInput(input, type) {
         case "phone":
             // Phone number validation
             phone_pattern = "^[+]?[1-9]?[0-9]{7,15}$"
-            clean_phone = regex_replace(sanitized, "[^0-9+]", "")
-            if (!regex_match(clean_phone, phone_pattern)) {
+            clean_phone = regex.replace(sanitized, "[^0-9+]", "")
+            if (!regex.match(clean_phone, phone_pattern)) {
                 return {"valid": false, "error": "Invalid phone number format"}
             }
             sanitized = clean_phone
@@ -1699,7 +1706,7 @@ function validateAndSanitizeInput(input, type) {
                 return {"valid": false, "error": "Name must be 2-50 characters"}
             }
             // Remove potentially dangerous characters
-            sanitized = regex_replace(sanitized, "[<>\"'&{}]", "")
+            sanitized = regex.replace(sanitized, "[<>\"'&{}]", "")
             break
 
         case "password":
@@ -1707,13 +1714,13 @@ function validateAndSanitizeInput(input, type) {
             if (len(sanitized) < 8) {
                 return {"valid": false, "error": "Password must be at least 8 characters"}
             }
-            if (!regex_match(sanitized, ".*[A-Z].*")) {
+            if (!regex.match(sanitized, ".*[A-Z].*")) {
                 return {"valid": false, "error": "Password must contain uppercase letter"}
             }
-            if (!regex_match(sanitized, ".*[a-z].*")) {
+            if (!regex.match(sanitized, ".*[a-z].*")) {
                 return {"valid": false, "error": "Password must contain lowercase letter"}
             }
-            if (!regex_match(sanitized, ".*[0-9].*")) {
+            if (!regex.match(sanitized, ".*[0-9].*")) {
                 return {"valid": false, "error": "Password must contain number"}
             }
             break
@@ -1732,10 +1739,10 @@ function safeDbQuery(query_template, parameters) {
 
         // Escape special characters
         if (typeof(param) == "string") {
-            escaped_param = regex_replace(param, "['\"\\]", "\\$0")
-            safe_query = regex_replace(safe_query, "\\$" + str(i + 1), "'" + escaped_param + "'")
+            escaped_param = regex.replace(param, "['\"\\]", "\\$0")
+            safe_query = regex.replace(safe_query, "\\$" + str(i + 1), "'" + escaped_param + "'")
         } else {
-            safe_query = regex_replace(safe_query, "\\$" + str(i + 1), str(param))
+            safe_query = regex.replace(safe_query, "\\$" + str(i + 1), str(param))
         }
     }
 
@@ -1760,8 +1767,8 @@ safe_query = safeDbQuery("SELECT * FROM users WHERE id = $1 AND name = $2", [use
 function createSecureSession(user_id) {
     session_data = {
         "user_id": user_id,
-        "created_at": date_now(),
-        "expires_at": date_now() + SESSION_TIMEOUT,
+        "created_at": datetime.now(),
+        "expires_at": datetime.now() + SESSION_TIMEOUT,
         "ip_address": getCurrentIP(),
         "user_agent": getCurrentUserAgent()
     }
@@ -1786,7 +1793,7 @@ function validateSession(session_token) {
     }
 
     // Check if session has expired
-    if (date_now() > session_data.expires_at) {
+    if (datetime.now() > session_data.expires_at) {
         deleteSession(session_token)
         return {"valid": false, "error": "Session expired"}
     }
@@ -1811,7 +1818,7 @@ function generateSecureToken() {
         token = token + chars[random_index]
     }
 
-    return token + "_" + str(date_now())
+    return token + "_" + str(datetime.now())
 }
 ```
 
@@ -1958,7 +1965,7 @@ fun implement_advanced_task_scheduler():
             task_with_priority = {
                 "task": task,
                 "priority": priority,
-                "created_at": date_now()
+                "created_at": datetime.now()
             }
 
             if (priority > 0) then:
@@ -1997,7 +2004,7 @@ fun implement_advanced_task_scheduler():
                 result = {
                     "task_id": task.id,
                     "result": task.execute(),
-                    "executed_at": date_now(),
+                    "executed_at": datetime.now(),
                     "status": "completed"
                 }
 
@@ -2008,14 +2015,14 @@ fun implement_advanced_task_scheduler():
                 stack_push(undo_stack, {
                     "task": task,
                     "result": result,
-                    "timestamp": date_now()
+                    "timestamp": datetime.now()
                 })                return result
 
             catch (error):
                 error_result = {
                     "task_id": task.id,
                     "error": str(error),
-                    "executed_at": date_now(),
+                    "executed_at": datetime.now(),
                     "status": "failed"
                 }
 
@@ -2093,7 +2100,7 @@ fun create_robust_data_pipeline():
                 if (typeof(data.name) != "string" or len(trim(data.name)) == 0) then:
                     append(errors, "Name must be a non-empty string")
                 end
-                if (not is_regex_match(data.email, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) then:
+                if (not regex.is_match(data.email, "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$")) then:
                     append(errors, "Invalid email format")
                 end
 
@@ -2140,7 +2147,7 @@ fun create_robust_data_pipeline():
                 enhanced = data
                 enhanced.email_domain = split(data.email, "@")[1]
                 enhanced.name_length = len(data.name)
-                enhanced.processed_at = date_now()
+                enhanced.processed_at = datetime.now()
 
                 // Calculate age category
                 if (data.age) then:
@@ -2241,7 +2248,7 @@ fun create_robust_data_pipeline():
                     "success": true,
                     "data": current_data,
                     "context": processing_context,
-                    "processed_at": date_now()
+                    "processed_at": datetime.now()
                 }
 
             catch (error):
@@ -2346,8 +2353,8 @@ fun create_enterprise_user_service():
                 end
 
                 // Create user with enhanced security
-                user_id = "uid_" + str(date_now()) + "_" + str(len(user_data.email))
-                salt = "salt_" + str(date_now())
+                user_id = "uid_" + str(datetime.now()) + "_" + str(len(user_data.email))
+                salt = "salt_" + str(datetime.now())
                 password_hash = "hash_" + user_data.password + "_" + salt
 
                 user = {
@@ -2356,7 +2363,7 @@ fun create_enterprise_user_service():
                     "name": user_data.name,
                     "password_hash": password_hash,
                     "salt": salt,
-                    "created_at": date_now(),
+                    "created_at": datetime.now(),
                     "last_login": null,
                     "status": "active",
                     "email_verified": false,
@@ -2373,7 +2380,7 @@ fun create_enterprise_user_service():
                     "security": {
                         "failed_login_attempts": 0,
                         "locked_until": null,
-                        "password_changed_at": date_now(),
+                        "password_changed_at": datetime.now(),
                         "two_factor_enabled": false
                     }
                 }
@@ -2401,7 +2408,7 @@ fun create_enterprise_user_service():
                 log_error("User creation failed", {
                     "error": str(error),
                     "email": user_data.email,
-                    "timestamp": date_now()
+                    "timestamp": datetime.now()
                 })
 
                 return {
@@ -2443,7 +2450,7 @@ fun create_enterprise_user_service():
                 end
 
                 // Check if account is locked
-                if (user.security.locked_until and date_now() < user.security.locked_until) then:
+                if (user.security.locked_until and datetime.now() < user.security.locked_until) then:
                     return {
                         "success": false,
                         "error": "Account temporarily locked due to too many failed attempts",
@@ -2459,7 +2466,7 @@ fun create_enterprise_user_service():
 
                     // Lock account if too many failures
                     if (user.security.failed_login_attempts >= config.max_login_attempts) then:
-                        user.security.locked_until = date_now() + config.lockout_duration
+                        user.security.locked_until = datetime.now() + config.lockout_duration
                     end
 
                     log_security_event("LOGIN_FAILED", {
@@ -2482,14 +2489,14 @@ fun create_enterprise_user_service():
                 // Reset failed attempts
                 user.security.failed_login_attempts = 0
                 user.security.locked_until = null
-                user.last_login = date_now()
+                user.last_login = datetime.now()
 
                 // Generate session
                 session_data = {
                     "user_id": user.id,
                     "email": user.email,
-                    "created_at": date_now(),
-                    "expires_at": date_now() + config.session_timeout,
+                    "created_at": datetime.now(),
+                    "expires_at": datetime.now() + config.session_timeout,
                     "ip_address": get_current_ip(),
                     "user_agent": get_current_user_agent(),
                     "additional_context": additional_context
@@ -2545,7 +2552,7 @@ fun create_enterprise_user_service():
             end
 
             // Check expiration
-            if (date_now() > session.expires_at) then:
+            if (datetime.now() > session.expires_at) then:
                 // Remove expired session by rebuilding session store
                 new_session_store = {}
                 for (token in session_store):
@@ -2558,7 +2565,7 @@ fun create_enterprise_user_service():
             end
 
             // Optional: Extend session on activity
-            session.expires_at = date_now() + config.session_timeout
+            session.expires_at = datetime.now() + config.session_timeout
 
             return {
                 "valid": true,
@@ -2655,13 +2662,13 @@ end
 
 // Helper functions for the service
 fun generate_secure_id():
-    timestamp = str(date_now())
+    timestamp = str(datetime.now())
     random_part = generate_random_string(16)
     return "uid_" + timestamp + "_" + random_part
 end
 
 fun generate_secure_session_token(user_id):
-    timestamp = str(date_now())
+    timestamp = str(datetime.now())
     random_part = generate_random_string(32)
     return "sess_" + str(user_id) + "_" + timestamp + "_" + random_part
 end
@@ -2687,14 +2694,16 @@ fun find_user_by_id(user_id):
 end
 
 fun log_security_event(event_type, details):
+    import "datetime"
+    import "json"
     log_entry = {
         "event_type": event_type,
-        "timestamp": date_now(),
+        "timestamp": datetime.now(),
         "details": details
     }
 
     // In production, send to security monitoring system
-    print("[SECURITY] " + event_type + ": " + json_stringify(details))
+    print("[SECURITY] " + event_type + ": " + json.stringify(details))
 end
 
 fun get_current_ip():

@@ -522,9 +522,11 @@ catch (error):
 end
 
 // Try-catch with specific error handling
+import "fs"
+import "json"
 try:
-    data = read_file("config.txt")
-    config = json_parse(data)
+    data = fs.read("config.txt")
+    config = json.parse(data)
     return config
 catch (fileError):
     print("Could not read file: " + str(fileError))
@@ -645,31 +647,35 @@ joined = join(["Hello", "World"], ", ")     // "Hello, World"
 ## Regular Expressions
 
 ```uddin
+import "regex"
+
 // Pattern matching
 pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
 email = "user@example.com"
-isValid = regex_match(pattern, email)  // true
+isValid = regex.match(pattern, email)  // true
 
 // Find matches
 text = "Call me at 123-456-7890 or 987-654-3210"
 phonePattern = "\\d{3}-\\d{3}-\\d{4}"
-firstPhone = regex_find(phonePattern, text)      // "123-456-7890"
-allPhones = regex_find_all(phonePattern, text)   // ["123-456-7890", "987-654-3210"]
+firstPhone = regex.find(phonePattern, text)      // "123-456-7890"
+allPhones = regex.find_all(phonePattern, text)   // ["123-456-7890", "987-654-3210"]
 
 // Replace with regex
-masked = regex_replace(phonePattern, text, "XXX-XXX-XXXX")
+masked = regex.replace(phonePattern, text, "XXX-XXX-XXXX")
 // "Call me at XXX-XXX-XXXX or XXX-XXX-XXXX"
 
 // Split with regex
-parts = regex_split("[,;\\s]+", "apple, banana; orange cherry")
+parts = regex.split("[,;\\s]+", "apple, banana; orange cherry")
 // ["apple", "banana", "orange", "cherry"]
 ```
 
 ## File I/O
 
 ```uddin
+import "fs"
+
 // Reading files
-content = read_file("data.txt")
+content = fs.read("data.txt")
 if (content != null) then:
     print("File content: " + content)
 else:
@@ -678,61 +684,61 @@ end
 
 // Writing files
 data = "Hello, World!"
-write_file("output.txt", data)
-
-// Appending to files
-append_file("log.txt", "New log entry\n")
+fs.write("output.txt", data)
 
 // File operations
-if (file_exists("config.txt")) then:
-    size = file_size("config.txt")
+if (fs.exists("config.txt")) then:
+    size = fs.size("config.txt")
     print("Config file size: " + str(size) + " bytes")
 end
 
 // Delete file
-file_delete("temp.txt")
+fs.delete("temp.txt")
 ```
 
 ## Date and Time
 
 ```uddin
+import "datetime"
+
 // Current date and time
-now = date_now()
+now = datetime.now()
 print("Current time: " + str(now))
 
 // Format dates
-formatted = date_format(now, "2006-01-02 15:04:05")
+formatted = datetime.format(now, "2006-01-02 15:04:05")
 print("Formatted: " + formatted)
 
 // Parse dates
 dateStr = "2023-12-25 10:30:00"
-parsedDate = date_parse(dateStr, "2006-01-02 15:04:05")
+parsedDate = datetime.parse(dateStr, "2006-01-02 15:04:05")
 
 // Date arithmetic
-future = date_add(now, "24h")      // Add 24 hours
-past = date_subtract(now, "1h30m") // Subtract 1 hour 30 minutes
+future = datetime.add(now, "24h")      // Add 24 hours
+past = datetime.subtract(now, "1h30m") // Subtract 1 hour 30 minutes
 
 // Date comparison
-diff = date_diff(future, now)      // "24h0m0s"
+diff = datetime.diff(future, now)      // "24h0m0s"
 ```
 
 ## HTTP and Networking
 
 ```uddin
+import "http"
+
 // HTTP GET request
-response = http_get("https://api.example.com/data")
+response = http.get("https://api.example.com/data")
 if (response != null) then:
     print("Response: " + response)
 end
 
 // HTTP POST request
 data = "{\"name\": \"John\", \"age\": 30}"
-response = http_post("https://api.example.com/users", data)
+response = http.post("https://api.example.com/users", data)
 
 // Other HTTP methods
-response = http_put(url, data)
-response = http_delete(url)
-response = http_patch(url, data)
+response = http.put(url, data)
+response = http.delete(url)
 ```
 
 ## Syntax Rules

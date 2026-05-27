@@ -360,21 +360,23 @@ end
 
 ## File I/O Functions
 
-Simple and efficient file operations for reading and writing data.
+Simple and efficient file operations for reading and writing data. Requires `import "fs"`.
 
 ```uddin
+import "fs"
+
 fun main():
     // Read entire file content
-    content = read_file("data.txt")
+    content = fs.read("data.txt")
     print(content)
 
     // Write data to file
     data = "Hello, World!\nThis is Uddin-Lang!"
-    write_file("output.txt", data)
+    fs.write("output.txt", data)
 
     // Check if file exists
-    if (file_exists("config.json")) then:
-        config = read_file("config.json")
+    if (fs.exists("config.json")) then:
+        config = fs.read("config.json")
         print("Config loaded: " + config)
     else:
         print("Config file not found")
@@ -424,9 +426,11 @@ Implement proper error handling for operations that might fail:
 
 ```uddin
 fun main():
+    import "fs"
+    import "json"
     try:
-        content = read_file("important_data.txt")
-        data = json_parse(content)
+        content = fs.read("important_data.txt")
+        data = json.parse(content)
         print("Data loaded successfully")
     catch (error):
         print("Error loading data: " + str(error))
@@ -492,8 +496,9 @@ fun to_lowercase(line):
 end
 
 fun process_text_file(filename):
+    import "fs"
     try:
-        content = read_file(filename)
+        content = fs.read(filename)
         lines = split(content, "\n")
 
         // Filter out empty lines
@@ -505,7 +510,7 @@ fun process_text_file(filename):
         result = join(sorted_lines, "\n")
 
         output_filename = "processed_" + filename
-        write_file(output_filename, result)
+        fs.write(output_filename, result)
         print("File processed successfully: " + output_filename)
 
         return true

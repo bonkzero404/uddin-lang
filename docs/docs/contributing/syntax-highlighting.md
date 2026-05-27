@@ -49,10 +49,10 @@ Syntax highlighting Uddin-Lang mendukung:
 - String functions: `print`, `println`, `len`, `str`, `split`, `join`, `trim`, dll.
 - Math functions: `abs`, `ceil`, `floor`, `round`, `sqrt`, `pow`, dll.
 - Array functions: `append`, `filter`, `map`, `reduce`, `sort`, dll.
-- Date/Time functions: `date_now`, `date_format`, `date_parse`, dll.
-- Regex functions: `regex_match`, `regex_find`, `is_regex_match`, dll.
-- Network functions: `http_get`, `http_post`, `tcp_connect`, dll.
-- File functions: `read_file`, `write_file`, `file_exists`, dll.
+- Date/Time functions: `datetime.now`, `datetime.format`, `datetime.parse`, dll. (requires `import "datetime"`)
+- Regex functions: `regex.match`, `regex.find`, `regex.is_match`, dll. (requires `import "regex"`)
+- Network functions: `http.get`, `http.post`, `http.tcp_connect`, dll. (requires `import "http"`)
+- File functions: `fs.read`, `fs.write`, `fs.exists`, dll. (requires `import "fs"`)
 
 ### Lainnya
 - **Strings**: Teks dalam tanda kutip ganda
