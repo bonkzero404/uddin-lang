@@ -1,7 +1,9 @@
+import "database"
+
 print("=== UDDIN-LANG Batch Processing Demo ===")
 
 
-conn_result = db_connect("postgres", "localhost", 5432, "postgres", "postgres", "password")
+conn_result = database.connect("postgres", "localhost", 5432, "postgres", "postgres", "password")
 
 if (conn_result["success"] == false) then:
     print("Failed to connect to database: " + conn_result["error"])
@@ -12,12 +14,12 @@ print("Connected to PostgreSQL database successfully!")
 conn = conn_result["conn"]
 
 
-create_result = db_execute(conn, "DROP TABLE IF EXISTS batch_test")
-create_result = db_execute(conn, "CREATE TABLE batch_test (id SERIAL PRIMARY KEY, name VARCHAR(100), age INTEGER, email VARCHAR(100))")
+create_result = database.exec(conn, "DROP TABLE IF EXISTS batch_test")
+create_result = database.exec(conn, "CREATE TABLE batch_test (id SERIAL PRIMARY KEY, name VARCHAR(100), age INTEGER, email VARCHAR(100))")
 
 if (create_result["success"] == false) then:
     print("Failed to create table: " + create_result["error"])
-    db_close(conn)
+    database.close(conn)
     exit(1)
 end
 
@@ -49,7 +51,7 @@ batch_operations = [
 ]
 
 
-batch_result = db_execute_batch(conn, batch_operations)
+batch_result = database.execute_batch(conn, batch_operations)
 
 if (batch_result["success"] == true) then:
     print("Batch insert successful!")
@@ -60,7 +62,7 @@ else:
 end
 
 
-query_result = db_query(conn, "SELECT COUNT(*) as count FROM batch_test")
+query_result = database.query(conn, "SELECT COUNT(*) as count FROM batch_test")
 if (query_result["success"] == true) then:
     rows = query_result["data"]
     if (len(rows) > 0) then:
@@ -87,13 +89,13 @@ update_operations = [
 ]
 
 
-update_result = db_execute_batch(conn, update_operations)
+update_result = database.execute_batch(conn, update_operations)
 
 if (update_result["success"] == true) then:
     print("Batch update successful!")
     print("Total operations: " + str(update_result["operations_count"]))
     print("Total rows affected: " + str(update_result["total_rows_affected"]))
-    
+
     results = update_result["results"]
     i = 0
     while (i < len(results)):
@@ -123,7 +125,7 @@ mixed_operations = [
 ]
 
 
-mixed_result = db_execute_batch(conn, mixed_operations)
+mixed_result = database.execute_batch(conn, mixed_operations)
 
 if (mixed_result["success"] == true) then:
     print("Mixed batch operations successful!")
@@ -134,7 +136,7 @@ else:
 end
 
 
-final_query = db_query(conn, "SELECT COUNT(*) as count FROM batch_test")
+final_query = database.query(conn, "SELECT COUNT(*) as count FROM batch_test")
 if (final_query["success"] == true) then:
     rows = final_query["data"]
     if (len(rows) > 0) then:
@@ -157,7 +159,7 @@ invalid_operations = [
 ]
 
 
-invalid_result = db_execute_batch(conn, invalid_operations)
+invalid_result = database.execute_batch(conn, invalid_operations)
 
 if (invalid_result["success"] == false) then:
     print("Error handling working correctly - batch rolled back")
@@ -167,7 +169,7 @@ else:
 end
 
 
-rollback_query = db_query(conn, "SELECT COUNT(*) as count FROM batch_test")
+rollback_query = database.query(conn, "SELECT COUNT(*) as count FROM batch_test")
 if (rollback_query["success"] == true) then:
     rows = rollback_query["data"]
     if (len(rows) > 0) then:
@@ -177,13 +179,13 @@ if (rollback_query["success"] == true) then:
 end
 
 
-cleanup_result = db_execute(conn, "DROP TABLE batch_test")
+cleanup_result = database.exec(conn, "DROP TABLE batch_test")
 if (cleanup_result["success"] == true) then:
     print("\nTest table cleaned up successfully!")
 end
 
 
-close_result = db_close(conn)
+close_result = database.close(conn)
 if (close_result["success"] == true) then:
     print("Database connection closed successfully!")
 end

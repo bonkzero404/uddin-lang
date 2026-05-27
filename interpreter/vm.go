@@ -17,19 +17,16 @@ type vmFunction struct {
 }
 
 func (f *vmFunction) call(interp *interpreter, pos Position, args []Value) Value {
-	newBase := 0
-	if len(f.vm.frames) > 0 {
-		top := f.vm.frames[len(f.vm.frames)-1]
-		newBase = top.baseReg + int(top.fn.MaxRegs) + 1
-	}
-	f.vm.pushFrame(f.fn, newBase, 0, f.captured)
-	newRegs := f.vm.regs[newBase:]
+	// Always use a fresh VM so this call is goroutine-safe and doesn't
+	// interfere with any caller's frame/register state.
+	child := NewVM(f.vm.interp)
+	child.pushFrame(f.fn, 0, 0, f.captured)
 	for i, arg := range args {
 		if i < int(f.fn.MaxRegs) {
-			newRegs[i] = arg
+			child.regs[i] = arg
 		}
 	}
-	return f.vm.run()
+	return child.run()
 }
 
 func (f *vmFunction) name() string { return f.fn.Name }
@@ -326,6 +323,28 @@ func (vm *VM) run() (result Value) {
 				panic(runtimeError(Position{}, "VM: SET_INDEX on non-container"))
 			}
 
+		case OP_ITER_NORMALIZE:
+			switch v := regs[instr.Src1].(type) {
+			case *[]Value:
+				regs[instr.Dst] = v // already a slice pointer, pass through
+			case []Value:
+				regs[instr.Dst] = &v
+			case map[string]Value:
+				keys := make([]Value, 0, len(v))
+				for k := range v {
+					keys = append(keys, k)
+				}
+				regs[instr.Dst] = &keys
+			case string:
+				chars := make([]Value, 0, len([]rune(v)))
+				for _, r := range v {
+					chars = append(chars, string(r))
+				}
+				regs[instr.Dst] = &chars
+			default:
+				regs[instr.Dst] = regs[instr.Src1]
+			}
+
 		case OP_LOAD_UPVAL:
 			if int(instr.Src1) < len(frame.captured) {
 				regs[instr.Dst] = frame.captured[instr.Src1]
@@ -339,15 +358,24 @@ func (vm *VM) run() (result Value) {
 		case OP_MAKE_FUNC:
 			subIdx := int(instr.Src1)<<8 | int(instr.Src2)
 			subfn := frame.fn.SubFunctions[subIdx]
-			captured := make([]Value, len(subfn.Upvalues))
-			for i, upv := range subfn.Upvalues {
-				if upv.IsLocal {
-					// Upvalue is a local register in the current (enclosing) frame.
-					captured[i] = regs[upv.Index]
-				} else {
-					// Upvalue is itself an upvalue of the current frame.
-					if int(upv.Index) < len(frame.captured) {
-						captured[i] = frame.captured[upv.Index]
+			var captured []Value
+			if subfn == frame.fn {
+				// Self-reference: the function creates a closure of itself.
+				// Re-use the current frame's captured values so recursive calls
+				// through this self-reference still see the correct upvalues.
+				captured = make([]Value, len(frame.captured))
+				copy(captured, frame.captured)
+			} else {
+				captured = make([]Value, len(subfn.Upvalues))
+				for i, upv := range subfn.Upvalues {
+					if upv.IsLocal {
+						// Upvalue is a local register in the current (enclosing) frame.
+						captured[i] = regs[upv.Index]
+					} else {
+						// Upvalue is itself an upvalue of the current frame.
+						if int(upv.Index) < len(frame.captured) {
+							captured[i] = frame.captured[upv.Index]
+						}
 					}
 				}
 			}
@@ -394,7 +422,11 @@ func (vm *VM) run() (result Value) {
 				args[i] = regs[argBase+i]
 			}
 			entry := vmBuiltinTable[builtinIdx]
-			regs[instr.Dst] = entry.fn(vm.interp, Position{}, args)
+			callResult := entry.fn(vm.interp, Position{}, args)
+			// Refresh regs: a VM callback (e.g. map/filter/reduce calling a lambda)
+			// may have grown vm.regs via pushFrame, invalidating our slice pointer.
+			regs = vm.regs[frame.baseReg:]
+			regs[instr.Dst] = callResult
 
 		case OP_CALL_BUILTIN_DIRECT:
 			directIdx := int(instr.Src1)<<8 | int(instr.Src2)
@@ -409,7 +441,10 @@ func (vm *VM) run() (result Value) {
 			if directIdx >= len(vmBuiltinDirectTable) || vmBuiltinDirectTable[directIdx] == nil {
 				panic(runtimeError(Position{}, "OP_CALL_BUILTIN_DIRECT: no direct impl for index %d", directIdx))
 			}
-			regs[instr.Dst] = vmBuiltinDirectTable[directIdx](vm.interp, Position{}, args)
+			callResult := vmBuiltinDirectTable[directIdx](vm.interp, Position{}, args)
+			// Same refresh: direct builtins can also call back into the VM.
+			regs = vm.regs[frame.baseReg:]
+			regs[instr.Dst] = callResult
 
 		case OP_TRY:
 			// Src1 = errReg; Dst:Src2 = signed jump offset to catch block.

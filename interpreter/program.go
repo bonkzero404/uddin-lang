@@ -21,18 +21,31 @@ func showErrorSource(source []byte, pos Position, dividerLen int) string {
 	errMessage := ""
 	errMessage += divider(dividerLen) + "\n"
 
-	// Split source into lines and get the line with the error
+	// Split source into lines and get the line with the error.
+	// Guard against zero/out-of-range positions (e.g. errors with no source location).
 	lines := bytes.Split(source, []byte{'\n'})
-	errorLine := string(lines[pos.Line-1])
+	lineIdx := pos.Line - 1
+	if lineIdx < 0 || lineIdx >= len(lines) {
+		return errMessage
+	}
+	errorLine := string(lines[lineIdx])
+
+	colIdx := pos.Column - 1
+	if colIdx < 0 {
+		colIdx = 0
+	}
+	if colIdx > len(errorLine) {
+		colIdx = len(errorLine)
+	}
 
 	// Count tabs to adjust the pointer position correctly
-	numTabs := strings.Count(errorLine[:pos.Column-1], "\t")
+	numTabs := strings.Count(errorLine[:colIdx], "\t")
 
 	// Replace tabs with spaces for consistent display
 	errMessage += strings.Replace(errorLine, "\t", "    ", -1) + "\n"
 
 	// Add pointer (^) at the error position
-	errMessage += strings.Repeat(" ", pos.Column-1) + strings.Repeat("   ", numTabs) + "^" + "\n"
+	errMessage += strings.Repeat(" ", colIdx) + strings.Repeat("   ", numTabs) + "^" + "\n"
 	errMessage += divider(dividerLen) + "\n"
 
 	return errMessage

@@ -1,6 +1,8 @@
 // HTTP Client Demo - Demonstration of HTTP client features in Uddin-Lang
 // File: 17_http_client_demo.din
 
+import "http"
+
 fun main():
     print("=== HTTP Client Demo ===")
     print("")
@@ -27,11 +29,11 @@ fun main():
 
     print("=== HTTP Client Demo Complete ===")
     print("Available features:")
-    print("- http_get(url)")
-    print("- http_post(url, data, headers?)")
-    print("- http_put(url, data, headers?)")
-    print("- http_delete(url)")
-    print("- http_request(method, url, data?, headers?)")
+    print("- http.get(url)")
+    print("- http.post(url, data, headers?)")
+    print("- http.put(url, data, headers?)")
+    print("- http.delete(url)")
+    print("- http.request(method, url, data?, headers?)")
 end
 
 // Demo HTTP GET request
@@ -39,7 +41,7 @@ fun try_get_request():
     print("  Making GET request to JSONPlaceholder...")
 
     // GET request ke API publik
-    response = http_get("https://jsonplaceholder.typicode.com/posts/1")
+    response = http.get("https://jsonplaceholder.typicode.com/posts/1")
 
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])
@@ -66,7 +68,7 @@ fun try_post_request():
     }
 
     // POST request
-    response = http_post("https://jsonplaceholder.typicode.com/posts", post_data)
+    response = http.post("https://jsonplaceholder.typicode.com/posts", post_data)
 
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])
@@ -92,7 +94,7 @@ fun try_put_request():
     }
 
     // PUT request to update resource
-    response = http_put("https://jsonplaceholder.typicode.com/posts/1", put_data)
+    response = http.put("https://jsonplaceholder.typicode.com/posts/1", put_data)
 
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])
@@ -109,7 +111,7 @@ end
 fun try_delete_request():
     print("  Making DELETE request...")
 
-    response = http_delete("https://jsonplaceholder.typicode.com/posts/1")
+    response = http.delete("https://jsonplaceholder.typicode.com/posts/1")
 
     print("  Status: " + str(response["status"]))
     print("  Status Text: " + response["status_text"])

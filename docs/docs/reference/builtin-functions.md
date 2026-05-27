@@ -217,61 +217,6 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 |----------|-------------|---------|-------------|
 | `print(values...)` | Print to console | `print("Hello", "World")` | void |
 | `input(prompt)` | Read user input | `name = input("Enter name: ")` | string |
-| `read_file(path)` | Read file content | `content = read_file("data.txt")` | string |
-| `write_file(path, content)` | Write to file | `write_file("out.txt", "Hello")` | bool |
-
-## File System Operations
-
-### File Operations
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `read_file(path)` | Read file content | `content = read_file("data.txt")` | string |
-| `write_file(path, content)` | Write content to file | `write_file("output.txt", "Hello World")` | bool |
-| `file_exists(path)` | Check if file/directory exists | `file_exists("config.json")` → `true` | bool |
-| `file_size(path)` | Get file size in bytes | `file_size("data.txt")` → `1024` | int |
-| `file_modified(path)` | Get last modification time | `file_modified("log.txt")` → `"2024-01-15"` | string |
-| `file_permissions(path)` | Get file permissions | `file_permissions("script.sh")` → `"755"` | string |
-| `copy_file(source, destination)` | Copy file to new location | `copy_file("src.txt", "backup.txt")` | bool |
-| `move_file(source, destination)` | Move/rename file | `move_file("old.txt", "new.txt")` | bool |
-| `delete_file(path)` | Delete file | `delete_file("temp.txt")` | bool |
-
-### Directory Operations
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `mkdir(path)` | Create directory | `mkdir("logs")` | bool |
-| `rmdir(path)` | Remove empty directory | `rmdir("temp")` | bool |
-| `list_dir(path)` | List directory contents | `list_dir(".")` → `["file1", "dir1"]` | array |
-| `getcwd()` | Get current working directory | `getcwd()` → `"/home/user/project"` | string |
-| `chdir(path)` | Change working directory | `chdir("/tmp")` | bool |
-
-### Path Operations
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `path_join(parts...)` | Join path components | `path_join("home", "user", "file.txt")` | string |
-| `path_dirname(path)` | Get directory name | `path_dirname("/home/user/file.txt")` | string |
-| `path_basename(path)` | Get base filename | `path_basename("/home/user/file.txt")` | string |
-| `path_ext(path)` | Get file extension | `path_ext("document.pdf")` → `".pdf"` | string |
-
-## JSON Functions
-
-| Function | Description | Example |
-|----------|-------------|----------|
-| `json_parse(json_string)` | Parse JSON string to Uddin-Lang value | `data = json_parse('{"name": "John", "age": 30}')` |
-| `json_stringify(value)` | Convert Uddin-Lang value to JSON string | `json_str = json_stringify({name: "Alice", age: 25})` |
-
-### JSON Type Mapping
-
-| JSON Type | Uddin-Lang Type | Example |
-|-----------|-----------------|----------|
-| `object` | `map[string]Value` | `{"key": "value"}` → `{key: "value"}` |
-| `array` | `[]Value` | `[1, 2, 3]` → `[1, 2, 3]` |
-| `string` | `string` | `"hello"` → `"hello"` |
-| `number` | `int` or `float64` | `42` → `42`, `3.14` → `3.14` |
-| `boolean` | `bool` | `true` → `true` |
-| `null` | `null` | `null` → `null` |
 
 ## XML Processing
 
@@ -290,55 +235,6 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 | Text Content | String value | `<title>Book</title>` → `{"title": "Book"}` |
 | Multiple Elements | Array | `<item>1</item><item>2</item>` → `[1, 2]` |
 
-## Networking Functions
-
-### HTTP Client Functions
-
-| Function | Description | Example |
-|----------|-------------|----------|
-| `http_get(url)` | HTTP GET request | `http_get("https://api.example.com/data")` |
-| `http_post(url, data)` | HTTP POST request | `http_post("https://api.example.com", data)` |
-| `http_put(url, data)` | HTTP PUT request | `http_put("https://api.example.com/1", data)` |
-| `http_delete(url)` | HTTP DELETE request | `http_delete("https://api.example.com/1")` |
-| `http_request(method, url, data)` | Generic HTTP request | `http_request("PATCH", url, data)` |
-
-### HTTP Server Functions
-
-| Function | Description | Example |
-|----------|-------------|----------|
-| `http_server_start(port, server_id?)` | Start HTTP server on specified port | `server = http_server_start(8080, "main")` |
-| `http_server_stop(server_id?)` | Stop HTTP server | `http_server_stop("main")` |
-| `http_server_route(method, path, handler, server_id?)` | Register route handler | `http_server_route("GET", "/api", my_handler, "main")` |
-| `http_response(res, status, headers?, body?)` | Send HTTP response | `http_response(res, 200, {"Content-Type": "text/plain"}, "Hello")` |
-
-### Network Utilities
-
-| Function | Description | Example |
-|----------|-------------|----------|
-| `net_resolve(hostname)` | Resolve hostname to IP addresses | `net_resolve("google.com")` → `["142.250.191.14"]` |
-| `net_ping(host, port, timeout)` | Test connectivity to host:port | `net_ping("google.com", 80, 3000)` → `{"success": true, "time": 45}` |
-
-### TCP Functions
-
-| Function | Description | Example |
-|----------|-------------|----------|
-| `tcp_connect(host, port)` | Create TCP client connection | `conn = tcp_connect("localhost", 8080)` |
-| `tcp_listen(port)` | Create TCP server listener | `listener = tcp_listen(8080)` |
-| `tcp_accept(listener)` | Accept incoming TCP connection | `client = tcp_accept(listener)` |
-| `tcp_read(connection)` | Read data from TCP connection | `data = tcp_read(conn)` |
-| `tcp_write(connection, data)` | Write data to TCP connection | `tcp_write(conn, "Hello Server!")` |
-| `tcp_close(connection)` | Close TCP connection/listener | `tcp_close(conn)` |
-
-### UDP Functions
-
-| Function | Description | Example |
-|----------|-------------|----------|
-| `udp_connect(host, port)` | Create UDP client connection | `conn = udp_connect("localhost", 8080)` |
-| `udp_listen(port)` | Create UDP server listener | `listener = udp_listen(8080)` |
-| `udp_read(connection)` | Read data from UDP connection | `data = udp_read(conn)` |
-| `udp_write(connection, data)` | Write data to UDP connection | `udp_write(conn, "Hello Server!")` |
-| `udp_close(connection)` | Close UDP connection/listener | `udp_close(conn)` |
-
 ## Utility Functions
 
 | Function | Description | Example | Return Type |
@@ -350,281 +246,6 @@ Uddin-Lang provides a comprehensive set of built-in functions to help you build 
 | `radians(degrees)` | Convert degrees to radians | `radians(180)` → `3.14159` | float |
 | `is_nan(x)` | Check if value is NaN | `is_nan(0.0/0.0)` → `true` | bool |
 | `is_infinite(x)` | Check if value is infinite | `is_infinite(1.0/0.0)` → `true` | bool |
-| `date_now()` | Current timestamp | `date_now()` → `"2025-06-26T14:30:00Z"` | string |
-| `time_now()` | Current Unix timestamp in milliseconds | `time_now()` → `1640995445123` | int |
-| `date_format(date, fmt)` | Format date | `date_format(date_now(), "YYYY-MM-DD")` | string |
-| `date_parse(date_str, layout)` | Parse date string | `date_parse("2023-01-01", "2006-01-02")` | int |
-| `date_format_new(timestamp, layout)` | Format timestamp with layout | `date_format_new(time_now(), "2006-01-02 15:04:05")` | string |
-| `date_add(timestamp, duration)` | Add duration to timestamp | `date_add(time_now(), "24h")` | int |
-| `date_subtract(timestamp, duration)` | Subtract duration from timestamp | `date_subtract(time_now(), "1h30m")` | int |
-| `date_diff(timestamp1, timestamp2)` | Calculate difference between timestamps | `date_diff(time2, time1)` | int |
-| `date_between(timestamp, start, end)` | Check if timestamp is between two dates | `date_between(now, start, end)` | bool |
-| `date_compare(timestamp1, timestamp2)` | Compare two timestamps | `date_compare(time1, time2)` | int |
-
-## Regular Expression Functions
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `is_regex_match(pattern, text)` | Check if text matches regex pattern | `is_regex_match("^[0-9]+$", "123")` → `true` | bool |
-| `regex_match(text, pattern)` | Check if text matches regex pattern | `regex_match("hello@example.com", email_pattern)` | bool |
-| `regex_find(text, pattern)` | Find first match of regex pattern | `regex_find("Phone: 123-456-7890", "[0-9-]+")` → `"123-456-7890"` | string |
-| `regex_find_all(text, pattern)` | Find all matches of regex pattern | `regex_find_all(text, email_pattern)` | array |
-| `regex_replace(text, pattern, replacement)` | Replace regex matches | `regex_replace("hello world", "world", "universe")` | string |
-| `regex_split(text, pattern)` | Split text by regex pattern | `regex_split("a,b;c", "[,;]")` → `["a", "b", "c"]` | array |
-
-## Database Functions
-
-### Connection Management
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `db_connect(driver, host, port, database, username, password)` | Connect to database | `db_connect("postgres", "localhost", 5432, "mydb", "user", "pass")` | object |
-| `db_connect_with_pool(driver, host, port, database, username, password, pool_config)` | Connect with connection pool | `db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "pass", pool_config)` | object |
-| `db_configure_pool(connection, max_open, max_idle, max_lifetime)` | Configure connection pool | `db_configure_pool(conn, 20, 10, 3600)` | object |
-| `db_close(connection)` | Close database connection | `db_close(conn)` | void |
-
-### Query Operations
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `db_query(connection, query, params...)` | Execute SELECT query | `db_query(conn, "SELECT * FROM users WHERE id = $1", 123)` | object |
-| `db_execute(connection, query, params...)` | Execute INSERT/UPDATE/DELETE | `db_execute(conn, "INSERT INTO users (name) VALUES ($1)", "John")` | object |
-| `db_execute_batch(connection, operations)` | Execute multiple operations in batch | `db_execute_batch(conn, operations_array)` | object |
-
-### Asynchronous Operations
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `db_execute_async(connection, query, params...)` | Execute query asynchronously | `db_execute_async(conn, "SELECT * FROM large_table")` | object |
-| `db_get_async_status(operation_id)` | Get status of async operation | `db_get_async_status("op_123")` | object |
-| `db_cancel_async(operation_id)` | Cancel async operation | `db_cancel_async("op_123")` | object |
-| `db_list_async_operations()` | List all async operations | `db_list_async_operations()` | object |
-| `db_cleanup_async_operations()` | Clean up completed async operations | `db_cleanup_async_operations()` | object |
-
-### Real-time Streaming
-
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `stream_tables(connection, table_name, callback)` | Start real-time streaming for single table | `stream_tables(conn, "users", on_change)` | void |
-| `stream_tables(connection, table_names, callback)` | Start real-time streaming for multiple tables | `stream_tables(conn, ["users", "orders"], on_multi_change)` | void |
-| `stream_tables(connection, table_name, callback, columns)` | Stream with column selection | `stream_tables(conn, "users", on_change, ["id", "name"])` | void |
-| `db_stop_stream(streamer_id)` | Stop real-time streaming | `db_stop_stream("streamer_123")` | void |
-
-### Database Function Examples
-
-#### Basic Connection and Query
-```uddin
-// Connect to PostgreSQL
-conn_result = db_connect("postgres", "localhost", 5432, "mydb", "user", "password")
-
-if (conn_result.success) then:
-    conn = conn_result.conn
-    print("Connected to " + conn_result.driver + " database: " + conn_result.database)
-    
-    // Execute a query (PostgreSQL uses $1, $2, etc.)
-    result = db_query(conn, "SELECT * FROM users WHERE age > $1", 18)
-    
-    if (result.success) then:
-        print("Found " + str(result.count) + " users")
-        print("Columns: " + str(result.columns))
-        for (row in result.data):
-            print("User: " + row.name + ", Age: " + str(row.age))
-        end
-    end
-    
-    // Execute an insert (returns rows_affected and last_insert_id)
-    insert_result = db_execute(conn, "INSERT INTO users (name, email) VALUES ($1, $2)", "John", "john@example.com")
-    if (insert_result.success) then:
-        print("Inserted " + str(insert_result.rows_affected) + " rows")
-        print("Last insert ID: " + str(insert_result.last_insert_id))
-    end
-    
-    // Close connection
-    close_result = db_close(conn)
-    if (close_result.success) then:
-        print(close_result.message)
-    end
-end
-
-// Connect to MySQL (uses ? placeholders)
-mysql_result = db_connect("mysql", "localhost", 3306, "mydb", "user", "password")
-if (mysql_result.success) then:
-    mysql_conn = mysql_result.conn
-    
-    // MySQL uses ? for placeholders
-    result = db_query(mysql_conn, "SELECT * FROM users WHERE age > ?", 18)
-    if (result.success) then:
-        print("Found " + str(result.count) + " MySQL users")
-    end
-    
-    db_close(mysql_conn)
-end
-```
-
-#### Batch Operations
-```uddin
-// Prepare batch operations (PostgreSQL example)
-operations = [
-    {"query": "INSERT INTO users (name, email) VALUES ($1, $2)", "args": ["Alice", "alice@example.com"]},
-    {"query": "INSERT INTO users (name, email) VALUES ($1, $2)", "args": ["Bob", "bob@example.com"]},
-    {"query": "UPDATE users SET active = $1 WHERE name = $2", "args": [true, "Alice"]}
-]
-
-// Execute batch
-batch_result = db_execute_batch(conn, operations)
-
-if (batch_result.success) then:
-    print("Batch executed successfully")
-    print("Total affected rows: " + str(batch_result.total_affected))
-    
-    // Check individual results
-    for (i = 0; i < len(batch_result.results); i++):
-        result = batch_result.results[i]
-        if (result.success) then:
-            print("Operation " + str(i) + ": " + str(result.rows_affected) + " rows affected")
-        else:
-            print("Operation " + str(i) + " failed: " + result.error)
-        end
-    end
-else:
-    print("Batch failed: " + batch_result.error)
-end
-
-// MySQL batch example
-mysql_operations = [
-    {"query": "INSERT INTO users (name, email) VALUES (?, ?)", "args": ["Charlie", "charlie@example.com"]},
-    {"query": "INSERT INTO users (name, email) VALUES (?, ?)", "args": ["Diana", "diana@example.com"]}
-]
-
-mysql_batch_result = db_execute_batch(mysql_conn, mysql_operations)
-if (mysql_batch_result.success) then:
-    print("MySQL batch completed: " + str(mysql_batch_result.total_affected) + " total rows")
-end
-```
-
-#### Connection Pooling
-```uddin
-// Create pool configuration
-pool_config = {
-    "max_open": 10,
-    "max_idle": 5,
-    "max_lifetime": 3600
-}
-
-// Connect with connection pool
-pool_conn = db_connect_with_pool("postgres", "localhost", 5432, "mydb", "user", "password", pool_config)
-
-if (pool_conn.success) then:
-    conn = pool_conn.conn
-    print("Pool created with max_open: " + str(pool_conn.max_open))
-    print("Pool max_idle: " + str(pool_conn.max_idle))
-    
-    // Configure pool settings (can be changed after creation)
-    config_result = db_configure_pool(conn, 20, 10, 7200) // max_open, max_idle, max_lifetime
-    if (config_result.success) then:
-        print("Pool configuration updated")
-    end
-    
-    // Use the pooled connection
-    result = db_query(conn, "SELECT COUNT(*) as total FROM users")
-    if (result.success) then:
-        print("Total users: " + str(result.data[0].total))
-    end
-    
-    close_result = db_close(conn)
-    if (close_result.success) then:
-        print(close_result.message)
-    end
-end
-```
-
-#### Asynchronous Operations
-```uddin
-// Execute query asynchronously
-async_result = db_execute_async(conn, "SELECT * FROM large_table")
-
-if (async_result.success) then:
-    operation_id = async_result.operation_id
-    print("Started async operation: " + operation_id)
-    
-    // Check status periodically
-    while (true):
-        status = db_get_async_status(operation_id)
-        
-        if (status.status == "completed") then:
-            print("Query completed with " + str(status.result.count) + " rows")
-            print("Affected rows: " + str(status.result.rows_affected))
-            print("Last insert ID: " + str(status.result.last_insert_id))
-            break
-        elif (status.status == "failed") then:
-            print("Query failed: " + status.error)
-            break
-        end
-        
-        print("Operation still running...")
-        // Wait before checking again
-        sleep(1000)
-    end
-    
-    // List all operations
-    operations = db_list_async_operations()
-    print("Total async operations: " + str(operations.count))
-    
-    // Cleanup completed operations
-    cleanup_result = db_cleanup_async_operations()
-    if (cleanup_result.success) then:
-        print("Cleaned up " + str(cleanup_result.cleaned_count) + " operations")
-    end
-else:
-    print("Failed to start async operation: " + async_result.error)
-end
-```
-
-#### Real-time Streaming
-```uddin
-// Define callback function
-function on_data_change(event):
-    print("Stream ID: " + event.stream_id)
-    print("Table: " + event.table)
-    print("Operation: " + event.operation) // INSERT, UPDATE, DELETE
-    print("Timestamp: " + event.timestamp)
-    
-    if (event.operation == "INSERT") then:
-        print("New data: " + str(event.new_data))
-    else if (event.operation == "UPDATE") then:
-        print("Old data: " + str(event.old_data))
-        print("New data: " + str(event.new_data))
-    else if (event.operation == "DELETE") then:
-        print("Deleted data: " + str(event.old_data))
-    end
-end
-
-// Define error callback
-function on_stream_error(error):
-    print("Stream error: " + error.message)
-    print("Error code: " + str(error.code))
-end
-
-// Start streaming with callbacks
-stream_result = stream_tables(conn, ["users", "orders"], on_data_change, on_stream_error)
-
-if (stream_result.success) then:
-    stream_id = stream_result.stream_id
-    print("Streaming started with ID: " + stream_id)
-    print("Monitoring tables: " + str(stream_result.tables))
-    
-    // Let it run for some time
-    sleep(30000) // 30 seconds
-    
-    // Stop streaming
-    stop_result = db_stop_stream(stream_id)
-    if (stop_result.success) then:
-        print("Streaming stopped: " + stop_result.message)
-    end
-else:
-    print("Failed to start streaming: " + stream_result.error)
-end
-```
 
 ## System Functions
 
@@ -632,26 +253,24 @@ end
 |----------|-------------|---------|-------------|
 | `exit(code)` | Exit program with code | `exit(0)` | void |
 
-## Rule Engine - Fact Database Functions
+---
 
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `fact_assert(type, id, data)` | Add fact to database | `fact_assert("person", "john", {"age": 30})` | bool |
-| `fact_retract(type, id, data)` | Remove fact from database | `fact_retract("person", "john", {})` | bool |
-| `fact_query(type, id, pattern)` | Query facts with pattern | `fact_query("person", null, {"city": "Jakarta"})` | array |
-| `fact_exists(type, id, pattern)` | Check if fact exists | `fact_exists("person", "john", {})` | bool |
-| `fact_count(type, id, pattern)` | Count matching facts | `fact_count("person", null, {})` | int |
-| `fact_clear()` | Clear all facts | `fact_clear()` | void |
-| `fact_get_all()` | Get all facts | `fact_get_all()` | array |
+## Functions Moved to Stdlib Modules
 
-## Complex Event Processing Functions
+The following function groups have been moved to opt-in namespaced stdlib modules. They are no longer available as flat globals. Use `import "module"` to access them.
 
-| Function | Description | Example | Return Type |
-|----------|-------------|---------|-------------|
-| `event_emit(type, data)` | Emit event | `event_emit("user_login", {"user": "john"})` | void |
-| `event_define_pattern(name, pattern)` | Define event pattern | `event_define_pattern("login_pattern", pattern)` | bool |
-| `event_get_window(name)` | Get event window | `event_get_window("recent_events")` | array |
-| `event_clear()` | Clear all events | `event_clear()` | void |
-| `event_count(type)` | Count events by type | `event_count("user_login")` | int |
+| Module | Import | Functions |
+|--------|--------|-----------|
+| `fs` | `import "fs"` | `fs.read`, `fs.write`, `fs.exists`, `fs.size`, `fs.modified`, `fs.permissions`, `fs.copy`, `fs.move`, `fs.delete`, `fs.mkdir`, `fs.rmdir`, `fs.list_dir`, `fs.path_join`, `fs.path_dirname`, `fs.path_basename`, `fs.path_ext`, `fs.getcwd`, `fs.chdir` |
+| `json` | `import "json"` | `json.parse`, `json.stringify` |
+| `http` | `import "http"` | `http.get`, `http.post`, `http.put`, `http.delete`, `http.request`, `http.server_start`, `http.server_stop`, `http.server_route`, `http.response`, `http.tcp_connect`, `http.tcp_listen`, `http.tcp_accept`, `http.tcp_read`, `http.tcp_write`, `http.tcp_close`, `http.udp_connect`, `http.udp_listen`, `http.udp_read`, `http.udp_write`, `http.udp_close`, `http.net_resolve`, `http.net_ping` |
+| `datetime` | `import "datetime"` | `datetime.now`, `datetime.time_now`, `datetime.sleep`, `datetime.format`, `datetime.parse`, `datetime.format_enhanced`, `datetime.add`, `datetime.subtract`, `datetime.diff`, `datetime.between`, `datetime.compare` |
+| `regex` | `import "regex"` | `regex.is_match`, `regex.match`, `regex.find`, `regex.find_all`, `regex.replace`, `regex.split` |
+| `database` | `import "database"` | `database.connect`, `database.query`, `database.exec`, `database.close`, `database.begin`, `database.commit`, `database.rollback`, `database.prepare`, `database.ping`, `database.stats` |
+| `fact` | `import "fact"` | `fact.assert`, `fact.retract`, `fact.query`, `fact.exists`, `fact.count`, `fact.clear`, `fact.get_all` |
+| `cdc` | `import "cdc"` | `cdc.emit`, `cdc.define_pattern`, `cdc.get_window`, `cdc.clear`, `cdc.count` |
+| `waf` | `import "waf"` | `waf.header`, `waf.query`, `waf.body_contains`, `waf.cidr_match`, `waf.path_match`, `waf.score`, `waf.action`, `waf.detected`, `waf.detected_any`, `waf.detected_list`, `waf.return` |
+
+See the [Module System Reference](./modules) for full documentation, function signatures, and examples.
 
 For more detailed examples and advanced usage, see the [Tutorial](../tutorial/basics/introduction.md) section.

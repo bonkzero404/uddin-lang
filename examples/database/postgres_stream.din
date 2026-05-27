@@ -2,8 +2,11 @@
 // Example of streaming with different column selection for each PostgreSQL table
 // using trigger-based streaming with new table-column mapping format
 
+import "database"
+import "json"
+
 // Connect to PostgreSQL database
-connResult = db_connect("postgres", "localhost", 5432, "testdb", "postgres", "password")
+connResult = database.connect("postgres", "localhost", 5432, "testdb", "postgres", "password")
 
 if (not connResult.success) then:
     print("❌ Failed to connect to PostgreSQL database: " + connResult.error)
@@ -56,9 +59,9 @@ CREATE TABLE IF NOT EXISTS tasks (
 )`
 
 // Execute table creation
-db_execute(postgres_conn, employeesTableSQL)
-db_execute(postgres_conn, projectsTableSQL)
-db_execute(postgres_conn, tasksTableSQL)
+database.exec(postgres_conn, employeesTableSQL)
+database.exec(postgres_conn, projectsTableSQL)
+database.exec(postgres_conn, tasksTableSQL)
 
 print("✅ Tables created successfully!")
 print("")
@@ -86,7 +89,7 @@ fun on_data_change(channel, payload):
     print("Channel: " + channel)
 
     // Parse JSON payload
-    data = json_parse(payload)
+    data = json.parse(payload)
 
     print("Table: " + data.table)
     print("Operation: " + data.operation)
@@ -109,4 +112,4 @@ fun on_data_change(channel, payload):
 end
 
 // Start streaming with per-table column selection configuration
-stream_tables(postgres_conn, ["employees", "projects", "tasks"], on_data_change, table_columns)
+database.postgres(postgres_conn, ["employees", "projects", "tasks"], on_data_change, table_columns)

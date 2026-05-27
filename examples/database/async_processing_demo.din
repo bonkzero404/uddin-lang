@@ -1,8 +1,11 @@
 // Async Processing Demo
 // This demo shows how to use asynchronous database operations
 
+import "database"
+import "datetime"
+
 // Connect to database
-conn_result = db_connect("postgres", "localhost", 5432, "postgres", "postgres", "password")
+conn_result = database.connect("postgres", "localhost", 5432, "postgres", "postgres", "password")
 if (conn_result["success"] == false) then:
     print("Failed to connect to database: " + conn_result["error"])
     exit(1)
@@ -14,7 +17,7 @@ print("Connected to database successfully")
 // Create test table
 create_table_sql = "CREATE TABLE IF NOT EXISTS async_test (id SERIAL PRIMARY KEY, name VARCHAR(100), value INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)"
 
-create_result = db_execute(conn, create_table_sql)
+create_result = database.exec(conn, create_table_sql)
 if (create_result["success"] == false) then:
     print("Failed to create table: " + create_result["error"])
     exit(1)
@@ -22,12 +25,12 @@ end
 print("Test table created successfully")
 
 // Clear existing data
-clear_result = db_execute(conn, "DELETE FROM async_test")
+clear_result = database.exec(conn, "DELETE FROM async_test")
 print("Cleared existing data: " + str(clear_result["rows_affected"]) + " rows deleted")
 
 // Test 1: Simple async insert
 print("\n=== Test 1: Simple Async Insert ===")
-async_result1 = db_execute_async(conn_result, "INSERT INTO async_test (name, value) VALUES ($1, $2)", ["async_item_1", 100])
+async_result1 = database.execute_async(conn_result, "INSERT INTO async_test (name, value) VALUES ($1, $2)", ["async_item_1", 100])
 if (async_result1["success"] == false) then:
     print("Failed to start async operation: " + async_result1["error"])
     exit(1)
@@ -37,12 +40,12 @@ operation_id1 = async_result1["operation_id"]
 print("Started async operation with ID: " + operation_id1)
 
 // Check status immediately
-status1 = db_get_async_status(operation_id1)
+status1 = database.get_async_status(operation_id1)
 print("Initial status: " + status1["status"])
 
 // Wait a bit and check again
-sleep(100)  // 100ms
-status1 = db_get_async_status(operation_id1)
+datetime.sleep(100)  // 100ms
+status1 = database.get_async_status(operation_id1)
 print("Status after 100ms: " + status1["status"])
 if (status1["status"] == "completed") then:
     if ("result" in status1) then:
@@ -69,7 +72,7 @@ async_ops = []
 for (i in range(5)):
     name = "async_item_" + str(i + 2)
     value = (i + 2) * 10
-    async_result = db_execute_async(conn_result, "INSERT INTO async_test (name, value) VALUES ($1, $2)", [name, value])
+    async_result = database.execute_async(conn_result, "INSERT INTO async_test (name, value) VALUES ($1, $2)", [name, value])
     if (async_result["success"]) then:
         append(async_ops, async_result["operation_id"])
         print("Started operation " + str(i + 1) + " with ID: " + async_result["operation_id"])
@@ -83,21 +86,21 @@ max_wait = 50  // Maximum 5 seconds (50 * 100ms)
 wait_count = 0
 
 while (all_completed == false and wait_count < max_wait):
-    sleep(100)  // 100ms
+    datetime.sleep(100)  // 100ms
     wait_count = wait_count + 1
-    
+
     completed_count = 0
     for (op_id in async_ops):
-        status = db_get_async_status(op_id)
+        status = database.get_async_status(op_id)
         if (status["status"] == "completed" or status["status"] == "failed") then:
             completed_count = completed_count + 1
         end
     end
-    
+
     if (completed_count == len(async_ops)) then:
         all_completed = true
     end
-    
+
     if (wait_count % 10 == 0) then:  // Print progress every second
         print("Progress: " + str(completed_count) + "/" + str(len(async_ops)) + " operations completed")
     end
@@ -110,7 +113,7 @@ failed_ops = 0
 
 for (i in range(len(async_ops))):
     op_id = async_ops[i]
-    status = db_get_async_status(op_id)
+    status = database.get_async_status(op_id)
     print("Operation " + str(i + 1) + " (" + op_id + "): " + status["status"])
     if (status["status"] == "completed") then:
         successful_ops = successful_ops + 1
@@ -132,7 +135,7 @@ print("\nSummary: " + str(successful_ops) + " successful, " + str(failed_ops) + 
 
 // Test 3: List all async operations
 print("\n=== Test 3: List All Async Operations ===")
-all_ops = db_list_async_operations()
+all_ops = database.list_async()
 print("Total async operations: " + str(all_ops["count"]))
 operations = all_ops["operations"]
 for (i in range(len(operations))):
@@ -144,30 +147,30 @@ end
 print("\n=== Test 4: Cancel Operation ===")
 // Start a slow operation (simulate with a complex query)
 slow_query = "INSERT INTO async_test (name, value) SELECT 'slow_' || generate_series(1, 1000), generate_series(1, 1000)"
-slow_async = db_execute_async(conn_result, slow_query)
+slow_async = database.execute_async(conn_result, slow_query)
 
 if (slow_async["success"]) then:
     slow_op_id = slow_async["operation_id"]
     print("Started slow operation: " + slow_op_id)
-    
+
     // Wait a bit then cancel
-    sleep(50)  // 50ms
-    cancel_result = db_cancel_async(slow_op_id)
+    datetime.sleep(50)  // 50ms
+    cancel_result = database.cancel_async(slow_op_id)
     if (cancel_result["success"]) then:
         print("Successfully cancelled operation")
     else:
         print("Failed to cancel operation: " + cancel_result["error"])
     end
-    
+
     // Check status after cancellation
-    sleep(100)  // 100ms
-    final_status = db_get_async_status(slow_op_id)
+    datetime.sleep(100)  // 100ms
+    final_status = database.get_async_status(slow_op_id)
     print("Final status after cancellation: " + final_status["status"])
 end
 
 // Verify data in database
 print("\n=== Verification ===")
-select_result = db_query(conn, "SELECT COUNT(*) as count FROM async_test")
+select_result = database.query(conn, "SELECT COUNT(*) as count FROM async_test")
 if (select_result["success"]) then:
     count = select_result["data"][0]["count"]
     print("Total records in database: " + str(count))
@@ -176,7 +179,7 @@ else:
 end
 
 // Show some sample data
-sample_result = db_query(conn, "SELECT * FROM async_test ORDER BY id LIMIT 5")
+sample_result = database.query(conn, "SELECT * FROM async_test ORDER BY id LIMIT 5")
 if (sample_result["success"]) then:
     print("\nSample data:")
     for (row in sample_result["data"]):
@@ -186,7 +189,7 @@ end
 
 // Cleanup async operations
 print("\n=== Cleanup ===")
-cleanup_result = db_cleanup_async_operations()
+cleanup_result = database.cleanup_async()
 if (cleanup_result["success"]) then:
     print("Cleaned up " + str(cleanup_result["cleaned_count"]) + " async operations")
 else:
@@ -194,6 +197,6 @@ else:
 end
 
 // Close database connection
-db_close(conn)
+database.close(conn)
 print("\nDatabase connection closed")
 print("Async processing demo completed successfully!")

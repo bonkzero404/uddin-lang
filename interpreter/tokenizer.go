@@ -103,6 +103,7 @@ var keywordTokens = map[string]Token{
 	"import":   IMPORT,
 	"in":       IN,
 	"memo":     MEMO,
+	"nil":      NULL,
 	"null":     NULL,
 	"not":      NOT,
 	"or":       OR,

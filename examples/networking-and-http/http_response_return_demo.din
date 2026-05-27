@@ -1,5 +1,9 @@
 // Demo: HTTP Response Return Value
-// This example shows how to use the return value from http_response() function
+// This example shows how to use the return value from http.response() function
+
+import "http"
+import "json"
+import "datetime"
 
 print("Starting HTTP Response Return Demo...")
 
@@ -11,15 +15,15 @@ print("Port: " + str(port))
 
 // Start server
 print("About to start HTTP server...")
-http_server_start(port, server_id)
+http.server_start(port, server_id)
 print("HTTP server started successfully!")
 
-// Handler that uses http_response return value
+// Handler that uses http.response return value
 fun demoHandler(request, response):
     // Send response and capture the return value
-    result = http_response(response, 200, {"Content-Type": "application/json"}, json_stringify({
+    result = http.response(response, 200, {"Content-Type": "application/json"}, json.stringify({
         "message": "Hello from Uddin-Lang!",
-        "timestamp": date_now(),
+        "timestamp": datetime.now(),
         "method": request["method"]
     }))
 
@@ -44,7 +48,7 @@ fun errorHandler(request, response):
         data = {"error": "Something went wrong", "code": 500}
 
         // Send error response and capture result
-        result = http_response(response, 500, {"Content-Type": "application/json"}, json_stringify(data))
+        result = http.response(response, 500, {"Content-Type": "application/json"}, json.stringify(data))
 
         // Log error response details
         print("Error response sent:")
@@ -66,10 +70,10 @@ fun conditionalHandler(request, response):
 
     if ("curl" in user_agent) then:
         // Response for curl clients
-        result = http_response(response, 200, {"Content-Type": "text/plain"}, "Hello curl user!")
+        result = http.response(response, 200, {"Content-Type": "text/plain"}, "Hello curl user!")
     else:
         // Response for other clients
-        result = http_response(response, 200, {"Content-Type": "application/json"}, json_stringify({
+        result = http.response(response, 200, {"Content-Type": "application/json"}, json.stringify({
             "message": "Hello web browser!",
             "user_agent": user_agent
         }))
@@ -84,9 +88,9 @@ fun conditionalHandler(request, response):
 end
 
 // Register routes
-http_server_route("GET", "/demo", demoHandler, server_id)
-http_server_route("GET", "/error", errorHandler, server_id)
-http_server_route("GET", "/conditional", conditionalHandler, server_id)
+http.server_route("GET", "/demo", demoHandler, server_id)
+http.server_route("GET", "/error", errorHandler, server_id)
+http.server_route("GET", "/conditional", conditionalHandler, server_id)
 
 print("Demo Server running at http://localhost:" + str(port))
 print("Endpoints:")

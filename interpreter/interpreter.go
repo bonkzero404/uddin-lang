@@ -1571,11 +1571,26 @@ func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
 			case error:
 				err = runtimeError(Position{}, "runtime error: %s", e.Error())
 			default:
-				err = runtimeError(Position{}, "unexpected runtime error")
+				err = runtimeError(Position{}, "unexpected runtime error: %v", r)
 			}
 		}
 	}()
 	c := NewCompiler()
+
+	// Math constants available as global variables in every program.
+	vmGlobals := map[string]Value{
+		"PI":    Value(math.Pi),
+		"E":     Value(math.E),
+		"TAU":   Value(2 * math.Pi),
+		"PHI":   Value((1 + math.Sqrt(5)) / 2),
+		"LN2":   Value(math.Ln2),
+		"LN10":  Value(math.Log(10)),
+		"SQRT2": Value(math.Sqrt2),
+		"SQRT3": Value(math.Sqrt(3)),
+	}
+	for k := range vmGlobals {
+		c.preSeededVars = append(c.preSeededVars, k)
+	}
 
 	// Pre-seed variable names from Config.Vars so the compiler allocates registers
 	// for them. The actual values are written into those registers before execution.
@@ -1592,6 +1607,17 @@ func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
 	interp := newInterpreter(config)
 	vm := NewVM(interp)
 
+	// Write math constants into their registers.
+	for k, v := range vmGlobals {
+		if reg, ok := c.locals[k]; ok {
+			needed := int(reg) + 1
+			for len(vm.regs) < needed {
+				vm.regs = append(vm.regs, make([]Value, needed-len(vm.regs))...)
+			}
+			vm.regs[reg] = v
+		}
+	}
+
 	// Load pre-defined variable values into the VM register window before execution.
 	if config != nil {
 		for k, v := range config.Vars {
@@ -1606,6 +1632,22 @@ func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
 	}
 
 	vm.Execute(fn)
+
+	// Fixup pass: after all top-level OP_MAKE_FUNC instructions have run, every
+	// function register holds its final vmFunction value. Re-capture upvalues for
+	// every top-level vmFunction so that forward references (main() calling a
+	// function defined later in the file) resolve to the correct values.
+	// Upvalues with IsLocal=true were captured from the top-level register window,
+	// which is exactly vm.regs[0..N-1]. We re-read them now that all are populated.
+	for _, reg := range vm.regs {
+		if vf, ok := reg.(*vmFunction); ok {
+			for i, upv := range vf.fn.Upvalues {
+				if upv.IsLocal && int(upv.Index) < len(vm.regs) {
+					vf.captured[i] = vm.regs[upv.Index]
+				}
+			}
+		}
+	}
 
 	// Auto-call main() if defined and not in a unit test (mirrors tree-walker behavior).
 	if config == nil || !config.IsUnitTest {

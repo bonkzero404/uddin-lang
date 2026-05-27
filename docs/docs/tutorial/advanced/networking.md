@@ -11,8 +11,10 @@ Uddin-Lang provides comprehensive networking support, including HTTP client/serv
 ### Basic HTTP Requests
 
 ```uddin
+import "http"
+
 // GET request
-response = http_get("https://api.github.com/users/octocat")
+response = http.get("https://api.github.com/users/octocat")
 print("Status: " + str(response.status))
 print("Body: " + str(response.body))
 print("Headers: " + str(response.headers))
@@ -21,24 +23,29 @@ print("Headers: " + str(response.headers))
 ### HTTP Methods
 
 ```uddin
+import "http"
+
 // GET request
-get_response = http_get("https://httpbin.org/get")
+get_response = http.get("https://httpbin.org/get")
 
 // POST request dengan data
 post_data = {"name": "John", "age": 30}
-post_response = http_post("https://httpbin.org/post", post_data)
+post_response = http.post("https://httpbin.org/post", post_data)
 
 // PUT request
 put_data = {"id": 1, "name": "Updated Name"}
-put_response = http_put("https://httpbin.org/put", put_data)
+put_response = http.put("https://httpbin.org/put", put_data)
 
 // DELETE request
-delete_response = http_delete("https://httpbin.org/delete")
+delete_response = http.delete("https://httpbin.org/delete")
 ```
 
 ### Advanced HTTP Requests
 
 ```uddin
+import "http"
+import "json"
+
 // Custom HTTP request dengan headers
 headers = {
     "Authorization": "Bearer your-token",
@@ -48,11 +55,11 @@ headers = {
 
 data = {"message": "Hello API"}
 
-response = http_request("POST", "https://api.example.com/data", data, headers)
+response = http.request("POST", "https://api.example.com/data", data, headers)
 
 if (response.status == 200) then:
     print("Request successful!")
-    result = json_parse(response.body)
+    result = json.parse(response.body)
     print(result)
 else:
     print("Request failed: " + str(response.status))
@@ -64,21 +71,23 @@ end
 ### Basic HTTP Server
 
 ```uddin
+import "http"
+
 // Create HTTP server
 server_id = "my-server"
 port = 8080
 
 // Start server
-http_server_start(port, server_id)
+http.server_start(port, server_id)
 print("Server running on port " + str(port))
 
 // Route handler function
 fun homeHandler(req, res):
-    http_response(res, 200, {"Content-Type": "text/plain"}, "Hello, World!")
+    http.response(res, 200, {"Content-Type": "text/plain"}, "Hello, World!")
 end
 
 // Register route
-http_server_route("GET", "/", homeHandler, server_id)
+http.server_route("GET", "/", homeHandler, server_id)
 
 print("Server ready to accept requests...")
 print("Access http://localhost:" + str(port))
@@ -93,11 +102,15 @@ end
 ### Advanced HTTP Server with Multiple Routes
 
 ```uddin
+import "http"
+import "json"
+import "datetime"
+
 server_id = "api-server"
 port = 8080
 
 // Start server
-http_server_start(port, server_id)
+http.server_start(port, server_id)
 
 // Handler for GET /users
 fun getUsersHandler(request, response):
@@ -107,18 +120,18 @@ fun getUsersHandler(request, response):
     ]
 
     headers = {"Content-Type": "application/json"}
-    http_response(response, 200, headers, json_stringify(users))
+    http.response(response, 200, headers, json.stringify(users))
 end
 
 // Handler for POST /users
 fun createUserHandler(request, response):
     try:
-        user_data = json_parse(request["body"])
+        user_data = json.parse(request["body"])
 
         // Validate data - check if properties exist and are not empty
         if (not("name" in user_data) or not("email" in user_data)) then:
             error_response = {"error": "Name and email are required"}
-            return http_response(response, 400, {"Content-Type": "application/json"}, json_stringify(error_response))
+            return http.response(response, 400, {"Content-Type": "application/json"}, json.stringify(error_response))
         end
 
 
@@ -127,14 +140,14 @@ fun createUserHandler(request, response):
             id: random_int(1000, 9999),
             name: user_data.name,
             email: user_data.email,
-            created_at: date_now()
+            created_at: datetime.now()
         }
 
-        return http_response(response, 201, {"Content-Type": "application/json"}, json_stringify(new_user))
+        return http.response(response, 201, {"Content-Type": "application/json"}, json.stringify(new_user))
 
     catch (error):
         error_response = {"error": "Invalid JSON data"}
-        return http_response(response, 400, {"Content-Type": "application/json"}, json_stringify(error_response))
+        return http.response(response, 400, {"Content-Type": "application/json"}, json.stringify(error_response))
     end
 end
 
@@ -142,17 +155,17 @@ end
 fun healthHandler(request, response):
     health_data = {
         "status": "healthy",
-        "timestamp": date_now(),
+        "timestamp": datetime.now(),
         "uptime": "running"
     }
 
-    http_response(response, 200, {"Content-Type": "application/json"}, json_stringify(health_data))
+    http.response(response, 200, {"Content-Type": "application/json"}, json.stringify(health_data))
 end
 
 // Register routes
-http_server_route("GET", "/api/users", getUsersHandler, server_id)
-http_server_route("POST", "/api/users", createUserHandler, server_id)
-http_server_route("GET", "/api/health", healthHandler, server_id)
+http.server_route("GET", "/api/users", getUsersHandler, server_id)
+http.server_route("POST", "/api/users", createUserHandler, server_id)
+http.server_route("GET", "/api/health", healthHandler, server_id)
 
 print("API Server running at http://localhost:" + str(port))
 print("Endpoints:")
@@ -273,8 +286,10 @@ end
 ### DNS Resolution
 
 ```uddin
+import "http"
+
 // Resolve hostname to IP
-result = net_resolve("google.com")
+result = http.net_resolve("google.com")
 if (result.success) then:
     print("IP addresses for google.com:")
     for (ip in result.ips):
@@ -288,8 +303,10 @@ end
 ### Network Ping
 
 ```uddin
+import "http"
+
 // Ping host (using port 53 for DNS and 5000ms timeout)
-ping_result = net_ping("8.8.8.8", 53, 5000)
+ping_result = http.net_ping("8.8.8.8", 53, 5000)
 
 if (ping_result.success) then:
     print("Ping successful!")
@@ -305,9 +322,11 @@ end
 ### JSON Parsing and Serialization
 
 ```uddin
+import "json"
+
 // Parse JSON string
 json_string = '{"name": "John", "age": 30, "city": "New York"}'
-data = json_parse(json_string)
+data = json.parse(json_string)
 
 print("Name: " + data.name)
 print("Age: " + str(data.age))
@@ -323,7 +342,7 @@ user = {
     }
 }
 
-json_output = json_stringify(user)
+json_output = json.stringify(user)
 print(json_output)
 ```
 
@@ -332,6 +351,9 @@ print(json_output)
 ### REST API Client
 
 ```uddin
+import "http"
+import "json"
+
 fun APIClient(base_url, api_key):
     return {
         "base_url": base_url,
@@ -342,22 +364,22 @@ fun APIClient(base_url, api_key):
 
         "get": fun(endpoint):
             url = this.base_url + endpoint
-            return http_request("GET", url, null, this.headers)
+            return http.request("GET", url, null, this.headers)
         end,
 
         "post": fun(endpoint, data):
             url = this.base_url + endpoint
-            return http_request("POST", url, data, this.headers)
+            return http.request("POST", url, data, this.headers)
         end,
 
         "put": fun(endpoint, data):
             url = this.base_url + endpoint
-            return http_request("PUT", url, data, this.headers)
+            return http.request("PUT", url, data, this.headers)
         end,
 
         "delete": fun(endpoint):
             url = this.base_url + endpoint
-            return http_request("DELETE", url, null, this.headers)
+            return http.request("DELETE", url, null, this.headers)
         end
     }
 end
@@ -368,7 +390,7 @@ api = APIClient("https://api.example.com", "your-api-key")
 // GET request
 users = api.get("/users")
 if (users.status == 200) then:
-    user_list = json_parse(users.body)
+    user_list = json.parse(users.body)
     print("Found " + str(len(user_list)) + " users")
 end
 
@@ -383,9 +405,12 @@ end
 ### Web Scraper
 
 ```uddin
+import "http"
+import "regex"
+
 fun scrapeWebsite(url):
     try:
-        response = http_get(url)
+        response = http.get(url)
 
         if (response.status != 200) then:
             return {"error": "HTTP " + str(response.status)}
@@ -407,7 +432,7 @@ fun scrapeWebsite(url):
         end
 
         // Extract all links
-        link_matches = regex_find_all(html, 'href="([^"]+)"')
+        link_matches = regex.find_all(html, 'href="([^"]+)"')
         links = []
         if (len(link_matches) > 0) then:
             for (match in link_matches):
@@ -498,10 +523,13 @@ end
 ### Robust HTTP Client
 
 ```uddin
+import "http"
+import "json"
+
 fun safeHttpRequest(method, url, data, headers, retries):
     for (attempt in range(1, retries + 1)):
         try:
-            response = http_request(method, url, data, headers)
+            response = http.request(method, url, data, headers)
 
             // Check for successful status codes
             if (response.status >= 200 and response.status < 300) then:
@@ -531,7 +559,7 @@ result = safeHttpRequest("GET", "https://rickandmortyapi.com/api", null, {}, 3)
 if (result.success) then:
     print("Request successful")
     data = result.data.body
-    print(json_stringify(data))
+    print(json.stringify(data))
 else:
     print("Request failed: " + result.error)
 end

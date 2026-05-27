@@ -223,16 +223,18 @@ Add functions to save and load tasks with real file operations:
 ```uddin
 // Save tasks to file
 fun save_tasks():
+    import "json"
+    import "fs"
     if (len(tasks) == 0) then:
         print("ℹ️  No tasks to save")
         return
     end
 
     // Convert tasks to JSON string
-    json_data = json_stringify(tasks)
+    json_data = json.stringify(tasks)
 
     // Write to file
-    if (write_file("tasks.json", json_data)) then:
+    if (fs.write("tasks.json", json_data)) then:
         print("💾 Tasks saved successfully!")
     else:
         print("❌ Failed to save tasks")
@@ -241,16 +243,18 @@ end
 
 // Load tasks from file
 fun load_tasks():
+    import "json"
+    import "fs"
     // Check if tasks file exists
-    if (file_exists("tasks.json")) then:
+    if (fs.exists("tasks.json")) then:
         print("📂 Found existing tasks file. Loading...")
 
         // Read file content
-        file_content = read_file("tasks.json")
+        file_content = fs.read("tasks.json")
 
         if (file_content != null && file_content != "") then:
             // Parse JSON content
-            loaded_tasks = json_parse(file_content)
+            loaded_tasks = json.parse(file_content)
 
             if (loaded_tasks != null) then:
                 // Clear existing tasks and load from file
@@ -277,8 +281,9 @@ end
 
 // Get current timestamp
 fun get_timestamp():
-    // Use date_now() function to get current timestamp
-    return date_now()
+    import "datetime"
+    // Use datetime.now() function to get current timestamp
+    return datetime.now()
 end
 ```
 

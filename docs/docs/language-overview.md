@@ -115,14 +115,18 @@ end
 **"Simple things should be simple"** - Common programming tasks require minimal code, while complex operations remain possible but don't complicate the basic use cases.
 
 ```din
+import "fs"
+import "http"
+import "json"
+
 // Simple file operations
-content = read_file("data.txt")
+content = fs.read("data.txt")
 lines = split(content, "\n")
-write_file("output.txt", join(lines, ", "))
+fs.write("output.txt", join(lines, ", "))
 
 // Simple HTTP requests
-response = http_get("https://api.example.com/users")
-users = parse_json(response.body)
+response = http.get("https://api.example.com/users")
+users = json.parse(response.body)
 
 // Simple database queries
 for (user in mysql_stream(db_config, "SELECT * FROM users WHERE active = 1")):
@@ -476,8 +480,8 @@ graph TB
     G[Math Functions] --> H[abs, sqrt, pow, sin, cos]
     I[String Functions] --> J[substr, split, join, contains]
     K[Array Functions] --> L[range, filter, map, reduce]
-    M[File System] --> N[read_file, write_file, exists]
-    O[Network] --> P[http_get, http_post, tcp_connect]
+    M[File System] --> N[fs.read, fs.write, fs.exists]
+    O[Network] --> P[http.get, http.post, http.tcp_connect]
     Q[Database] --> R[mysql_stream, postgres_stream]
     S[Concurrent] --> T[async, await, parallel]
     U[Data Structure] --> V[stack, queue, heap, graph]

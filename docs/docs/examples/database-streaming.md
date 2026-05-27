@@ -11,8 +11,12 @@ This page provides practical examples of using UddinLang's real-time database st
 ### PostgreSQL User Monitoring
 
 ```uddin
+import "database"
+import "json"
+import "datetime"
+
 // Connect to PostgreSQL database
-conn_result = db_connect("postgres", "localhost", 5432, "myapp", "postgres", "password")
+conn_result = database.connect("postgres", "localhost", 5432, "myapp", "postgres", "password")
 
 if (not conn_result.success) then:
     print("❌ Failed to connect: " + conn_result.error)
@@ -23,7 +27,7 @@ conn = conn_result.conn
 
 // Define callback function for user changes
 fun onUserChange(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
     
     if (data.operation == "INSERT") then:
         print("👤 New user registered: " + data.data.username + " (" + data.data.email + ")")
@@ -43,15 +47,19 @@ print("🔄 Started monitoring users table...")
 
 // Keep the program running
 while (true):
-    sleep(1000)
+    datetime.sleep(1000)
 end
 ```
 
 ### MySQL Product Inventory Monitoring
 
 ```uddin
+import "database"
+import "json"
+import "datetime"
+
 // Connect to MySQL database
-conn_result = db_connect("mysql", "localhost", 3306, "inventory", "root", "password")
+conn_result = database.connect("mysql", "localhost", 3306, "inventory", "root", "password")
 
 if (not conn_result.success) then:
     print("❌ Failed to connect: " + conn_result.error)
@@ -62,7 +70,7 @@ conn = conn_result.conn
 
 // Define callback function for inventory changes
 fun onInventoryChange(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
     
     if (data.operation == "UPDATE") then:
         old_qty = data.old_data.quantity
@@ -87,7 +95,7 @@ print("🔄 Started monitoring product inventory...")
 
 // Keep the program running
 while (true):
-    sleep(1000)
+    datetime.sleep(1000)
 end
 ```
 
@@ -96,8 +104,12 @@ end
 ### E-commerce Real-time Dashboard
 
 ```uddin
+import "database"
+import "json"
+import "datetime"
+
 // Connect to PostgreSQL database
-conn_result = db_connect("postgres", "localhost", 5432, "ecommerce", "postgres", "password")
+conn_result = database.connect("postgres", "localhost", 5432, "ecommerce", "postgres", "password")
 
 if (not conn_result.success) then:
     print("❌ Failed to connect: " + conn_result.error)
@@ -114,7 +126,7 @@ static low_stock_products = []
 
 // Multi-table callback function
 fun onEcommerceChange(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
     table = data.table
     operation = data.operation
     
@@ -178,15 +190,19 @@ print("📊 Real-time dashboard active...")
 
 // Keep the program running
 while (true):
-    sleep(1000)
+    datetime.sleep(1000)
 end
 ```
 
 ### Financial Transaction Monitoring
 
 ```uddin
+import "database"
+import "json"
+import "datetime"
+
 // Connect to PostgreSQL database
-conn_result = db_connect("postgres", "localhost", 5432, "banking", "postgres", "password")
+conn_result = database.connect("postgres", "localhost", 5432, "banking", "postgres", "password")
 
 if (not conn_result.success) then:
     print("❌ Failed to connect: " + conn_result.error)
@@ -206,7 +222,7 @@ static suspicious_activities = []
 
 // Multi-table callback for financial monitoring
 fun onFinancialChange(channel, payload):
-    data = json_parse(payload)
+    data = json.parse(payload)
     table = data.table
     operation = data.operation
     
@@ -291,7 +307,7 @@ print("🛡️ Fraud detection system active...")
 
 // Keep the program running
 while (true):
-    sleep(1000)
+    datetime.sleep(1000)
 end
 ```
 
@@ -300,6 +316,10 @@ end
 ### Resilient Streaming with Error Handling
 
 ```uddin
+import "database"
+import "json"
+import "datetime"
+
 // Robust connection setup with retry logic
 fun setup_resilient_connection(config):
     max_retries = 3
@@ -308,7 +328,7 @@ fun setup_resilient_connection(config):
     for (i in range(max_retries)):
         print("🔄 Attempting database connection (attempt " + str(i + 1) + "/" + str(max_retries) + ")...")
         
-        conn_result = db_connect(
+        conn_result = database.connect(
             config.driver, config.host, config.port,
             config.database, config.username, config.password
         )
@@ -320,7 +340,7 @@ fun setup_resilient_connection(config):
             print("❌ Connection failed: " + conn_result.error)
             if (i < max_retries - 1) then:
                 print("⏳ Waiting " + str(retry_delay / 1000) + " seconds before retry...")
-                sleep(retry_delay)
+                datetime.sleep(retry_delay)
             end
         end
     end
@@ -332,7 +352,7 @@ end
 // Robust callback with error handling
 fun robust_callback(channel, payload):
     try:
-        data = json_parse(payload)
+        data = json.parse(payload)
         
         // Validate required fields
         if (not has_key(data, "operation") or not has_key(data, "table")) then:
@@ -402,11 +422,11 @@ try:
     
     // Keep running with periodic health checks
     while (true):
-        sleep(10000)  // Check every 10 seconds
+        datetime.sleep(10000)  // Check every 10 seconds
         
         // Perform health check (optional)
         try:
-            result = db_query(conn, "SELECT 1")
+            result = database.query(conn, "SELECT 1")
             if (not result.success) then:
                 print("⚠️ Database health check failed: " + result.error)
             end
@@ -421,12 +441,12 @@ catch (streaming_error):
 finally:
     // Cleanup
     if (stream_id != null) then:
-        db_stop_stream(stream_id)
+        database.stop_stream(stream_id)
         print("🛑 Streaming stopped")
     end
     
     if (conn != null) then:
-        db_close(conn)
+        database.close(conn)
         print("🔌 Database connection closed")
     end
 end
@@ -435,6 +455,10 @@ end
 ### Performance-Optimized Batch Processing
 
 ```uddin
+import "database"
+import "json"
+import "datetime"
+
 // Configuration
 BATCH_SIZE = 100
 BATCH_TIMEOUT = 5000  // 5 seconds
@@ -442,19 +466,19 @@ MAX_MEMORY_USAGE = 1000000  // 1MB
 
 // Global batch storage
 static change_batch = []
-static last_batch_process = time_now()
+static last_batch_process = datetime.time_now()
 static total_memory_usage = 0
 
 // Optimized callback with batching
 fun optimized_callback(channel, payload):
     try:
-        data = json_parse(payload)
+        data = json.parse(payload)
         
         // Add to batch
         append(change_batch, data)
         total_memory_usage = total_memory_usage + len(payload)
         
-        current_time = time_now()
+        current_time = datetime.time_now()
         time_since_last_batch = current_time - last_batch_process
         
         // Process batch if conditions are met
@@ -478,7 +502,7 @@ fun process_batch():
         return
     end
     
-    start_time = time_now()
+    start_time = datetime.time_now()
     batch_size = len(change_batch)
     
     print("📦 Processing batch of " + str(batch_size) + " changes...")
@@ -498,9 +522,9 @@ fun process_batch():
     // Clear batch
     change_batch = []
     total_memory_usage = 0
-    last_batch_process = time_now()
+    last_batch_process = datetime.time_now()
     
-    processing_time = time_now() - start_time
+    processing_time = datetime.time_now() - start_time
     print("✅ Batch processed in " + str(processing_time) + "ms")
 end
 
@@ -543,7 +567,7 @@ fun process_table_changes(table, changes):
 end
 
 // Setup optimized streaming
-conn_result = db_connect("postgres", "localhost", 5432, "myapp", "postgres", "password")
+conn_result = database.connect("postgres", "localhost", 5432, "myapp", "postgres", "password")
 
 if (not conn_result.success) then:
     print("❌ Failed to connect: " + conn_result.error)
@@ -561,10 +585,10 @@ print("📊 Batch size: " + str(BATCH_SIZE) + ", Timeout: " + str(BATCH_TIMEOUT)
 
 // Keep running with periodic batch processing
 while (true):
-    sleep(1000)
+    datetime.sleep(1000)
     
     // Force process batch if timeout reached
-    if (len(change_batch) > 0 and (time_now() - last_batch_process) >= BATCH_TIMEOUT) then:
+    if (len(change_batch) > 0 and (datetime.time_now() - last_batch_process) >= BATCH_TIMEOUT) then:
         process_batch()
     end
 end

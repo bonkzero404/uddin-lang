@@ -375,8 +375,10 @@ Based on the actual interpreter implementation, these functions are available fo
 
 ### Date/Time Functions
 
--   `date_now()` - Get current timestamp
--   `date_diff()` - Calculate time differences
+Requires `import "datetime"`.
+
+-   `datetime.now()` - Get current timestamp
+-   `datetime.diff()` - Calculate time differences
 
 ### Type Checking
 
