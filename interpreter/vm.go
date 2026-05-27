@@ -417,6 +417,14 @@ func (vm *VM) run() (result Value) {
 	return nil
 }
 
+// reset clears all VM state and rebinds it to a new interpreter instance.
+// This allows a pooled VM to be reused across multiple executions.
+func (vm *VM) reset(interp *interpreter) {
+	vm.frames   = vm.frames[:0]
+	vm.tryStack = vm.tryStack[:0]
+	vm.interp   = interp
+}
+
 // doReturn pops the top frame and, for non-top-level calls, writes the return
 // value into the caller's register window.
 func (vm *VM) doReturn(val Value) Value {
