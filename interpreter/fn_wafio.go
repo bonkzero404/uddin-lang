@@ -140,21 +140,20 @@ func wafCIDRMatchFunc(interp *interpreter, pos Position, args []Value) Value {
 	return Value(CIDRMatchHelper(ip, cidr))
 }
 
-// wafPathMatchFunc implements waf_path_match(pattern) → bool
-// Glob-matches the request path against pattern.
+// wafPathMatchFunc implements waf_path_match(pattern, path) → bool
+// Glob-matches path against pattern.
 func wafPathMatchFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "waf_path_match", args, 1); err != Value(nil) {
+	if err := ensureNumArgs(pos, "waf_path_match", args, 2); err != Value(nil) {
 		return err
 	}
 	pattern, ok := args[0].(string)
 	if !ok {
-		return Value(fmt.Errorf("waf_path_match() requires a string argument, not %s", typeName(args[0])))
+		return Value(fmt.Errorf("waf_path_match() requires string arguments, not %s", typeName(args[0])))
 	}
-	ctx := wafCtx(interp)
-	if ctx == nil {
-		return Value(false)
+	path, ok := args[1].(string)
+	if !ok {
+		return Value(fmt.Errorf("waf_path_match() requires string arguments, not %s", typeName(args[1])))
 	}
-	path, _ := ctx["path"].(string)
 	return Value(PathGlobMatch(pattern, path))
 }
 

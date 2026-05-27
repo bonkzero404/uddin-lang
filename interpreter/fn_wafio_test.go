@@ -403,22 +403,16 @@ func TestWAFCIDRMatch_Via_Builtin(t *testing.T) {
 // -- waf_path_match (via interpreter) -----------------------------------------
 
 func TestWAFPathMatch_Via_Builtin(t *testing.T) {
-	ctx := map[string]any{
-		"path": "/admin/settings",
-	}
-	interp := makeTestInterp(ctx)
-	result := wafPathMatchFunc(interp, noPos, []Value{"/admin/*"})
+	interp := makeTestInterp(nil)
+	result := wafPathMatchFunc(interp, noPos, []Value{"/admin/*", "/admin/settings"})
 	if result != Value(true) {
 		t.Error("expected path_match to return true for /admin/settings against /admin/*")
 	}
 }
 
 func TestWAFPathMatch_NoMatch_Via_Builtin(t *testing.T) {
-	ctx := map[string]any{
-		"path": "/api/users",
-	}
-	interp := makeTestInterp(ctx)
-	result := wafPathMatchFunc(interp, noPos, []Value{"/admin/*"})
+	interp := makeTestInterp(nil)
+	result := wafPathMatchFunc(interp, noPos, []Value{"/admin/*", "/api/users"})
 	if result != Value(false) {
 		t.Error("expected path_match to return false for /api/users against /admin/*")
 	}

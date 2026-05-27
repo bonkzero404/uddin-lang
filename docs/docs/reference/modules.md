@@ -241,7 +241,7 @@ print(resp["body"])
 import "waf"
 ```
 
-WAF functions read from the `_waf_ctx` map injected by the host. See [WAFio integration](./library#wafio) for how to populate it.
+Most WAF functions read from the `_waf_ctx` map injected by the host (except `path_match` and `cidr_match` which take explicit arguments). See [WAFio integration](./library#wafio) for how to populate it.
 
 | Function | Signature | Description |
 |----------|-----------|-------------|
@@ -249,7 +249,7 @@ WAF functions read from the `_waf_ctx` map injected by the host. See [WAFio inte
 | `waf.query` | `(name)` | URL query parameter value or `null` |
 | `waf.body_contains` | `(needle)` | `true` if request body contains substring |
 | `waf.cidr_match` | `(ip, cidr)` | `true` if IP is in CIDR range |
-| `waf.path_match` | `(pattern)` | Glob-match request path against pattern |
+| `waf.path_match` | `(pattern, path)` | Glob-match path against pattern |
 | `waf.score` | `()` | Current threat score (float) |
 | `waf.action` | `()` | Current action string (`"ALLOW"`, `"LOG"`, `"BLOCK"`) |
 | `waf.detected` | `(category)` | `true` if category was detected |

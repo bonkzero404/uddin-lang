@@ -4,7 +4,7 @@
 
 <div align="center">
 
-![UDDIN-LANG Logo](https://img.shields.io/badge/UDDIN--LANG-v1.0-e84393?style=for-the-badge&logo=data:image/svg+xmlbase64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)
+![UDDIN-LANG Logo](https://img.shields.io/badge/UDDIN--LANG-v2.0-e84393?style=for-the-badge&logo=data:image/svg+xmlbase64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJMMTMuMDkgOC4yNkwyMCA5TDEzLjA5IDE1Ljc0TDEyIDIyTDEwLjkxIDE1Ljc0TDQgOUwxMC45MSA4LjI2TDEyIDJaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K)
 
 **Flexible Rule Logic Platform with Programming Language Expressiveness**
 
@@ -112,16 +112,17 @@ graph TD
 -   ✅ **Exception Handling** with try-catch blocks
 -   ✅ **Advanced Error Reporting** with precise error location and clear explanations
 -   ✅ **Loop Control** (break, continue statements)
--   ✅ **Module System** with import statement for importing .din files
+-   ✅ **Module System** — `import "name"` for stdlib modules; `import "file.din"` for local scripts
+-   ✅ **Stdlib Modules** — `json`, `regex`, `datetime`, `fs`, `http`, `database`, `fact`, `cdc`, `waf`
 -   ✅ **Flexible Comment System** with both single-line (`//`) and multiline (`/* */`) comments
 -   ✅ **Functional Programming** paradigms
 -   ✅ **Memory Safe** with garbage collection
+-   ✅ **Bytecode VM** — register-based VM compiles AST to bytecode for faster execution
 -   ✅ **Rich Operator Set** including logical XOR and compound assignment operators
 -   ✅ **Multiline Strings** with backticks for raw text (perfect for JSON, SQL, HTML)
--   ✅ **JSON Support** with built-in parsing and serialization functions
 -   ✨ **Extended Standard Library** with advanced string manipulation, functional array methods, and new data structures (Set, Stack, Queue)
-   🌐 **Comprehensive Networking** with HTTP client, TCP/UDP sockets, and network utilities
-   🗄️ **Database Integration & CDC** with real-time Change Data Capture for PostgreSQL and MySQL binlog streaming
+-   🌐 **Comprehensive Networking** with HTTP client, TCP/UDP sockets, and network utilities (via `import "http"`)
+-   🗄️ **Database Integration & CDC** with real-time Change Data Capture for PostgreSQL and MySQL binlog streaming (via `import "database"` / `import "cdc"`)
 
 ### 🛠️ Developer Tools
 
@@ -132,6 +133,14 @@ graph TD
 -   ✅ **Multiple Execution Modes** - Analysis, profiling, and standard execution
 
 ---
+
+> **⚠️ v2.0 Breaking Change:** `date_now()`, `read_file()`, `regex_match()`, `json_parse()`, `db_connect()`, `http_get()`, etc. are no longer global. Use `import "module"` first:
+> ```din
+> import "datetime"; import "fs"; import "regex"
+> print(datetime.now())
+> print(fs.read_file("data.txt"))
+> ```
+> See [stdlib module reference →](https://bonkzero404.github.io/uddin-lang/docs/reference/modules)
 
 **📖 For complete language reference, syntax guide, and advanced examples:**
 
@@ -165,7 +174,9 @@ go install github.com/bonkzero404/uddin-lang/cmd/uddin-lang@latest
 # Or build from source
 git clone https://github.com/bonkzero404/uddin-lang.git
 cd uddin-lang
-go build -o uddinlang cmd/uddin-lang/main.go
+make build   # produces ./uddinlang
+# or manually:
+go build -o uddinlang ./cmd/uddin-lang/
 ```
 
 #### Using as Go Library
@@ -175,31 +186,34 @@ package main
 
 import (
     "fmt"
-    "github.com/bonkzero404/uddin-lang"
+    "strings"
+
+    uddin "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
-    // Create a new engine
     engine := uddin.New()
 
-    // Execute code
-    result, err := engine.ExecuteString(`
+    // Capture output via SetStdout
+    var buf strings.Builder
+    engine.SetStdout(&buf)
+
+    stats, err := engine.ExecuteString(`
         x = 10
         y = 20
-        return x + y
+        print(x + y)
     `)
     if err != nil {
         panic(err)
     }
+    fmt.Println("Output:", strings.TrimSpace(buf.String())) // Output: 30
+    fmt.Println("Ops:", stats.Ops)
 
-    fmt.Println("Result:", result) // Output: Result: 30
-
-    // Evaluate expressions
-    value, err := engine.EvaluateString("2 + 3 * 4")
+    // Evaluate a single expression — returns (Value, *Stats, error)
+    value, _, err := engine.EvaluateString("2 + 3 * 4")
     if err != nil {
         panic(err)
     }
-
     fmt.Println("Expression result:", value) // Output: Expression result: 14
 }
 ```
@@ -246,30 +260,41 @@ The language comes with comprehensive examples showcasing all features:
 
 ```bash
 # List all available examples
-uddin-lang --examples
-# or if built from source: ./uddinlang --examples
+./uddinlang --examples
 
-# Run specific examples
-uddin-lang examples/12_logical_operators.din     # XOR and logical operations
-uddin-lang examples/13_assignment_operators.din  # Compound assignments (+=, -=, etc.)
-uddin-lang examples/01_hello_world.din          # Basic syntax
-uddin-lang examples/03_math_library.din         # Mathematical functions
+# Basics
+./uddinlang examples/basics/hello_world.din
+./uddinlang examples/basics/logical_operators.din
+./uddinlang examples/basics/functional_demo.din
 
-# ✨ New Standard Library Examples
-uddin-lang examples/14_string_manipulation_demo.din  # Advanced string functions
-uddin-lang examples/15_array_methods_demo.din        # Functional array methods
-uddin-lang examples/16_data_structures_demo.din      # Set, Stack, Queue usage
-uddin-lang examples/20_json_handling_demo.din        # JSON parsing and serialization
-uddin-lang examples/21_multiline_strings_demo.din    # Multiline string features
+# Data structures
+./uddinlang examples/data-structures/array_methods_demo.din
+./uddinlang examples/data-structures/data_structures_demo.din   # Set, Stack, Queue
 
-# 🌐 Networking Examples
-./uddinlang examples/17_http_client_demo.din      # HTTP client operations
-./uddinlang examples/18_networking_demo.din       # TCP/UDP networking and utilities
-./uddinlang examples/19_persistent_http_server.din # Persistent HTTP server with main function
+# Math & calculations
+./uddinlang examples/math-and-calculations/math_library.din
+./uddinlang examples/math-and-calculations/import_library_demo.din
 
-# 🗄️ Database & CDC Examples
-./uddinlang examples/database/postgres_multi_table_stream_listener.din  # PostgreSQL CDC streaming
-./uddinlang examples/database/mysql_multi_table_stream_listener.din     # MySQL binlog CDC streaming
+# File & data handling (requires: import "json" / import "fs")
+./uddinlang examples/file-and-data-handling/json_handling_demo.din
+./uddinlang examples/file-and-data-handling/filesystem_operations_demo.din
+./uddinlang examples/file-and-data-handling/xml_handling_demo.din
+
+# Networking (requires: import "http")
+./uddinlang examples/networking-and-http/http_client_demo.din
+
+# Database (requires: import "database")
+./uddinlang examples/database/connection_pooling_demo.din
+./uddinlang examples/database/batch_processing_demo.din
+
+# Rule engine (requires: import "fact" / import "cdc" / import "regex" / import "datetime")
+./uddinlang examples/rule-engine/rule_engine_fact_database_demo.din
+./uddinlang examples/rule-engine/rule_engine_cep_demo.din
+./uddinlang examples/rule-engine/rule_engine_regex_demo.din
+
+# Performance
+./uddinlang examples/performance-and-optimization/memoization_demo.din
+./uddinlang examples/performance-and-optimization/concurrent_basic_demo.din
 ```
 
 ### 🛠️ CLI Features & Development Tools
@@ -700,6 +725,9 @@ UDDIN-LANG provides powerful real-time database integration capabilities with bu
 
 ```go
 // PostgreSQL CDC Example
+import "database"
+import "json"
+
 fun main():
     // Configure CDC connection
     config = {
@@ -711,11 +739,11 @@ fun main():
     }
 
     // Start streaming changes from multiple tables
-    stream_tables(["users", "orders", "products"], config, fun(event):
+    database.stream_tables(["users", "orders", "products"], config, fun(event):
         print("Database change detected:")
         print("Table: " + event.table)
         print("Operation: " + event.operation)
-        print("Data: " + json_stringify(event.data))
+        print("Data: " + json.stringify(event.data))
 
         // Process the change event
         if (event.table == "orders" and event.operation == "INSERT") then:
@@ -752,8 +780,11 @@ graph TB
     A[Source Code] --> B[Tokenizer/Lexer]
     B --> C[Parser]
     C --> D[Abstract Syntax Tree]
-    D --> E[Evaluator]
+    D --> VM[Bytecode Compiler]
+    VM --> E[Bytecode VM]
+    D --> TW[Tree-walker Evaluator]
     E --> F[Interpreter Core]
+    TW --> F
     F --> G[Runtime Environment]
 
     %% Core Components
@@ -763,19 +794,17 @@ graph TB
     G --> K[Error Handling]
 
     %% Optimization Layer
-    L[Expression Optimizer] --> E
-    M[Constant Folder] --> E
+    L[Expression Optimizer] --> D
+    M[Constant Folder] --> D
     N[Memoization Cache] --> F
     O[String Interning] --> J
 
     %% Built-in Function Categories
-    I --> P[Core Functions]
-    I --> Q[Math Functions]
-    I --> R[String Functions]
-    I --> S[Array Functions]
-    I --> T[File System]
-    I --> U[Network Functions]
-    I --> V[Database Functions]
+    I --> P[Core / Math / String / Array]
+    I --> MOD[Stdlib Module Registry]
+    MOD --> M1[json / regex / datetime]
+    MOD --> M2[fs / http / database]
+    MOD --> M3[fact / cdc / waf]
 
     %% Memory Management
     J --> W[Array Pools]
@@ -790,6 +819,7 @@ graph TB
     style G fill:#f0f4c3
     style L fill:#fce4ec
     style I fill:#e0f2f1
+    style MOD fill:#e0f2f1
 ```
 
 ### Memory Management & Optimization
@@ -838,27 +868,29 @@ graph TB
     B --> C[Argument Validation]
     B --> D[Call Statistics]
 
-    %% Function Categories
-    E[Core Functions] --> F[print, len, typeof]
-    G[Math Functions] --> H[abs, sqrt, pow, sin, cos]
-    I[String Functions] --> J[substr, split, join, contains]
-    K[Array Functions] --> L[range, filter, map, reduce]
-    M[File System] --> N[read_file, write_file, exists]
-    O[Network] --> P[http_get, http_post, tcp_connect]
-    Q[Database] --> R[mysql_stream, postgres_stream]
-    S[Concurrent] --> T[async, await, parallel]
-    U[Data Structure] --> V[stack, queue, heap, graph]
+    %% Built-in Function Categories
+    E[Core Functions] --> F[print, len, typeof, str, int]
+    G[Math Functions] --> H[abs, sqrt, pow, sin, cos, round]
+    I[String Functions] --> J[substr, split, join, contains, trim]
+    K[Array Functions] --> L[range, filter, map, reduce, sort]
+    U[Data Structure] --> V[stack, queue, set, heap, graph]
+    S[Concurrent] --> T[concurrent_map, concurrent_filter]
+
+    %% Stdlib Modules (via import "name")
+    MOD[Stdlib Modules] --> M1[fs — read_file, write_file, mkdir]
+    MOD --> M2[http — get, post, tcp_connect, udp_listen]
+    MOD --> M3[database — connect, query, stream_tables]
+    MOD --> M4[json / regex / datetime]
+    MOD --> M5[fact / cdc / waf]
 
     %% Dispatch Flow
     A --> E
     A --> G
     A --> I
     A --> K
-    A --> M
-    A --> O
-    A --> Q
     A --> S
     A --> U
+    A --> MOD
 
     %% Optimization
     W[Fast Path] --> X[Type-specific Handlers]

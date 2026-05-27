@@ -2,6 +2,7 @@ package uddin
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -712,6 +713,8 @@ func TestStdlibModulesRegistered(t *testing.T) {
 		{"waf", `import "waf"\nprint(waf.cidr_match("192.168.1.1", "192.168.1.0/24"))`, "true"},
 		{"cdc", `import "cdc"\ncdc.emit("test", {})\nprint(cdc.count("test"))`, "1"},
 		{"fact", `import "fact"\nfact.assert("cat", "k")\nprint(fact.exists("cat", "k"))`, "true"},
+		{"http", `import "http"\nprint(typeof(http.get))`, "function"},
+		{"database", `import "database"\nprint(typeof(database.connect))`, "function"},
 	}
 
 	for _, tt := range tests {
@@ -730,5 +733,174 @@ func TestStdlibModulesRegistered(t *testing.T) {
 				t.Fatalf("got %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestEngine_NewWithConfig(t *testing.T) {
+	config := DefaultConfig()
+	config.IsUnitTest = true
+
+	engine := NewWithConfig(config)
+	if engine == nil {
+		t.Fatal("Expected non-nil engine")
+	}
+
+	// Verify it can execute code
+	var buf bytes.Buffer
+	engine.SetStdout(&buf)
+	_, err := engine.ExecuteString(`print("cfg ok")`)
+	if err != nil {
+		t.Fatalf("execution failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "cfg ok") {
+		t.Errorf("expected output to contain 'cfg ok', got %q", buf.String())
+	}
+}
+
+func TestEngine_ExecuteFile(t *testing.T) {
+	// Write a temp .din script
+	f, err := os.CreateTemp("", "uddin_test_*.din")
+	if err != nil {
+		t.Fatal("create temp file:", err)
+	}
+	defer os.Remove(f.Name())
+
+	_, err = f.WriteString(`print("hello from file")`)
+	if err != nil {
+		t.Fatal("write temp file:", err)
+	}
+	f.Close()
+
+	var buf bytes.Buffer
+	engine := New()
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+
+	_, err = engine.ExecuteFile(f.Name())
+	if err != nil {
+		t.Fatalf("ExecuteFile failed: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "hello from file") {
+		t.Errorf("expected 'hello from file' in output, got %q", buf.String())
+	}
+}
+
+func TestEngine_EnableMemoryOptimization(t *testing.T) {
+	var buf bytes.Buffer
+	engine := New()
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+	engine.EnableMemoryOptimization()
+
+	_, err := engine.ExecuteString(`print("mem ok")`)
+	if err != nil {
+		t.Fatalf("execution after EnableMemoryOptimization failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "mem ok") {
+		t.Errorf("expected 'mem ok' in output, got %q", buf.String())
+	}
+}
+
+func TestEngine_SetStdin(t *testing.T) {
+	engine := New()
+	r := strings.NewReader("hello")
+	engine.SetStdin(r)
+	// Smoke test: verify SetStdin doesn't panic and the engine can execute
+	var buf bytes.Buffer
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+	_, err := engine.ExecuteString(`print("stdin set")`)
+	if err != nil {
+		t.Fatalf("execution after SetStdin failed: %v", err)
+	}
+}
+
+func TestEngine_StdlibJSON(t *testing.T) {
+	t.Run("parse", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "json"
+result = json.parse("{\"x\": 42}")
+print(result["x"])`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("json.parse failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), "42") {
+			t.Errorf("expected '42' in output, got %q", buf.String())
+		}
+	})
+
+	t.Run("stringify", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "json"
+print(json.stringify({"a": 1}))`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("json.stringify failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), `"a"`) {
+			t.Errorf(`expected '"a"' in output, got %q`, buf.String())
+		}
+	})
+}
+
+func TestEngine_StdlibRegex(t *testing.T) {
+	t.Run("is_match_true", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "regex"
+print(regex.is_match("^\\d+$", "12345"))`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("regex.is_match failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), "true") {
+			t.Errorf("expected 'true', got %q", buf.String())
+		}
+	})
+
+	t.Run("is_match_false", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "regex"
+print(regex.is_match("^\\d+$", "abc"))`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("regex.is_match failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), "false") {
+			t.Errorf("expected 'false', got %q", buf.String())
+		}
+	})
+}
+
+func TestEngine_TryCatch(t *testing.T) {
+	var buf bytes.Buffer
+	engine := New()
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+
+	src := `try:
+    x = 1 / 0
+catch (err):
+    print("caught error")
+end`
+	_, err := engine.ExecuteString(src)
+	if err != nil {
+		t.Fatalf("try-catch execution failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "caught error") {
+		t.Errorf("expected 'caught error' in output, got %q", buf.String())
 	}
 }

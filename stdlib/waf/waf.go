@@ -151,18 +151,17 @@ func wafCIDRMatchFunc(ctx interpreter.ModuleContext, pos interpreter.Position, a
 }
 
 func wafPathMatchFunc(ctx interpreter.ModuleContext, pos interpreter.Position, args []interpreter.Value) interpreter.Value {
-	if len(args) != 1 {
-		return interpreter.Value(fmt.Errorf("waf.path_match() requires exactly 1 argument, got %d", len(args)))
+	if len(args) != 2 {
+		return interpreter.Value(fmt.Errorf("waf.path_match() requires exactly 2 arguments, got %d", len(args)))
 	}
 	pattern, ok := args[0].(string)
 	if !ok {
-		return interpreter.Value(fmt.Errorf("waf.path_match() requires a string argument, not %T", args[0]))
+		return interpreter.Value(fmt.Errorf("waf.path_match() requires string arguments, not %T", args[0]))
 	}
-	wafCtx := getWafCtx(ctx)
-	if wafCtx == nil {
-		return interpreter.Value(false)
+	path, ok := args[1].(string)
+	if !ok {
+		return interpreter.Value(fmt.Errorf("waf.path_match() requires string arguments, not %T", args[1]))
 	}
-	path, _ := wafCtx["path"].(string)
 	return interpreter.Value(pathGlobMatch(pattern, path))
 }
 

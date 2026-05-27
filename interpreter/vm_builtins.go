@@ -299,19 +299,18 @@ func directWafCidrMatch(_ *interpreter, pos Position, args []Value) Value {
 }
 
 func directWafPathMatch(interp *interpreter, pos Position, args []Value) Value {
-	if len(args) != 1 {
-		panic(typeError(pos, "waf_path_match() requires 1 argument, got %d", len(args)))
+	if len(args) != 2 {
+		panic(typeError(pos, "waf_path_match() requires 2 arguments, got %d", len(args)))
 	}
 	pattern, ok := args[0].(string)
 	if !ok {
-		panic(typeError(pos, "waf_path_match() requires a string argument (pattern)"))
+		panic(typeError(pos, "waf_path_match() requires string arguments, not %T", args[0]))
 	}
-	ctx := wafCtx(interp)
-	if ctx == nil {
-		return Value(false)
+	path, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "waf_path_match() requires string arguments, not %T", args[1]))
 	}
-	requestPath, _ := ctx["path"].(string)
-	return Value(PathGlobMatch(pattern, requestPath))
+	return Value(PathGlobMatch(pattern, path))
 }
 
 func directAppend(_ *interpreter, pos Position, args []Value) Value {
