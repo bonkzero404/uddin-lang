@@ -35,7 +35,9 @@ func DefaultMemoizationConfig() *MemoizationConfig {
 	}
 }
 
-// StableMemoizationConfig returns stable memoization configuration for production
+// StableMemoizationConfig returns memoization configuration for long-lived single-Engine use.
+// WARNING: Memoization is NOT thread-safe. Do not enable on Engines shared across goroutines.
+// The production-ready cache (UseProductionCache=true) is stable for single-threaded scripts.
 func StableMemoizationConfig() *MemoizationConfig {
 	return &MemoizationConfig{
 		EnableMemoization:  true,
@@ -97,6 +99,10 @@ type Config struct {
 	// Memoization configures memoization behavior
 	// If nil, defaults to DefaultMemoizationConfig()
 	Memoization *MemoizationConfig
+
+	// VMEnabled routes execution through the bytecode VM instead of the tree-walker.
+	// Default false during Phase 1 rollout. Enable after full test suite passes.
+	VMEnabled bool
 }
 
 // DefaultConfig returns a configuration with sensible defaults
@@ -110,6 +116,7 @@ func DefaultConfig() *Config {
 		IsUnitTest:   false,
 		MemoryLayout: DefaultMemoryLayoutConfig(),
 		Memoization:  DefaultMemoizationConfig(),
+		VMEnabled:    true,
 	}
 }
 
@@ -124,6 +131,7 @@ func TestConfig() *Config {
 		IsUnitTest:   true,
 		MemoryLayout: DefaultMemoryLayoutConfig(),
 		Memoization:  DefaultMemoizationConfig(),
+		VMEnabled:    true,
 	}
 }
 

@@ -53,6 +53,13 @@ type interpreter struct {
 	optimizer *ConstantFolder
 	// DirectOutput controls whether print() writes directly to os.Stdout
 	DirectOutput bool
+
+	// Per-engine rule engine state (was package-level global — isolated per Engine)
+	factDatabase  map[string]any
+	factMutex     sync.RWMutex
+	eventStore    []map[string]any
+	eventPatterns map[string]any
+	eventMutex    sync.RWMutex
 }
 
 // returnResult is used to handle return statements in functions.
@@ -87,24 +94,23 @@ var binaryEvalFuncs = map[Token]binaryEvalFunc{
 }
 
 // ensureIntToFloats converts integer or float operands to float64 for arithmetic operations.
-// If either operand is not a numeric type (int or float64), it returns error values.
+// If either operand is not a numeric type (int or float64), it returns (0, 0, false).
 //
 // Parameters:
-//   - pos: Position in source code for error reporting
 //   - l: Left operand value
 //   - r: Right operand value
-//   - operation: String description of the operation for error messages
 //
 // Returns:
-//   - Two float64 values representing the converted operands, or (0, 0) on error
-func ensureIntToFloats(l, r Value) (float64, float64) {
+//   - Two float64 values representing the converted operands, and a bool that is
+//     true on success or false when either operand is not a numeric type.
+func ensureIntToFloats(l, r Value) (float64, float64, bool) {
 	// Try to convert left operand to float64
 	lf, lok := l.(float64)
 	if !lok {
 		if li, lok := l.(int); lok {
 			lf = float64(li) // Convert int to float64
 		} else {
-			return 0, 0 // Return error values that can be detected by caller
+			return 0, 0, false // Type error: left operand is not numeric
 		}
 	}
 
@@ -114,11 +120,11 @@ func ensureIntToFloats(l, r Value) (float64, float64) {
 		if ri, rok := r.(int); rok {
 			rf = float64(ri) // Convert int to float64
 		} else {
-			return 0, 0 // Return error values
+			return 0, 0, false // Type error: right operand is not numeric
 		}
 	}
 
-	return lf, rf
+	return lf, rf, true
 }
 
 // evalEqual evaluates equality between two values of any type.
@@ -327,14 +333,13 @@ func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 			// Optimized array concatenation using advanced batch processing for large arrays
 			llen, rlen := len(*larr), len(*rarr)
 			if llen+rlen > 1000 {
-				// Use batch processing for large arrays with unified pool manager
-				result := GetPooledArray(llen + rlen)
-				defer PutPooledArray(result)
-				result = SmartAppend(result, *larr...)
-				result = SmartAppend(result, *rarr...)
-				final := make([]Value, len(result))
-				copy(final, result)
-				return Value(&final)
+				// Allocate a fresh buffer — do NOT pool intermediate concat buffers,
+				// because SmartAppend may reallocate the slice, making the deferred
+				// PutPooledArray return a stale header and corrupt the pool.
+				result := make([]Value, 0, llen+rlen)
+				result = append(result, *larr...)
+				result = append(result, *rarr...)
+				return Value(&result)
 			} else {
 				// Use existing optimized concatenation for smaller arrays
 				concat := NewArrayConcatenator(llen + rlen)
@@ -453,8 +458,8 @@ func evalDivide(pos Position, l, r Value) Value {
 	}
 
 	// Fallback to original logic
-	li, ri := ensureIntToFloats(l, r)
-	if li == 0 && ri == 0 {
+	li, ri, ok := ensureIntToFloats(l, r)
+	if !ok {
 		panic(typeError(pos, "/ requires two floats or integers"))
 	}
 	if ri == 0 {
@@ -470,8 +475,8 @@ func evalModulo(pos Position, l, r Value) Value {
 	}
 
 	// Fallback to original logic
-	li, ri := ensureIntToFloats(l, r)
-	if li == 0 && ri == 0 {
+	li, ri, ok := ensureIntToFloats(l, r)
+	if !ok {
 		panic(typeError(pos, "modulo operator requires two floats or integers"))
 	}
 	if ri == 0 {
@@ -489,8 +494,8 @@ func evalPower(pos Position, l, r Value) Value {
 	}
 
 	// Fallback to original logic with math.Pow
-	li, ri := ensureIntToFloats(l, r)
-	if li == 0 && ri == 0 {
+	li, ri, ok := ensureIntToFloats(l, r)
+	if !ok {
 		panic(typeError(pos, "** requires two floats or integers"))
 	}
 	result := math.Pow(li, ri)
@@ -716,69 +721,22 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 	case *Call:
 		function := interp.evaluate(e.Function)
-		// Check for direct functionType
-		if f, ok := function.(functionType); ok {
-			args := []Value{}
-			for _, a := range e.Arguments {
-				args = SmartAppend(args, interp.evaluate(a))
-			}
-			if e.Ellipsis {
-				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-				args = args[:len(args)-1]
-				for iterator.HasNext() {
-					args = SmartAppend(args, iterator.Value())
-				}
-			}
-			return interp.callFunction(e.Function.Position(), f, args)
+		f, ok := function.(functionType)
+		if !ok {
+			panic(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
 		}
-		// Check for *userFunction specifically
-		if uf, ok := function.(*userFunction); ok {
-			args := []Value{}
-			for _, a := range e.Arguments {
-				args = SmartAppend(args, interp.evaluate(a))
-			}
-			if e.Ellipsis {
-				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-				args = args[:len(args)-1]
-				for iterator.HasNext() {
-					args = SmartAppend(args, iterator.Value())
-				}
-			}
-			return interp.callFunction(e.Function.Position(), uf, args)
+		args := []Value{}
+		for _, a := range e.Arguments {
+			args = SmartAppend(args, interp.evaluate(a))
 		}
-		// Check for builtinFunction specifically
-		if bf, ok := function.(builtinFunction); ok {
-			args := []Value{}
-			for _, a := range e.Arguments {
-				args = SmartAppend(args, interp.evaluate(a))
-			}
-			if e.Ellipsis {
-				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-				args = args[:len(args)-1]
-				for iterator.HasNext() {
-					args = SmartAppend(args, iterator.Value())
-				}
-			}
-			return interp.callFunction(e.Function.Position(), bf, args)
-		}
-		// Check if it's a function type wrapped in any (from tagged values)
-		if interfaceVal, ok := function.(any); ok {
-			if f, ok := interfaceVal.(functionType); ok {
-				args := []Value{}
-				for _, a := range e.Arguments {
-					args = SmartAppend(args, interp.evaluate(a))
-				}
-				if e.Ellipsis {
-					iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
-					args = args[:len(args)-1]
-					for iterator.HasNext() {
-						args = SmartAppend(args, iterator.Value())
-					}
-				}
-				return interp.callFunction(e.Function.Position(), f, args)
+		if e.Ellipsis {
+			iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
+			args = args[:len(args)-1]
+			for iterator.HasNext() {
+				args = SmartAppend(args, iterator.Value())
 			}
 		}
-		panic(typeError(e.Function.Position(), "can't call non-function type %s", typeName(function)))
+		return interp.callFunction(e.Function.Position(), f, args)
 	case *Literal:
 		return Value(e.Value)
 	case *Variable:
@@ -1484,6 +1442,11 @@ func (interp *interpreter) execute(prog *Program) {
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
 
+	// Initialize per-engine rule engine state (isolated from other Engine instances)
+	interp.factDatabase = make(map[string]any)
+	interp.eventStore = make([]map[string]any, 0)
+	interp.eventPatterns = make(map[string]any)
+
 	// Set global memory layout configuration
 	if config.MemoryLayout != nil {
 		SetGlobalMemoryLayoutConfig(config.MemoryLayout)
@@ -1596,10 +1559,61 @@ func Evaluate(expr Expression, config *Config) (v Value, stats *Stats, err error
 	return
 }
 
+// executeVM routes execution through the bytecode VM instead of the tree-walker.
+func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
+	c := NewCompiler()
+
+	// Pre-seed variable names from Config.Vars so the compiler allocates registers
+	// for them. The actual values are written into those registers before execution.
+	if config != nil {
+		for k := range config.Vars {
+			c.preSeededVars = append(c.preSeededVars, k)
+		}
+	}
+
+	fn, compileErr := c.Compile(prog)
+	if compileErr != nil {
+		return nil, compileErr
+	}
+	interp := newInterpreter(config)
+	vm := NewVM(interp)
+
+	// Load pre-defined variable values into the VM register window before execution.
+	if config != nil {
+		for k, v := range config.Vars {
+			if reg, ok := c.locals[k]; ok {
+				needed := int(reg) + 1
+				for len(vm.regs) < needed {
+					vm.regs = append(vm.regs, make([]Value, needed-len(vm.regs))...)
+				}
+				vm.regs[reg] = v
+			}
+		}
+	}
+
+	vm.Execute(fn)
+
+	// Auto-call main() if defined and not in a unit test (mirrors tree-walker behavior).
+	if config == nil || !config.IsUnitTest {
+		if reg, ok := c.locals["main"]; ok {
+			if int(reg) < len(vm.regs) {
+				if mainFn, ok := vm.regs[reg].(*vmFunction); ok {
+					mainFn.call(interp, Position{}, nil)
+				}
+			}
+		}
+	}
+
+	return &interp.stats, nil
+}
+
 // Execute takes a parsed Program and interpreter config and interprets the
 // program. Return interpreter statistics, and an error which is nil on
 // success or an interpreter.Error if there's an error.
 func Execute(prog *Program, config *Config) (stats *Stats, err error) {
+	if config != nil && config.VMEnabled {
+		return executeVM(prog, config)
+	}
 	interp := newInterpreter(config)
 	defer func() {
 		if r := recover(); r != nil {

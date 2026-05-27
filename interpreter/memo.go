@@ -28,8 +28,9 @@ func NewOptimizedMemoCache(maxSize int) *OptimizedMemoCache {
 	}
 }
 
-// Global optimized memo cache
-// EXPERIMENTAL: Global memoization cache for experimental function caching
+// EXPERIMENTAL(thread-safety): Global memoization cache shared across all interpreter instances.
+// Safe for read-heavy single-Engine workloads; unsafe when the same memoized function
+// is called concurrently from different Engines.
 var globalOptimizedMemoCache = NewOptimizedMemoCache(10000)
 
 // ProductionMemoCache provides a production-ready memoization cache with LRU eviction and TTL support

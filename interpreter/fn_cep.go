@@ -17,8 +17,8 @@ func eventEmitFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("event_emit: first argument must be an event type string"))
 	}
 
-	eventMutex.Lock()
-	defer eventMutex.Unlock()
+	interp.eventMutex.Lock()
+	defer interp.eventMutex.Unlock()
 
 	// Create event structure
 	event := map[string]any{
@@ -33,11 +33,11 @@ func eventEmitFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// Add to event store
-	eventStore = append(eventStore, event)
+	interp.eventStore = append(interp.eventStore, event)
 
 	// Keep only recent events (last 1000)
-	if len(eventStore) > 1000 {
-		eventStore = eventStore[len(eventStore)-1000:]
+	if len(interp.eventStore) > 1000 {
+		interp.eventStore = interp.eventStore[len(interp.eventStore)-1000:]
 	}
 
 	return Value(true)
@@ -70,8 +70,8 @@ func eventDefinePatternFunc(interp *interpreter, pos Position, args []Value) Val
 		return Value(fmt.Errorf("event_define_pattern: second argument must be an array of event types"))
 	}
 
-	eventMutex.Lock()
-	defer eventMutex.Unlock()
+	interp.eventMutex.Lock()
+	defer interp.eventMutex.Unlock()
 
 	// Store pattern
 	pattern := map[string]any{
@@ -88,7 +88,7 @@ func eventDefinePatternFunc(interp *interpreter, pos Position, args []Value) Val
 		}
 	}
 
-	eventPatterns[patternName] = pattern
+	interp.eventPatterns[patternName] = pattern
 	return Value(true)
 }
 
@@ -109,13 +109,13 @@ func eventGetWindowFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("event_get_window: invalid duration format: %v", err))
 	}
 
-	eventMutex.RLock()
-	defer eventMutex.RUnlock()
+	interp.eventMutex.RLock()
+	defer interp.eventMutex.RUnlock()
 
 	cutoffTime := time.Now().Add(-duration)
 	var filteredEvents []map[string]any
 
-	for _, event := range eventStore {
+	for _, event := range interp.eventStore {
 		// Parse event timestamp
 		if timestampStr, ok := event["timestamp"].(string); ok {
 			if eventTime, err := time.Parse(time.RFC3339, timestampStr); err == nil {
@@ -153,13 +153,13 @@ func eventGetWindowFunc(interp *interpreter, pos Position, args []Value) Value {
 // eventClearFunc clears events from the event store
 // Usage: event_clear() or event_clear("user_login")
 func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
-	eventMutex.Lock()
-	defer eventMutex.Unlock()
+	interp.eventMutex.Lock()
+	defer interp.eventMutex.Unlock()
 
 	if len(args) == 0 {
 		// Clear all events
-		count := len(eventStore)
-		eventStore = make([]map[string]any, 0)
+		count := len(interp.eventStore)
+		interp.eventStore = make([]map[string]any, 0)
 		return Value(count) // int, not int64
 	}
 
@@ -172,7 +172,7 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 	var filteredEvents []map[string]any
 	count := 0
 
-	for _, event := range eventStore {
+	for _, event := range interp.eventStore {
 		if et, ok := event["type"].(string); ok && et == eventType {
 			count++
 		} else {
@@ -180,19 +180,19 @@ func eventClearFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	}
 
-	eventStore = filteredEvents
+	interp.eventStore = filteredEvents
 	return Value(count) // int, not int64
 }
 
 // eventCountFunc counts events in the store
 // Usage: event_count() or event_count("user_login")
 func eventCountFunc(interp *interpreter, pos Position, args []Value) Value {
-	eventMutex.RLock()
-	defer eventMutex.RUnlock()
+	interp.eventMutex.RLock()
+	defer interp.eventMutex.RUnlock()
 
 	if len(args) == 0 {
 		// Return total count
-		return Value(len(eventStore)) // int, not int64
+		return Value(len(interp.eventStore)) // int, not int64
 	}
 
 	// Count events of specific type
@@ -202,7 +202,7 @@ func eventCountFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	count := 0
-	for _, event := range eventStore {
+	for _, event := range interp.eventStore {
 		if et, ok := event["type"].(string); ok && et == eventType {
 			count++
 		}

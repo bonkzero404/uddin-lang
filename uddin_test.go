@@ -3,6 +3,7 @@ package uddin
 import (
 	"bytes"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -617,4 +618,82 @@ func BenchmarkEngine_EvaluateString(b *testing.B) {
 			b.Fatalf("Evaluation failed: %v", err)
 		}
 	}
+}
+
+func TestEngineCache_SameResultTwice(t *testing.T) {
+	engine := New()
+	engine.SetUnitTestMode(true)
+
+	src := `score + 1`
+	prog, err := engine.ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+
+	for i, wantScore := range []int{10, 20} {
+		engine.SetVariable("score", wantScore)
+		_, err := engine.ExecuteProgram(prog)
+		if err != nil {
+			t.Fatalf("exec %d: %v", i, err)
+		}
+	}
+}
+
+func TestEngineCache_ConcurrentSafe(t *testing.T) {
+	src := `x = 1
+x`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			e := New()
+			e.SetUnitTestMode(true)
+			_, err := e.ExecuteProgram(prog)
+			if err != nil {
+				t.Errorf("concurrent exec: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+func BenchmarkEngine_NoCacheVsCache(b *testing.B) {
+	src := `
+fun fib(n: int):
+    if (n <= 1) then:
+        return n
+    end
+    return fib(n - 1) + fib(n - 2)
+end
+fib(20)
+`
+	b.Run("ParseAndExecute", func(b *testing.B) {
+		engine := New()
+		engine.SetUnitTestMode(true)
+		for b.Loop() {
+			_, err := engine.ExecuteString(src)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+
+	b.Run("CachedExecute", func(b *testing.B) {
+		engine := New()
+		engine.SetUnitTestMode(true)
+		prog, _ := engine.ParseProgram([]byte(src))
+		b.ResetTimer()
+		for b.Loop() {
+			_, err := engine.ExecuteProgram(prog)
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
