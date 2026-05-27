@@ -1019,3 +1019,36 @@ func TestVMBuiltinDirect_Contains(t *testing.T) {
 		t.Errorf("expected true, got %v", result)
 	}
 }
+
+func BenchmarkBuiltinDirect_Len(b *testing.B) {
+	src := `len("hello world")`
+	prog, _ := ParseProgram([]byte(src))
+	fn, _ := NewCompiler().Compile(prog)
+	cfg := TestConfig()
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(cfg).Execute(fn)
+	}
+}
+
+func BenchmarkBuiltinDirect_Upper(b *testing.B) {
+	src := `upper("hello world")`
+	prog, _ := ParseProgram([]byte(src))
+	fn, _ := NewCompiler().Compile(prog)
+	cfg := TestConfig()
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(cfg).Execute(fn)
+	}
+}
+
+func BenchmarkBuiltinDirect_Contains(b *testing.B) {
+	src := `contains("hello world foo bar", "foo")`
+	prog, _ := ParseProgram([]byte(src))
+	fn, _ := NewCompiler().Compile(prog)
+	cfg := TestConfig()
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(cfg).Execute(fn)
+	}
+}
