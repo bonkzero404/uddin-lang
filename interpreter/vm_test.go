@@ -1088,3 +1088,34 @@ len(arr)
 		t.Errorf("expected 4, got %v", result)
 	}
 }
+
+func BenchmarkBuiltinChain_LenUpper(b *testing.B) {
+	src := `
+x = upper("hello world")
+y = len(x)
+z = contains(x, "HELLO")
+z
+`
+	prog, _ := ParseProgram([]byte(src))
+	fn, _ := NewCompiler().Compile(prog)
+	cfg := TestConfig()
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(cfg).Execute(fn)
+	}
+}
+
+func BenchmarkBuiltinChain_WafRule(b *testing.B) {
+	src := `
+path = "/api/v1/users"
+result = starts_with(path, "/api") and contains(path, "users") and ends_with(path, "users")
+result
+`
+	prog, _ := ParseProgram([]byte(src))
+	fn, _ := NewCompiler().Compile(prog)
+	cfg := TestConfig()
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(cfg).Execute(fn)
+	}
+}
