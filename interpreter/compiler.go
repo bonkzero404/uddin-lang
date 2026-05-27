@@ -125,10 +125,54 @@ func (c *Compiler) Compile(prog *Program) (*Function, error) {
 		c.localReg(name)
 	}
 
+	// Multi-pass top-level compilation for forward-reference support.
+	//
+	// Pass 1 — compile Import statements first (file imports inline the
+	//   imported AST nodes; module imports emit OP_IMPORT_MODULE).  This makes
+	//   imported function names available in c.locals before the current file's
+	//   own function bodies reference them.
+	//
+	// Pre-scan — allocate a register for every top-level FunctionDefinition
+	//   name.  localReg is idempotent; compileFunctionDef reuses these regs.
+	//   Eliminates compile-time "undefined variable" for forward refs.
+	//
+	// Pass 2 — emit OP_MAKE_FUNC for all FunctionDefinition statements.
+	//   Runtime forward references are fixed up in executeVM after Execute().
+	//
+	// Pass 3 — emit all remaining (non-import, non-function) statements.
+	var funcStmts []Statement
+	var otherStmts []Statement
+	for _, stmt := range prog.Statements {
+		switch stmt.(type) {
+		case *Import:
+			if err := c.compileStatement(stmt); err != nil {
+				return nil, err
+			}
+			c.freeTemps()
+		case *FunctionDefinition:
+			funcStmts = append(funcStmts, stmt)
+		default:
+			otherStmts = append(otherStmts, stmt)
+		}
+	}
+	// pre-scan: allocate registers for this file's function names
+	for _, stmt := range funcStmts {
+		fd := stmt.(*FunctionDefinition)
+		c.localReg(fd.Name)
+	}
+	// pass 2: emit OP_MAKE_FUNC
+	for _, stmt := range funcStmts {
+		if err := c.compileStatement(stmt); err != nil {
+			return nil, err
+		}
+		c.freeTemps()
+	}
+	nonFuncStmts := otherStmts
+
 	// lastExprReg tracks the register holding the last expression-statement
 	// result so the top-level program returns it implicitly (REPL semantics).
 	lastExprReg := int(-1)
-	for _, stmt := range prog.Statements {
+	for _, stmt := range nonFuncStmts {
 		if es, ok := stmt.(*ExpressionStatement); ok {
 			r, err := c.compileExpr(es.Expression)
 			if err != nil {

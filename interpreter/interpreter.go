@@ -1633,6 +1633,22 @@ func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
 
 	vm.Execute(fn)
 
+	// Fixup pass: after all top-level OP_MAKE_FUNC instructions have run, every
+	// function register holds its final vmFunction value. Re-capture upvalues for
+	// every top-level vmFunction so that forward references (main() calling a
+	// function defined later in the file) resolve to the correct values.
+	// Upvalues with IsLocal=true were captured from the top-level register window,
+	// which is exactly vm.regs[0..N-1]. We re-read them now that all are populated.
+	for _, reg := range vm.regs {
+		if vf, ok := reg.(*vmFunction); ok {
+			for i, upv := range vf.fn.Upvalues {
+				if upv.IsLocal && int(upv.Index) < len(vm.regs) {
+					vf.captured[i] = vm.regs[upv.Index]
+				}
+			}
+		}
+	}
+
 	// Auto-call main() if defined and not in a unit test (mirrors tree-walker behavior).
 	if config == nil || !config.IsUnitTest {
 		if reg, ok := c.locals["main"]; ok {
