@@ -15,6 +15,11 @@ var vmBuiltinTable []vmBuiltinEntry
 // vmBuiltinIndex maps builtin name → index in vmBuiltinTable.
 var vmBuiltinIndex = map[string]uint16{}
 
+// vmBuiltinDirectTable is a parallel table to vmBuiltinTable.
+// A non-nil entry means the builtin has a direct implementation that skips
+// the DispatchOrPanic chain. Index is stable and matches vmBuiltinTable.
+var vmBuiltinDirectTable []func(*interpreter, Position, []Value) Value
+
 func init() {
 	registerVMBuiltins()
 }
@@ -30,6 +35,7 @@ func registerVMBuiltins() {
 
 	vmBuiltinTable = make([]vmBuiltinEntry, 0, len(names))
 	vmBuiltinIndex = make(map[string]uint16, len(names))
+	vmBuiltinDirectTable = make([]func(*interpreter, Position, []Value) Value, len(names))
 
 	for _, name := range names {
 		n := name // capture loop var
@@ -41,4 +47,14 @@ func registerVMBuiltins() {
 		})
 		vmBuiltinIndex[n] = uint16(len(vmBuiltinTable) - 1)
 	}
+}
+
+// registerVMBuiltinDirect sets a direct (no-dispatch) implementation for name.
+// Must be called after registerVMBuiltins() — from init() in vm_builtins.go.
+func registerVMBuiltinDirect(name string, fn func(*interpreter, Position, []Value) Value) {
+	idx, ok := vmBuiltinIndex[name]
+	if !ok {
+		panic("registerVMBuiltinDirect: unknown builtin " + name)
+	}
+	vmBuiltinDirectTable[idx] = fn
 }

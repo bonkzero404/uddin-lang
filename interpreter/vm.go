@@ -395,6 +395,18 @@ func (vm *VM) run() (result Value) {
 			entry := vmBuiltinTable[builtinIdx]
 			regs[instr.Dst] = entry.fn(vm.interp, Position{}, args)
 
+		case OP_CALL_BUILTIN_DIRECT:
+			directIdx := int(instr.Src1)<<8 | int(instr.Src2)
+			metaInstr := frame.fn.Code[frame.pc]
+			frame.pc++
+			argc := int(metaInstr.Dst)
+			argBase := int(metaInstr.Src1)<<8 | int(metaInstr.Src2)
+			args := make([]Value, argc)
+			for i := 0; i < argc; i++ {
+				args[i] = regs[argBase+i]
+			}
+			regs[instr.Dst] = vmBuiltinDirectTable[directIdx](vm.interp, Position{}, args)
+
 		case OP_TRY:
 			// Src1 = errReg; Dst:Src2 = signed jump offset to catch block.
 			catchOffset := instr.jumpOffset()

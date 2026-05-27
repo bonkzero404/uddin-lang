@@ -971,3 +971,51 @@ fact(5)
 		t.Errorf("expected 120 (5!), got %v (%T)", result, result)
 	}
 }
+
+func TestVMBuiltinDirect_Len(t *testing.T) {
+	src := `len("hello")`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 5 {
+		t.Errorf("expected 5, got %v (%T)", result, result)
+	}
+}
+
+func TestVMBuiltinDirect_Upper(t *testing.T) {
+	src := `upper("hello")`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != "HELLO" {
+		t.Errorf("expected HELLO, got %v", result)
+	}
+}
+
+func TestVMBuiltinDirect_Contains(t *testing.T) {
+	src := `contains("hello world", "world")`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != true {
+		t.Errorf("expected true, got %v", result)
+	}
+}

@@ -60,9 +60,10 @@ const (
 	OP_SET_INDEX  // regs[Dst][regs[Src1]] = regs[Src2]
 
 	// Functions
-	OP_MAKE_FUNC    // Dst = &vmFunction from fn.SubFunctions[Src1<<8|Src2]
-	OP_CALL         // Dst = call(regs[Src1], argc=Src2, args at argBase)
-	OP_CALL_BUILTIN // Dst = builtinTable[Src1<<8|Src2](argc=next.Dst)
+	OP_MAKE_FUNC           // Dst = &vmFunction from fn.SubFunctions[Src1<<8|Src2]
+	OP_CALL                // Dst = call(regs[Src1], argc=Src2, args at argBase)
+	OP_CALL_BUILTIN        // Dst = builtinTable[Src1<<8|Src2](argc=next.Dst)
+	OP_CALL_BUILTIN_DIRECT // Dst = directTable[Src1<<8|Src2](argc=next.Dst) — direct pointer, no DispatchOrPanic
 
 	// Exception handling
 	OP_TRY     // Src1=errReg; Dst:Src2=signed jump offset to catch block
@@ -100,7 +101,7 @@ func opName(op OpCode) string {
 		"AND", "OR", "NOT", "XOR",
 		"JUMP", "JUMP_FALSE", "JUMP_TRUE", "RETURN",
 		"MAKE_ARRAY", "MAKE_MAP", "SUBSCRIPT", "SET_INDEX",
-		"MAKE_FUNC", "CALL", "CALL_BUILTIN",
+		"MAKE_FUNC", "CALL", "CALL_BUILTIN", "CALL_BUILTIN_DIRECT",
 		"TRY", "END_TRY",
 	}
 	if int(op) < len(names) {
