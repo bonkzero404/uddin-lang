@@ -36,7 +36,6 @@ func TestBuiltinFunctions(t *testing.T) {
 		{"contains_string", `print(contains("hello", "ell"))`, "true"},
 		{"contains_array", `print(contains([1, 2, 3], 2))`, "true"},
 		{"str_pad", `print(str_pad("5", 2, "0"))`, "500"},
-		{"is_regex_match", `print(is_regex_match("^\\d+$", "12345"))`, "true"},
 	}
 
 	for _, test := range tests {

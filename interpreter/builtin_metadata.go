@@ -160,64 +160,9 @@ func getBuiltinMetadataMap() map[string]BuiltinMetadata {
 		"is_nan":      {ArgCount: 1, FastPath: true},
 		"is_infinite": {ArgCount: 1, FastPath: true},
 
-		// Data Serialization
-		"json_parse":     {ArgCount: 1, FastPath: false},
-		"json_stringify": {ArgCount: 1, FastPath: false},
-		"xml_parse":      {ArgCount: 1, FastPath: false},
-		"xml_stringify":  {ArgCount: 1, FastPath: false},
-
-		// Database Functions
-		"db_connect":                  {ArgCount: 6, FastPath: false},
-		"db_query":                    {ArgCount: -1, FastPath: false}, // Variadic: conn, query, params...
-		"db_execute":                  {ArgCount: -1, FastPath: false}, // Variadic
-		"db_connect_with_pool":        {ArgCount: 7, FastPath: false},
-		"db_configure_pool":           {ArgCount: 4, FastPath: false},
-		"db_execute_batch":            {ArgCount: 2, FastPath: false},
-		"db_execute_async":            {ArgCount: -1, FastPath: false},
-		"db_get_async_status":         {ArgCount: 1, FastPath: false},
-		"db_cancel_async":             {ArgCount: 1, FastPath: false},
-		"db_list_async_operations":    {ArgCount: 0, FastPath: false},
-		"db_cleanup_async_operations": {ArgCount: -1, FastPath: false},
-		"stream_tables":               {ArgCount: -1, FastPath: false}, // 3-4 args
-		"db_stop_stream":              {ArgCount: 1, FastPath: false},
-		"db_close":                    {ArgCount: 1, FastPath: false},
-
-		// Regular Expression Functions
-		"is_regex_match": {ArgCount: 2, FastPath: false},
-		"regex_match":    {ArgCount: 2, FastPath: false},
-		"regex_find":     {ArgCount: 2, FastPath: false},
-		"regex_find_all": {ArgCount: 2, FastPath: false},
-		"regex_replace":  {ArgCount: 3, FastPath: false},
-		"regex_split":    {ArgCount: 2, FastPath: false},
-
-		// Date/Time Functions
-		"date_now":        {ArgCount: 0, FastPath: true},
-		"time_now":        {ArgCount: 0, FastPath: true},
-		"sleep":           {ArgCount: 1, FastPath: false},
-		"date_format":     {ArgCount: 2, FastPath: false},
-		"date_parse":      {ArgCount: 1, FastPath: false},
-		"date_format_new": {ArgCount: 2, FastPath: false},
-		"date_add":        {ArgCount: 3, FastPath: false},
-		"date_subtract":   {ArgCount: 3, FastPath: false},
-		"date_diff":       {ArgCount: -1, FastPath: false}, // 2-3 args: date1, date2, [unit]
-		"date_between":    {ArgCount: 3, FastPath: false},
-		"date_compare":    {ArgCount: 2, FastPath: false},
-
-		// Rule Engine - Fact Database
-		"fact_assert":  {ArgCount: -1, FastPath: false}, // 2-3 args: category, key, [value]
-		"fact_retract": {ArgCount: 1, FastPath: false},
-		"fact_query":   {ArgCount: -1, FastPath: false}, // 1-2 args: category, [key]
-		"fact_exists":  {ArgCount: 1, FastPath: true},
-		"fact_count":   {ArgCount: 0, FastPath: true},
-		"fact_clear":   {ArgCount: 0, FastPath: false},
-		"fact_get_all": {ArgCount: 0, FastPath: false},
-
-		// Rule Engine - Complex Event Processing
-		"event_emit":           {ArgCount: 2, FastPath: false},
-		"event_define_pattern": {ArgCount: -1, FastPath: false}, // 2-3 args: patternName, sequence, [timeWindow]
-		"event_get_window":     {ArgCount: -1, FastPath: false}, // 1-2 args: timeWindow, [eventType]
-		"event_clear":          {ArgCount: -1, FastPath: false}, // 0-1 args: [eventType]
-		"event_count":          {ArgCount: -1, FastPath: true},  // 0-1 args: [eventType]
+		// Data Serialization - XML (JSON moved to stdlib/json)
+		"xml_parse":     {ArgCount: 1, FastPath: false},
+		"xml_stringify": {ArgCount: 1, FastPath: false},
 
 		// Memory functions
 		"detect_memory_leaks": {ArgCount: 0, FastPath: false},

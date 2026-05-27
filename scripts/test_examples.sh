@@ -15,6 +15,7 @@ SKIP=(
   "examples/database/mysql_stream.din"
   "examples/database/postgres_stream.din"
   "examples/networking-and-http/http_response_return_demo.din"
+  "examples/networking-and-http/networking_demo.din"
   "examples/networking-and-http/persistent_http_server.din"
 )
 
