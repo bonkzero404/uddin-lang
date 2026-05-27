@@ -785,3 +785,33 @@ func TestEngine_ExecuteFile(t *testing.T) {
 		t.Errorf("expected 'hello from file' in output, got %q", buf.String())
 	}
 }
+
+func TestEngine_EnableMemoryOptimization(t *testing.T) {
+	var buf bytes.Buffer
+	engine := New()
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+	engine.EnableMemoryOptimization()
+
+	_, err := engine.ExecuteString(`print("mem ok")`)
+	if err != nil {
+		t.Fatalf("execution after EnableMemoryOptimization failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "mem ok") {
+		t.Errorf("expected 'mem ok' in output, got %q", buf.String())
+	}
+}
+
+func TestEngine_SetStdin(t *testing.T) {
+	engine := New()
+	r := strings.NewReader("hello")
+	engine.SetStdin(r)
+	// Smoke test: verify SetStdin doesn't panic and the engine can execute
+	var buf bytes.Buffer
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+	_, err := engine.ExecuteString(`print("stdin set")`)
+	if err != nil {
+		t.Fatalf("execution after SetStdin failed: %v", err)
+	}
+}
