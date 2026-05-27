@@ -19,12 +19,6 @@ func init() {
 	registerVMBuiltins()
 }
 
-func registerVMBuiltin(name string, fn func(*interpreter, Position, []Value) Value) {
-	idx := uint16(len(vmBuiltinTable))
-	vmBuiltinTable = append(vmBuiltinTable, vmBuiltinEntry{name: name, fn: fn})
-	vmBuiltinIndex[name] = idx
-}
-
 func registerVMBuiltins() {
 	// Collect all names from the package-level builtins map (functions.go).
 	// builtins is a package-level var, initialized before init() runs.
