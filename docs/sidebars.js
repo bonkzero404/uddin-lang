@@ -63,6 +63,7 @@ const sidebars = {
         'reference/builtin-functions',
         'reference/database-streaming',
         'reference/memory-optimization',
+        'reference/bytecode-vm',
         'reference/library',
     ],
 

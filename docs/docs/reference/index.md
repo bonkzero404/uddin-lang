@@ -44,6 +44,14 @@ Reference guide for real-time database streaming capabilities including:
 
 
 
+### [Bytecode VM & Performance](./bytecode-vm)
+Internals of the bytecode virtual machine and performance APIs including:
+- VM architecture and opcode reference
+- `CALL_BUILTIN_DIRECT` fast-path builtins
+- Engine program cache and VM pool
+- Regex pre-compilation
+- Disassembling bytecode
+
 ### [Go Library](./library)
 Comprehensive guide to using UDDIN-LANG as a Go library including:
 - Installation and setup
