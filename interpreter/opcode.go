@@ -54,10 +54,11 @@ const (
 	OP_RETURN     // return regs[Src1]
 
 	// Collections
-	OP_MAKE_ARRAY // Dst = []Value{regs[Src1]..regs[Src1+Src2-1]}
-	OP_MAKE_MAP   // Dst = map[string]Value built from Src2 pairs starting at Src1
-	OP_SUBSCRIPT  // Dst = regs[Src1][regs[Src2]]
-	OP_SET_INDEX  // regs[Dst][regs[Src1]] = regs[Src2]
+	OP_MAKE_ARRAY       // Dst = []Value{regs[Src1]..regs[Src1+Src2-1]}
+	OP_MAKE_MAP         // Dst = map[string]Value built from Src2 pairs starting at Src1
+	OP_SUBSCRIPT        // Dst = regs[Src1][regs[Src2]]
+	OP_SET_INDEX        // regs[Dst][regs[Src1]] = regs[Src2]
+	OP_ITER_NORMALIZE   // Dst = normalize Src1 to *[]Value (map→keys, string→chars, array→as-is)
 
 	// Functions
 	OP_MAKE_FUNC           // Dst = &vmFunction from fn.SubFunctions[Src1<<8|Src2]
@@ -103,7 +104,7 @@ func opName(op OpCode) string {
 		"EQ", "NEQ", "LT", "LTE", "GT", "GTE", "IN",
 		"AND", "OR", "NOT", "XOR",
 		"JUMP", "JUMP_FALSE", "JUMP_TRUE", "RETURN",
-		"MAKE_ARRAY", "MAKE_MAP", "SUBSCRIPT", "SET_INDEX",
+		"MAKE_ARRAY", "MAKE_MAP", "SUBSCRIPT", "SET_INDEX", "ITER_NORMALIZE",
 		"MAKE_FUNC", "CALL", "CALL_BUILTIN", "CALL_BUILTIN_DIRECT",
 		"TRY", "END_TRY",
 		"IMPORT_MODULE",

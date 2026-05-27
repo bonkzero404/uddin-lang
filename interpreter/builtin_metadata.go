@@ -17,7 +17,7 @@ func getBuiltinMetadataMap() map[string]BuiltinMetadata {
 		"println": {ArgCount: -1, FastPath: true},
 		"input":   {ArgCount: 0, FastPath: false},
 		"import":  {ArgCount: 1, FastPath: false},
-		"exit":    {ArgCount: 0, FastPath: false},
+		"exit":    {ArgCount: -1, FastPath: false},
 		"typeof":  {ArgCount: 1, FastPath: true},
 
 		// Type Conversion Functions (all take 1 arg, fast path)

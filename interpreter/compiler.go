@@ -29,7 +29,7 @@ func regexPatternArgIndex(name string) int {
 type Compiler struct {
 	fn      *Function
 	locals  map[string]uint8
-	nextReg uint8
+	nextReg uint16 // uint16 to avoid 8-bit wrap when many temps are allocated
 
 	// Loop control: slices of instruction indices that need patching.
 	// breakTargets holds indices of OP_JUMP instructions emitted by 'break'.
@@ -57,6 +57,11 @@ type Compiler struct {
 	// upvalues maps variable names to their upvalue index in fn.Upvalues.
 	// Populated lazily as free variables are encountered during compilation.
 	upvalues map[string]uint8
+
+	// pinnedWatermark is an extra lower bound for freeTemps().
+	// Loop compilation sets this to protect loop-control registers
+	// from being recycled by nested freeTemps() calls inside the loop body.
+	pinnedWatermark uint16
 }
 
 // isIntReg reports whether register r is known to hold an int value.
@@ -130,11 +135,13 @@ func (c *Compiler) Compile(prog *Program) (*Function, error) {
 				return nil, err
 			}
 			lastExprReg = int(r)
+			c.freeTemps()
 		} else {
 			if err := c.compileStatement(stmt); err != nil {
 				return nil, err
 			}
 			lastExprReg = -1
+			c.freeTemps()
 		}
 	}
 
@@ -148,7 +155,10 @@ func (c *Compiler) Compile(prog *Program) (*Function, error) {
 		c.emit(Instruction{Op: OP_LOAD_CONST, Dst: r, Src1: uint8(nilIdx >> 8), Src2: uint8(nilIdx)})
 	}
 	c.emit(Instruction{Op: OP_RETURN, Src1: r})
-	c.fn.MaxRegs = c.nextReg
+	// fn.MaxRegs is maintained by freeTemps() calls above; don't override it here.
+	if c.nextReg > uint16(c.fn.MaxRegs) {
+		c.fn.MaxRegs = uint8(c.nextReg)
+	}
 	return c.fn, nil
 }
 
@@ -169,12 +179,52 @@ func (c *Compiler) addConst(v Value) uint16 {
 }
 
 func (c *Compiler) allocReg() uint8 {
-	r := c.nextReg
+	if c.nextReg > 255 {
+		// Callers must check for compile errors after this; returning 0 is safe
+		// because the outer compileStatement loop returns the error immediately.
+		panic(fmt.Sprintf("compiler: register overflow — function %q uses more than 256 registers", c.fn.Name))
+	}
+	r := uint8(c.nextReg)
 	c.nextReg++
-	if c.nextReg > c.fn.MaxRegs {
-		c.fn.MaxRegs = c.nextReg
+	if c.nextReg > uint16(c.fn.MaxRegs) {
+		c.fn.MaxRegs = uint8(c.nextReg - 1) // MaxRegs = highest register used
+		if c.nextReg <= 256 {
+			c.fn.MaxRegs = uint8(c.nextReg)
+		}
 	}
 	return r
+}
+
+// localWatermark returns the first free register above all currently-allocated locals
+// and any pinned (loop-control) registers.
+func (c *Compiler) localWatermark() uint16 {
+	max := c.pinnedWatermark
+	for _, reg := range c.locals {
+		if uint16(reg)+1 > max {
+			max = uint16(reg) + 1
+		}
+	}
+	return max
+}
+
+// updateMaxRegs updates fn.MaxRegs if nextReg has grown beyond it.
+func (c *Compiler) updateMaxRegs() {
+	if c.nextReg > uint16(c.fn.MaxRegs) && c.nextReg <= 256 {
+		c.fn.MaxRegs = uint8(c.nextReg)
+	}
+}
+
+// freeTemps resets nextReg to just above all permanent locals and pinned regs,
+// releasing temp registers. MaxRegs is updated before the reset.
+func (c *Compiler) freeTemps() {
+	c.updateMaxRegs()
+	c.nextReg = c.localWatermark()
+}
+
+// freeTempsToWatermark is an alias for freeTemps — now that pinnedWatermark
+// handles loop-control protection, callers no longer need a separate wm parameter.
+func (c *Compiler) freeTempsToWatermark(_ uint16) {
+	c.freeTemps()
 }
 
 func (c *Compiler) localReg(name string) uint8 {
@@ -238,6 +288,16 @@ func (c *Compiler) compileVarAssign(v *Variable, value Expression, op Token) err
 	}
 
 	if op == ASSIGN {
+		// For brand-new locals (first assignment), free expression temps before
+		// allocating the local register. This keeps locals densely packed at low
+		// register numbers regardless of how many temporaries the RHS needed,
+		// preventing the watermark from drifting upward with each new variable.
+		// The src register remains readable after the reset because MaxRegs was
+		// already updated by allocReg() calls during expression compilation.
+		if _, exists := c.locals[v.Name]; !exists {
+			c.updateMaxRegs()
+			c.nextReg = c.localWatermark()
+		}
 		dst := c.localReg(v.Name)
 		c.emit(Instruction{Op: OP_STORE_VAR, Dst: dst, Src1: src})
 		return nil
@@ -406,30 +466,50 @@ func (c *Compiler) compileExpr(expr Expression) (uint8, error) {
 		return c.compileUnary(e)
 
 	case *List:
-		startReg := c.nextReg
+		// Compile each element, collect result regs, then copy into a
+		// contiguous window. Elements like -(n) consume multiple regs
+		// internally, so the result isn't necessarily at startReg+i.
 		count := len(e.Values)
-		for _, elem := range e.Values {
-			_, err := c.compileExpr(elem)
+		elemRegs := make([]uint8, count)
+		for i, elem := range e.Values {
+			r, err := c.compileExpr(elem)
 			if err != nil {
 				return 0, err
 			}
+			elemRegs[i] = r
+		}
+		startReg := uint16(c.nextReg)
+		for _, r := range elemRegs {
+			dst := c.allocReg()
+			c.emit(Instruction{Op: OP_STORE_VAR, Dst: dst, Src1: r})
 		}
 		dst := c.allocReg()
 		c.emit(Instruction{Op: OP_MAKE_ARRAY, Dst: dst, Src1: uint8(startReg), Src2: uint8(count)})
 		return dst, nil
 
 	case *Map:
-		startReg := c.nextReg
+		// Same as *List: compile all keys/values first, then copy into
+		// contiguous interleaved key-value window for OP_MAKE_MAP.
 		count := len(e.Items)
-		for _, item := range e.Items {
-			_, err := c.compileExpr(item.Key)
+		type pair struct{ k, v uint8 }
+		pairs := make([]pair, count)
+		for i, item := range e.Items {
+			kr, err := c.compileExpr(item.Key)
 			if err != nil {
 				return 0, err
 			}
-			_, err = c.compileExpr(item.Value)
+			vr, err := c.compileExpr(item.Value)
 			if err != nil {
 				return 0, err
 			}
+			pairs[i] = pair{kr, vr}
+		}
+		startReg := uint16(c.nextReg)
+		for _, p := range pairs {
+			kDst := c.allocReg()
+			c.emit(Instruction{Op: OP_STORE_VAR, Dst: kDst, Src1: p.k})
+			vDst := c.allocReg()
+			c.emit(Instruction{Op: OP_STORE_VAR, Dst: vDst, Src1: p.v})
 		}
 		dst := c.allocReg()
 		c.emit(Instruction{Op: OP_MAKE_MAP, Dst: dst, Src1: uint8(startReg), Src2: uint8(count)})
@@ -551,6 +631,7 @@ func (c *Compiler) compileIf(s *If) error {
 		if err := c.compileStatement(stmt); err != nil {
 			return err
 		}
+		c.freeTemps() // recycle temps between body statements
 	}
 
 	if len(s.Else) == 0 {
@@ -568,6 +649,7 @@ func (c *Compiler) compileIf(s *If) error {
 		if err := c.compileStatement(stmt); err != nil {
 			return err
 		}
+		c.freeTemps() // recycle temps between else body statements
 	}
 	// The then-path jump lands here, past the else block.
 	c.patchJump(jumpEnd)
@@ -603,7 +685,7 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 		sub.locals[param] = uint8(i)
 		sub.nextReg++
 	}
-	sub.fn.MaxRegs = sub.nextReg
+	sub.fn.MaxRegs = uint8(sub.nextReg)
 
 	// Store param type hints on the Function for Phase 2 JIT use.
 	sub.fn.ParamTypes = s.ParamHints
@@ -621,12 +703,13 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 	sub.selfName = s.Name
 	selfLocal := sub.allocReg()
 	sub.locals[s.Name] = selfLocal
-	sub.fn.MaxRegs = sub.nextReg
+	sub.fn.MaxRegs = uint8(sub.nextReg)
 
 	for _, stmt := range s.Body {
 		if err := sub.compileStatement(stmt); err != nil {
 			return err
 		}
+		sub.freeTemps()
 	}
 
 	// Implicit nil return.
@@ -634,7 +717,9 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 	r := sub.allocReg()
 	sub.emit(Instruction{Op: OP_LOAD_CONST, Dst: r, Src1: uint8(nilIdx >> 8), Src2: uint8(nilIdx)})
 	sub.emit(Instruction{Op: OP_RETURN, Src1: r})
-	sub.fn.MaxRegs = sub.nextReg
+	if sub.nextReg > uint16(sub.fn.MaxRegs) {
+		sub.fn.MaxRegs = uint8(sub.nextReg)
+	}
 
 	// Fill in the placeholder with the real sub-function.
 	c.fn.SubFunctions[subIdx] = sub.fn
@@ -768,6 +853,8 @@ func (c *Compiler) compileWhile(s *While) error {
 	}
 	// Jump past loop body when condition is false.
 	exitJump := c.emitJump(OP_JUMP_FALSE, cond)
+	// Condition is consumed by the jump; body temps can reuse this space.
+	c.freeTemps()
 
 	// Save outer break/continue targets and start fresh for this loop.
 	savedBreaks := c.breakTargets
@@ -775,10 +862,14 @@ func (c *Compiler) compileWhile(s *While) error {
 	c.breakTargets = nil
 	c.continueTargets = nil
 
+	// Pin locals watermark so nested freeTemps() inside body don't go below it.
+	savedPinned := c.pinnedWatermark
+	c.pinnedWatermark = c.nextReg
 	for _, stmt := range s.Body {
 		if err := c.compileStatement(stmt); err != nil {
 			return err
 		}
+		c.freeTemps()
 	}
 
 	// Patch all 'continue' jumps to point to the back-edge (condition re-eval).
@@ -808,9 +899,10 @@ func (c *Compiler) compileWhile(s *While) error {
 		c.fn.Code[idx].Src2 = uint8(o)
 	}
 
-	// Restore outer loop's break/continue lists.
+	// Restore outer loop's break/continue lists and pinned watermark.
 	c.breakTargets = savedBreaks
 	c.continueTargets = savedContinues
+	c.pinnedWatermark = savedPinned
 	return nil
 }
 
@@ -842,10 +934,13 @@ func (c *Compiler) compileContinue(s *Continue) error {
 //	condReg    — comparison result (counter < len)
 func (c *Compiler) compileFor(s *For) error {
 	// Evaluate the iterable once.
-	iterReg, err := c.compileExpr(s.Iterable)
+	rawReg, err := c.compileExpr(s.Iterable)
 	if err != nil {
 		return err
 	}
+	// Normalize to *[]Value: maps become keys arrays, strings become char arrays.
+	iterReg := c.allocReg()
+	c.emit(Instruction{Op: OP_ITER_NORMALIZE, Dst: iterReg, Src1: rawReg})
 
 	// counter = 0
 	counterReg := c.allocReg()
@@ -882,11 +977,17 @@ func (c *Compiler) compileFor(s *For) error {
 	c.breakTargets = nil
 	c.continueTargets = nil
 
+	// Pin all loop-control regs (iterReg, counterReg, lenReg, condReg) so that
+	// nested freeTemps() calls inside the body don't recycle them.
+	savedPinned := c.pinnedWatermark
+	c.pinnedWatermark = c.nextReg
+
 	// Compile body.
 	for _, stmt := range s.Body {
 		if err := c.compileStatement(stmt); err != nil {
 			return err
 		}
+		c.freeTemps()
 	}
 
 	// Continue target: increment counter then jump back to header.
@@ -924,6 +1025,7 @@ func (c *Compiler) compileFor(s *For) error {
 
 	c.breakTargets = savedBreaks
 	c.continueTargets = savedContinues
+	c.pinnedWatermark = savedPinned // restore outer loop's pin
 	return nil
 }
 
@@ -1021,12 +1123,13 @@ func (c *Compiler) compileFunctionExpr(e *FunctionExpression) (uint8, error) {
 		sub.locals[param] = uint8(i)
 		sub.nextReg++
 	}
-	sub.fn.MaxRegs = sub.nextReg
+	sub.fn.MaxRegs = uint8(sub.nextReg)
 
 	for _, stmt := range e.Body {
 		if err := sub.compileStatement(stmt); err != nil {
 			return 0, err
 		}
+		sub.freeTemps()
 	}
 
 	// Implicit nil return.
@@ -1034,7 +1137,9 @@ func (c *Compiler) compileFunctionExpr(e *FunctionExpression) (uint8, error) {
 	r := sub.allocReg()
 	sub.emit(Instruction{Op: OP_LOAD_CONST, Dst: r, Src1: uint8(nilIdx >> 8), Src2: uint8(nilIdx)})
 	sub.emit(Instruction{Op: OP_RETURN, Src1: r})
-	sub.fn.MaxRegs = sub.nextReg
+	if sub.nextReg > uint16(sub.fn.MaxRegs) {
+		sub.fn.MaxRegs = uint8(sub.nextReg)
+	}
 
 	subIdx := uint16(len(c.fn.SubFunctions))
 	c.fn.SubFunctions = append(c.fn.SubFunctions, sub.fn)

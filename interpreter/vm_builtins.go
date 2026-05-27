@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"fmt"
 	"net"
 	"sort"
 	"strconv"
@@ -273,25 +272,7 @@ func directStr(_ *interpreter, pos Position, args []Value) Value {
 	if len(args) != 1 {
 		panic(typeError(pos, "str() requires 1 argument, got %d", len(args)))
 	}
-	switch v := args[0].(type) {
-	case string:
-		return args[0]
-	case int:
-		return Value(fmt.Sprintf("%d", v))
-	case int64:
-		return Value(fmt.Sprintf("%d", v))
-	case float64:
-		return Value(fmt.Sprintf("%g", v))
-	case bool:
-		if v {
-			return Value("true")
-		}
-		return Value("false")
-	case nil:
-		return Value("null")
-	default:
-		return Value(fmt.Sprintf("%v", v))
-	}
+	return Value(toString(args[0], false))
 }
 
 func directWafCidrMatch(_ *interpreter, pos Position, args []Value) Value {
