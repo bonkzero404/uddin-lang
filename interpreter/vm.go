@@ -405,6 +405,9 @@ func (vm *VM) run() (result Value) {
 			for i := 0; i < argc; i++ {
 				args[i] = regs[argBase+i]
 			}
+			if directIdx >= len(vmBuiltinDirectTable) || vmBuiltinDirectTable[directIdx] == nil {
+				panic(runtimeError(Position{}, "OP_CALL_BUILTIN_DIRECT: no direct impl for index %d", directIdx))
+			}
 			regs[instr.Dst] = vmBuiltinDirectTable[directIdx](vm.interp, Position{}, args)
 
 		case OP_TRY:
