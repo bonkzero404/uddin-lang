@@ -268,10 +268,14 @@ func (vm *VM) run() Value {
 			}
 
 		case OP_LOAD_UPVAL:
-			regs[instr.Dst] = frame.captured[instr.Src1]
+			if int(instr.Src1) < len(frame.captured) {
+				regs[instr.Dst] = frame.captured[instr.Src1]
+			}
 
 		case OP_STORE_UPVAL:
-			frame.captured[instr.Dst] = regs[instr.Src1]
+			if int(instr.Dst) < len(frame.captured) {
+				frame.captured[instr.Dst] = regs[instr.Src1]
+			}
 
 		case OP_MAKE_FUNC:
 			subIdx := int(instr.Src1)<<8 | int(instr.Src2)

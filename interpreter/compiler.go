@@ -221,21 +221,31 @@ func (c *Compiler) compileVarAssign(v *Variable, value Expression, op Token) err
 	}
 
 	// Compound assignment: load variable, apply op, store back.
-	varReg, ok := c.locals[v.Name]
-	if !ok {
-		return fmt.Errorf("compiler: undefined variable %q in compound assignment", v.Name)
-	}
-	curReg := c.allocReg()
-	c.emit(Instruction{Op: OP_LOAD_VAR, Dst: curReg, Src1: varReg})
-
 	binOp, err := compoundOpToOpCode(op)
 	if err != nil {
 		return err
 	}
-	resultReg := c.allocReg()
-	c.emit(Instruction{Op: binOp, Dst: resultReg, Src1: curReg, Src2: src})
-	c.emit(Instruction{Op: OP_STORE_VAR, Dst: varReg, Src1: resultReg})
-	return nil
+
+	if varReg, ok := c.locals[v.Name]; ok {
+		curReg := c.allocReg()
+		c.emit(Instruction{Op: OP_LOAD_VAR, Dst: curReg, Src1: varReg})
+		resultReg := c.allocReg()
+		c.emit(Instruction{Op: binOp, Dst: resultReg, Src1: curReg, Src2: src})
+		c.emit(Instruction{Op: OP_STORE_VAR, Dst: varReg, Src1: resultReg})
+		return nil
+	}
+
+	// Try upvalue compound assignment.
+	if uvIdx, err2 := c.resolveUpvalue(v.Name); err2 == nil {
+		curReg := c.allocReg()
+		c.emit(Instruction{Op: OP_LOAD_UPVAL, Dst: curReg, Src1: uvIdx})
+		resultReg := c.allocReg()
+		c.emit(Instruction{Op: binOp, Dst: resultReg, Src1: curReg, Src2: src})
+		c.emit(Instruction{Op: OP_STORE_UPVAL, Dst: uvIdx, Src1: resultReg})
+		return nil
+	}
+
+	return fmt.Errorf("compiler: undefined variable %q in compound assignment", v.Name)
 }
 
 // compileSubscriptAssign handles subscript assignment (a[i] = expr) and compound
