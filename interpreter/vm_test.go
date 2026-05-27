@@ -673,3 +673,41 @@ func BenchmarkTreeWalkerCrossFunction(b *testing.B) {
 		Execute(prog, twCfg)
 	}
 }
+
+func TestVMAllBuiltins(t *testing.T) {
+	cases := []struct {
+		name string
+		src  string
+		want Value
+	}{
+		{"abs", `abs(-5)`, 5},
+		{"max", `max(3, 7)`, 7},
+		{"min", `min(3, 7)`, 3},
+		{"lower", `lower("HELLO")`, "hello"},
+		{"upper", `upper("hello")`, "HELLO"},
+		{"split", `len(split("a,b,c", ","))`, 3},
+		{"join", `join(["a", "b"], ",")`, `"a","b"`},
+		{"contains", `contains("hello", "ell")`, true},
+		{"trim", `trim("  hi  ")`, "hi"},
+		{"reverse_str", `reverse_str("abc")`, "cba"},
+		{"sum", `sum([1,2,3,4,5])`, 15},
+		{"round", `round(3.7)`, 4},
+		{"sqrt", `sqrt(9)`, 3.0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			prog, err := ParseProgram([]byte(tc.src))
+			if err != nil {
+				t.Fatal("parse:", err)
+			}
+			fn, err := NewCompiler().Compile(prog)
+			if err != nil {
+				t.Fatalf("compile: %v", err)
+			}
+			result := makeVM(TestConfig()).Execute(fn)
+			if result != tc.want {
+				t.Errorf("src=%q: want %v (%T), got %v (%T)", tc.src, tc.want, tc.want, result, result)
+			}
+		})
+	}
+}
