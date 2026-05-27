@@ -1,6 +1,9 @@
 package interpreter
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 // Compiler compiles a parsed AST into bytecode Functions.
 type Compiler struct {
@@ -189,7 +192,7 @@ func (c *Compiler) compileStatement(stmt Statement) error {
 	case *TryCatch:
 		return c.compileTryCatch(s)
 	case *Import:
-		return fmt.Errorf("compiler: import is not yet supported in the bytecode VM")
+		return c.compileImport(s)
 	default:
 		return fmt.Errorf("compiler: unsupported statement type %T", stmt)
 	}
@@ -989,4 +992,24 @@ func (c *Compiler) compileFunctionExpr(e *FunctionExpression) (uint8, error) {
 	dst := c.allocReg()
 	c.emit(Instruction{Op: OP_MAKE_FUNC, Dst: dst, Src1: uint8(subIdx >> 8), Src2: uint8(subIdx)})
 	return dst, nil
+}
+
+// compileImport reads, parses, and inlines an imported .din file into the
+// current compiler at compile time. Imported symbols are visible in the same
+// scope as if the file were written inline — matching tree-walker semantics.
+func (c *Compiler) compileImport(s *Import) error {
+	content, err := os.ReadFile(s.Filename)
+	if err != nil {
+		return fmt.Errorf("import '%s': %w", s.Filename, err)
+	}
+	prog, err := ParseProgram(content)
+	if err != nil {
+		return fmt.Errorf("import '%s': parse error: %w", s.Filename, err)
+	}
+	for _, stmt := range prog.Statements {
+		if err := c.compileStatement(stmt); err != nil {
+			return fmt.Errorf("import '%s': %w", s.Filename, err)
+		}
+	}
+	return nil
 }

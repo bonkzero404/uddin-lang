@@ -1,6 +1,9 @@
 package interpreter
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func makeVM(cfg *Config) *VM {
 	interp := newInterpreter(cfg)
@@ -782,5 +785,189 @@ func TestVMAllBuiltins(t *testing.T) {
 				t.Errorf("src=%q: want %v (%T), got %v (%T)", tc.src, tc.want, tc.want, result, result)
 			}
 		})
+	}
+}
+
+func TestVMNestedTryCatch(t *testing.T) {
+	src := `
+x = 0
+try:
+    try:
+        x = 1 / 0
+    catch (inner):
+        x = 10
+    end
+catch (outer):
+    x = 99
+end
+x
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 10 {
+		t.Errorf("expected 10 (inner handler), got %v (%T)", result, result)
+	}
+}
+
+func TestVMNestedTryCatchUnhandled(t *testing.T) {
+	src := `
+x = 0
+try:
+    try:
+        x = 1 / 0
+    catch (inner):
+        y = 1 / 0
+    end
+catch (outer):
+    x = 99
+end
+x
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 99 {
+		t.Errorf("expected 99 (outer handler), got %v (%T)", result, result)
+	}
+}
+
+func TestVMTryCatchInFunction(t *testing.T) {
+	src := `
+fun mayFail():
+    return 1 / 0
+end
+
+x = 0
+try:
+    x = mayFail()
+catch (e):
+    x = 88
+end
+x
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 88 {
+		t.Errorf("expected 88 (error in called function caught by try), got %v (%T)", result, result)
+	}
+}
+
+func TestVMTryCatchDoesNotCatchReturn(t *testing.T) {
+	// Verify that 'return' statements are NOT caught by try-catch
+	src := `
+fun earlyReturn():
+    try:
+        return 42
+    catch (e):
+        return 99
+    end
+end
+
+earlyReturn()
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 42 {
+		t.Errorf("expected 42 (return should not be caught), got %v (%T)", result, result)
+	}
+}
+
+func TestVMImport(t *testing.T) {
+	// Write a temporary .din library file that defines a helper function.
+	lib := []byte(`
+fun add(a, b):
+    return a + b
+end
+IMPORTED_CONST = 100
+`)
+	tmp, err := os.CreateTemp("", "uddin_import_test_*.din")
+	if err != nil {
+		t.Fatal("create temp:", err)
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(lib); err != nil {
+		t.Fatal("write temp:", err)
+	}
+	tmp.Close()
+
+	src := `import "` + tmp.Name() + `"
+result = add(IMPORTED_CONST, 23)
+result
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 123 {
+		t.Errorf("expected 123, got %v (%T)", result, result)
+	}
+}
+
+func TestVMImportFunction(t *testing.T) {
+	// Import a file that defines a recursive function.
+	lib := []byte(`
+fun fact(n):
+    if (n <= 1) then:
+        return 1
+    end
+    return n * fact(n - 1)
+end
+`)
+	tmp, err := os.CreateTemp("", "uddin_import_fact_*.din")
+	if err != nil {
+		t.Fatal("create temp:", err)
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(lib); err != nil {
+		t.Fatal("write temp:", err)
+	}
+	tmp.Close()
+
+	src := `import "` + tmp.Name() + `"
+fact(5)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 120 {
+		t.Errorf("expected 120 (5!), got %v (%T)", result, result)
 	}
 }
