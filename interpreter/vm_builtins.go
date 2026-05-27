@@ -273,9 +273,11 @@ func directStr(_ *interpreter, pos Position, args []Value) Value {
 	case string:
 		return args[0]
 	case int:
-		return Value(strconv.Itoa(v))
+		return Value(fmt.Sprintf("%d", v))
+	case int64:
+		return Value(fmt.Sprintf("%d", v))
 	case float64:
-		return Value(strconv.FormatFloat(v, 'f', -1, 64))
+		return Value(fmt.Sprintf("%g", v))
 	case bool:
 		if v {
 			return Value("true")
