@@ -186,31 +186,34 @@ package main
 
 import (
     "fmt"
-    "github.com/bonkzero404/uddin-lang"
+    "strings"
+
+    uddin "github.com/bonkzero404/uddin-lang"
 )
 
 func main() {
-    // Create a new engine
     engine := uddin.New()
 
-    // Execute code
-    result, err := engine.ExecuteString(`
+    // Capture output via SetStdout
+    var buf strings.Builder
+    engine.SetStdout(&buf)
+
+    stats, err := engine.ExecuteString(`
         x = 10
         y = 20
-        return x + y
+        print(x + y)
     `)
     if err != nil {
         panic(err)
     }
+    fmt.Println("Output:", strings.TrimSpace(buf.String())) // Output: 30
+    fmt.Println("Ops:", stats.Ops)
 
-    fmt.Println("Result:", result) // Output: Result: 30
-
-    // Evaluate expressions
-    value, err := engine.EvaluateString("2 + 3 * 4")
+    // Evaluate a single expression — returns (Value, *Stats, error)
+    value, _, err := engine.EvaluateString("2 + 3 * 4")
     if err != nil {
         panic(err)
     }
-
     fmt.Println("Expression result:", value) // Output: Expression result: 14
 }
 ```
