@@ -7,8 +7,9 @@ const vmMaxFrames = 512
 
 // vmFunction wraps a compiled Function so it satisfies the functionType interface.
 type vmFunction struct {
-	fn *Function
-	vm *VM
+	fn       *Function
+	vm       *VM
+	captured []Value // upvalues captured from enclosing scope(s)
 }
 
 func (f *vmFunction) call(interp *interpreter, pos Position, args []Value) Value {
@@ -17,7 +18,7 @@ func (f *vmFunction) call(interp *interpreter, pos Position, args []Value) Value
 		top := f.vm.frames[len(f.vm.frames)-1]
 		newBase = top.baseReg + int(top.fn.MaxRegs) + 1
 	}
-	f.vm.pushFrame(f.fn, newBase, 0)
+	f.vm.pushFrame(f.fn, newBase, 0, f.captured)
 	newRegs := f.vm.regs[newBase:]
 	for i, arg := range args {
 		if i < int(f.fn.MaxRegs) {
@@ -47,11 +48,11 @@ func NewVM(interp *interpreter) *VM {
 
 // Execute runs a top-level Function and returns its result.
 func (vm *VM) Execute(fn *Function) Value {
-	vm.pushFrame(fn, 0, 0)
+	vm.pushFrame(fn, 0, 0, nil)
 	return vm.run()
 }
 
-func (vm *VM) pushFrame(fn *Function, baseReg int, retReg int) {
+func (vm *VM) pushFrame(fn *Function, baseReg int, retReg int, captured []Value) {
 	if len(vm.frames) >= vmMaxFrames {
 		panic("VM: call stack overflow (max " + strconv.Itoa(vmMaxFrames) + " frames)")
 	}
@@ -60,10 +61,11 @@ func (vm *VM) pushFrame(fn *Function, baseReg int, retReg int) {
 		vm.regs = append(vm.regs, make([]Value, needed-len(vm.regs))...)
 	}
 	vm.frames = append(vm.frames, Frame{
-		fn:      fn,
-		pc:      0,
-		baseReg: baseReg,
-		retReg:  retReg,
+		fn:       fn,
+		pc:       0,
+		baseReg:  baseReg,
+		retReg:   retReg,
+		captured: captured,
 	})
 }
 
@@ -265,10 +267,28 @@ func (vm *VM) run() Value {
 				panic(runtimeError(Position{}, "VM: SET_INDEX on non-container"))
 			}
 
+		case OP_LOAD_UPVAL:
+			regs[instr.Dst] = frame.captured[instr.Src1]
+
+		case OP_STORE_UPVAL:
+			frame.captured[instr.Dst] = regs[instr.Src1]
+
 		case OP_MAKE_FUNC:
 			subIdx := int(instr.Src1)<<8 | int(instr.Src2)
 			subfn := frame.fn.SubFunctions[subIdx]
-			regs[instr.Dst] = &vmFunction{fn: subfn, vm: vm}
+			captured := make([]Value, len(subfn.Upvalues))
+			for i, upv := range subfn.Upvalues {
+				if upv.IsLocal {
+					// Upvalue is a local register in the current (enclosing) frame.
+					captured[i] = regs[upv.Index]
+				} else {
+					// Upvalue is itself an upvalue of the current frame.
+					if int(upv.Index) < len(frame.captured) {
+						captured[i] = frame.captured[upv.Index]
+					}
+				}
+			}
+			regs[instr.Dst] = &vmFunction{fn: subfn, vm: vm, captured: captured}
 
 		case OP_CALL:
 			fnVal := regs[instr.Src1]
@@ -287,7 +307,7 @@ func (vm *VM) run() Value {
 			case *vmFunction:
 				// Inline dispatch: push a new frame. The loop will re-fetch frame/regs/consts.
 				newBase := frame.baseReg + int(frame.fn.MaxRegs) + 1
-				vm.pushFrame(f.fn, newBase, int(instr.Dst))
+				vm.pushFrame(f.fn, newBase, int(instr.Dst), f.captured)
 				newRegs := vm.regs[newBase:]
 				for i, arg := range args {
 					if i < int(f.fn.MaxRegs) {

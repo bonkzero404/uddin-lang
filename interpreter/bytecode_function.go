@@ -36,8 +36,9 @@ type Function struct {
 
 // Frame is one activation record in the VM call stack.
 type Frame struct {
-	fn      *Function
-	pc      int
-	baseReg int // offset into vm.regs where this frame's register window starts
-	retReg  int // register in the CALLER's window where the return value is stored
+	fn       *Function
+	pc       int
+	baseReg  int     // offset into vm.regs where this frame's register window starts
+	retReg   int     // register in the CALLER's window where the return value is stored
+	captured []Value // upvalues captured from enclosing scope(s)
 }

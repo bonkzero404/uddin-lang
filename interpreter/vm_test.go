@@ -576,3 +576,100 @@ func BenchmarkVMTypedIntFib(b *testing.B) {
 		makeVM(TestConfig()).Execute(fn)
 	}
 }
+
+func TestVMFreeVariable(t *testing.T) {
+	src := `
+fun double(n):
+    return n * 2
+end
+
+fun apply(x):
+    return double(x)
+end
+
+apply(21)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 42 {
+		t.Errorf("expected 42, got %v (%T)", result, result)
+	}
+}
+
+func TestVMFreeVariableNested(t *testing.T) {
+	// Two functions defined at top level, one calls the other
+	src := `
+fun add(a, b):
+    return a + b
+end
+
+fun sum3(x, y, z):
+    return add(add(x, y), z)
+end
+
+sum3(1, 2, 3)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 6 {
+		t.Errorf("expected 6, got %v (%T)", result, result)
+	}
+}
+
+var crossFuncSource = []byte(`
+fun fibonacci(n):
+    if (n <= 1) then:
+        return n
+    else:
+        return fibonacci(n-1) + fibonacci(n-2)
+    end
+end
+
+fun calculate(x, y):
+    return fibonacci(x) + fibonacci(y)
+end
+
+calculate(10, 8)
+`)
+
+func BenchmarkVMCrossFunction(b *testing.B) {
+	prog, err := ParseProgram(crossFuncSource)
+	if err != nil {
+		b.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		b.Fatal("compile:", err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(TestConfig()).Execute(fn)
+	}
+}
+
+func BenchmarkTreeWalkerCrossFunction(b *testing.B) {
+	twCfg := TestConfig()
+	twCfg.VMEnabled = false
+	prog, err := ParseProgram(crossFuncSource)
+	if err != nil {
+		b.Fatal("parse:", err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		Execute(prog, twCfg)
+	}
+}

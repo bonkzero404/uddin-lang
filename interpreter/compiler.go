@@ -27,6 +27,13 @@ type Compiler struct {
 	// regTypes tracks the TypeHint for each register so the compiler can emit
 	// typed opcodes (e.g. OP_ADD_INT) when both operands are known-int.
 	regTypes map[uint8]TypeHint
+
+	// parent is the enclosing Compiler scope, used for upvalue (free variable) resolution.
+	parent *Compiler
+
+	// upvalues maps variable names to their upvalue index in fn.Upvalues.
+	// Populated lazily as free variables are encountered during compilation.
+	upvalues map[string]uint8
 }
 
 // isIntReg reports whether register r is known to hold an int value.
@@ -40,6 +47,37 @@ func (c *Compiler) markIntReg(r uint8) {
 		c.regTypes = make(map[uint8]TypeHint)
 	}
 	c.regTypes[r] = HintInt
+}
+
+// resolveUpvalue searches parent compiler scopes for the variable name.
+// If found, records it as an upvalue in fn.Upvalues and returns its index.
+// Returns an error if the variable is not found in any enclosing scope.
+func (c *Compiler) resolveUpvalue(name string) (uint8, error) {
+	if c.parent == nil {
+		return 0, fmt.Errorf("not found")
+	}
+	// Check if already recorded as an upvalue in this compiler.
+	if c.upvalues == nil {
+		c.upvalues = make(map[string]uint8)
+	}
+	if idx, ok := c.upvalues[name]; ok {
+		return idx, nil
+	}
+	// Check immediate parent's locals.
+	if reg, ok := c.parent.locals[name]; ok {
+		idx := uint8(len(c.fn.Upvalues))
+		c.fn.Upvalues = append(c.fn.Upvalues, UpvalueInfo{Name: name, IsLocal: true, Index: reg})
+		c.upvalues[name] = idx
+		return idx, nil
+	}
+	// Recurse: check parent's upvalues (for deeper nesting).
+	if uvIdx, err := c.parent.resolveUpvalue(name); err == nil {
+		idx := uint8(len(c.fn.Upvalues))
+		c.fn.Upvalues = append(c.fn.Upvalues, UpvalueInfo{Name: name, IsLocal: false, Index: uvIdx})
+		c.upvalues[name] = idx
+		return idx, nil
+	}
+	return 0, fmt.Errorf("not found")
 }
 
 // NewCompiler creates a fresh Compiler instance.
@@ -320,6 +358,12 @@ func (c *Compiler) compileExpr(expr Expression) (uint8, error) {
 			}
 			return dst, nil
 		}
+		// Try to resolve as upvalue from an enclosing scope.
+		if uvIdx, err2 := c.resolveUpvalue(e.Name); err2 == nil {
+			dst := c.allocReg()
+			c.emit(Instruction{Op: OP_LOAD_UPVAL, Dst: dst, Src1: uvIdx})
+			return dst, nil
+		}
 		return 0, fmt.Errorf("compiler: undefined variable %q", e.Name)
 
 	case *Binary:
@@ -519,6 +563,7 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 	sub := &Compiler{
 		fn:     &Function{Name: s.Name, Params: s.Parameters},
 		locals: make(map[string]uint8),
+		parent: c,
 	}
 	// Parameters occupy the first registers in the sub-function's window.
 	for i, param := range s.Parameters {
@@ -864,6 +909,7 @@ func (c *Compiler) compileFunctionExpr(e *FunctionExpression) (uint8, error) {
 	sub := &Compiler{
 		fn:     &Function{Name: "<anon>", Params: e.Parameters},
 		locals: make(map[string]uint8),
+		parent: c,
 	}
 	for i, param := range e.Parameters {
 		sub.locals[param] = uint8(i)
