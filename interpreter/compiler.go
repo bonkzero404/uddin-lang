@@ -527,6 +527,9 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 	}
 	sub.fn.MaxRegs = sub.nextReg
 
+	// Store param type hints on the Function for Phase 2 JIT use.
+	sub.fn.ParamTypes = s.ParamHints
+
 	// Mark int-annotated parameters so the sub-compiler can emit typed opcodes.
 	for i, hint := range s.ParamHints {
 		if hint == HintInt && i < len(s.Parameters) {

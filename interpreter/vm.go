@@ -122,23 +122,51 @@ func (vm *VM) run() Value {
 
 		// Typed integer arithmetic (no boxing, no type conversion)
 		case OP_ADD_INT:
-			regs[instr.Dst] = regs[instr.Src1].(int) + regs[instr.Src2].(int)
+			a, aOk := asInt(regs[instr.Src1])
+			b, bOk := asInt(regs[instr.Src2])
+			if aOk && bOk {
+				regs[instr.Dst] = a + b
+			} else {
+				regs[instr.Dst] = vm.interp.evalPlus(Position{}, regs[instr.Src1], regs[instr.Src2])
+			}
 		case OP_SUB_INT:
-			regs[instr.Dst] = regs[instr.Src1].(int) - regs[instr.Src2].(int)
+			a, aOk := asInt(regs[instr.Src1])
+			b, bOk := asInt(regs[instr.Src2])
+			if aOk && bOk {
+				regs[instr.Dst] = a - b
+			} else {
+				regs[instr.Dst] = evalMinus(Position{}, regs[instr.Src1], regs[instr.Src2])
+			}
 		case OP_MUL_INT:
-			regs[instr.Dst] = regs[instr.Src1].(int) * regs[instr.Src2].(int)
+			a, aOk := asInt(regs[instr.Src1])
+			b, bOk := asInt(regs[instr.Src2])
+			if aOk && bOk {
+				regs[instr.Dst] = a * b
+			} else {
+				regs[instr.Dst] = evalTimes(Position{}, regs[instr.Src1], regs[instr.Src2])
+			}
 		case OP_DIV_INT:
-			r := regs[instr.Src2].(int)
-			if r == 0 {
-				panic(runtimeError(Position{}, "VM: integer divide by zero"))
+			a, aOk := asInt(regs[instr.Src1])
+			b, bOk := asInt(regs[instr.Src2])
+			if aOk && bOk {
+				if b == 0 {
+					panic(runtimeError(Position{}, "VM: integer divide by zero"))
+				}
+				regs[instr.Dst] = a / b
+			} else {
+				regs[instr.Dst] = evalDivide(Position{}, regs[instr.Src1], regs[instr.Src2])
 			}
-			regs[instr.Dst] = regs[instr.Src1].(int) / r
 		case OP_MOD_INT:
-			r := regs[instr.Src2].(int)
-			if r == 0 {
-				panic(runtimeError(Position{}, "VM: integer modulo by zero"))
+			a, aOk := asInt(regs[instr.Src1])
+			b, bOk := asInt(regs[instr.Src2])
+			if aOk && bOk {
+				if b == 0 {
+					panic(runtimeError(Position{}, "VM: integer modulo by zero"))
+				}
+				regs[instr.Dst] = a % b
+			} else {
+				regs[instr.Dst] = evalModulo(Position{}, regs[instr.Src1], regs[instr.Src2])
 			}
-			regs[instr.Dst] = regs[instr.Src1].(int) % r
 
 		// Comparisons
 		case OP_EQ:
