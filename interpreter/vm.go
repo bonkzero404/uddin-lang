@@ -1,6 +1,9 @@
 package interpreter
 
-import "strconv"
+import (
+	"fmt"
+	"strconv"
+)
 
 const vmInitialRegCount = 256
 const vmMaxFrames = 512
@@ -30,11 +33,19 @@ func (f *vmFunction) call(interp *interpreter, pos Position, args []Value) Value
 
 func (f *vmFunction) name() string { return f.fn.Name }
 
+// tryFrame records the state needed to jump to a catch block on a panic.
+type tryFrame struct {
+	catchPC    int   // absolute PC (in the frame that owns OP_TRY) to jump to on error
+	errReg     uint8 // register index (relative to that frame's baseReg) to store the error string
+	frameDepth int   // len(vm.frames) when OP_TRY was executed
+}
+
 // VM executes compiled bytecode Functions.
 type VM struct {
-	regs   []Value
-	frames []Frame
-	interp *interpreter
+	regs     []Value
+	frames   []Frame
+	interp   *interpreter
+	tryStack []tryFrame
 }
 
 // NewVM creates a VM backed by the given interpreter (for builtin access).
@@ -71,7 +82,42 @@ func (vm *VM) pushFrame(fn *Function, baseReg int, retReg int, captured []Value)
 
 // run is the main dispatch loop. It processes one instruction at a time across
 // all frames, returning when the call stack is empty.
-func (vm *VM) run() Value {
+func (vm *VM) run() (result Value) {
+	defer func() {
+		if r := recover(); r != nil {
+			// returnResult panics are NOT errors — they are normal return-statement
+			// control flow. Re-panic so the caller's frame sees them.
+			if _, isReturn := r.(returnResult); isReturn {
+				panic(r)
+			}
+			// If there is no try handler, re-panic so the error propagates normally.
+			if len(vm.tryStack) == 0 {
+				panic(r)
+			}
+			// Pop the innermost try handler.
+			th := vm.tryStack[len(vm.tryStack)-1]
+			vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+			// Unwind the call stack back to the frame that owned the OP_TRY.
+			vm.frames = vm.frames[:th.frameDepth]
+			// Store the error message into the catch-variable register.
+			frame := &vm.frames[len(vm.frames)-1]
+			regs := vm.regs[frame.baseReg:]
+			var errMsg string
+			switch v := r.(type) {
+			case error:
+				errMsg = v.Error()
+			case string:
+				errMsg = v
+			default:
+				errMsg = fmt.Sprintf("%v", v)
+			}
+			regs[th.errReg] = errMsg
+			// Jump to the catch block.
+			frame.pc = th.catchPC
+			// Resume execution from the catch block.
+			result = vm.run()
+		}
+	}()
 	for len(vm.frames) > 0 {
 		frame := &vm.frames[len(vm.frames)-1]
 		if frame.pc >= len(frame.fn.Code) {
@@ -336,6 +382,21 @@ func (vm *VM) run() Value {
 			}
 			entry := vmBuiltinTable[builtinIdx]
 			regs[instr.Dst] = entry.fn(vm.interp, Position{}, args)
+
+		case OP_TRY:
+			// Src1 = errReg; Dst:Src2 = signed jump offset to catch block.
+			catchOffset := instr.jumpOffset()
+			vm.tryStack = append(vm.tryStack, tryFrame{
+				catchPC:    frame.pc + catchOffset, // pc was already incremented past OP_TRY
+				errReg:     instr.Src1,
+				frameDepth: len(vm.frames),
+			})
+
+		case OP_END_TRY:
+			// Try block completed without error — pop the handler.
+			if len(vm.tryStack) > 0 {
+				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
+			}
 
 		default:
 			panic(runtimeError(Position{}, "VM: unimplemented opcode %s", opName(instr.Op)))

@@ -187,7 +187,7 @@ func (c *Compiler) compileStatement(stmt Statement) error {
 	case *FunctionDefinition:
 		return c.compileFunctionDef(s)
 	case *TryCatch:
-		return fmt.Errorf("compiler: try-catch is not yet supported in the bytecode VM")
+		return c.compileTryCatch(s)
 	case *Import:
 		return fmt.Errorf("compiler: import is not yet supported in the bytecode VM")
 	default:
@@ -910,6 +910,50 @@ func (c *Compiler) compileTernary(e *Ternary) (uint8, error) {
 
 	c.patchJump(jumpEnd)
 	return dst, nil
+}
+
+// compileTryCatch compiles a try/catch block.
+//
+// Emitted bytecode layout:
+//
+//	OP_TRY      Src1=errReg, Dst:Src2=offset_to_catch_block
+//	<try body>
+//	OP_END_TRY                    ; no error — pop handler
+//	OP_JUMP     Dst:Src2=offset_past_catch ; skip over catch block
+//	<catch body>                  ; ← catch block starts here (OP_TRY jumps here on error)
+//	                              ; ← skip jump lands here (past catch block)
+func (c *Compiler) compileTryCatch(s *TryCatch) error {
+	// Allocate (or reuse) the register that will hold the caught error message.
+	errReg := c.localReg(s.ErrVar)
+
+	// Emit OP_TRY with a placeholder offset; Src1 carries errReg.
+	// emitJump(op, condReg) emits: Instruction{Op: op, Src1: condReg, Dst: 0, Src2: 0}
+	tryIdx := c.emitJump(OP_TRY, errReg)
+
+	// Compile try body.
+	for _, stmt := range s.TryBlock {
+		if err := c.compileStatement(stmt); err != nil {
+			return err
+		}
+	}
+
+	// Successful path: pop the handler and jump over the catch block.
+	c.emit(Instruction{Op: OP_END_TRY})
+	skipIdx := c.emit(Instruction{Op: OP_JUMP})
+
+	// Patch OP_TRY so its offset points here (start of catch block).
+	c.patchJump(tryIdx)
+
+	// Compile catch body.
+	for _, stmt := range s.CatchBlock {
+		if err := c.compileStatement(stmt); err != nil {
+			return err
+		}
+	}
+
+	// Patch the skip-jump to here (past catch block).
+	c.patchJump(skipIdx)
+	return nil
 }
 
 // compileFunctionExpr compiles an anonymous function expression (fun(params) body end).

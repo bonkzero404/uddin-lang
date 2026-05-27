@@ -64,6 +64,10 @@ const (
 	OP_CALL         // Dst = call(regs[Src1], argc=Src2, args at argBase)
 	OP_CALL_BUILTIN // Dst = builtinTable[Src1<<8|Src2](argc=next.Dst)
 
+	// Exception handling
+	OP_TRY     // Src1=errReg; Dst:Src2=signed jump offset to catch block
+	OP_END_TRY // pop the innermost try handler (no error occurred)
+
 	// Sentinel
 	_OP_MAX
 )
@@ -97,6 +101,7 @@ func opName(op OpCode) string {
 		"JUMP", "JUMP_FALSE", "JUMP_TRUE", "RETURN",
 		"MAKE_ARRAY", "MAKE_MAP", "SUBSCRIPT", "SET_INDEX",
 		"MAKE_FUNC", "CALL", "CALL_BUILTIN",
+		"TRY", "END_TRY",
 	}
 	if int(op) < len(names) {
 		return names[op]

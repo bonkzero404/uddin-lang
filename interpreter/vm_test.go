@@ -674,6 +674,79 @@ func BenchmarkTreeWalkerCrossFunction(b *testing.B) {
 	}
 }
 
+func TestVMTryCatch(t *testing.T) {
+	src := `
+x = 0
+try:
+    x = 1 / 0
+catch (e):
+    x = 99
+end
+x
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 99 {
+		t.Errorf("expected 99, got %v (%T)", result, result)
+	}
+}
+
+func TestVMTryCatchErrVar(t *testing.T) {
+	src := `
+msg = ""
+try:
+    x = 1 / 0
+catch (e):
+    msg = str(e)
+end
+len(msg) > 0
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != true {
+		t.Errorf("expected true (non-empty error message), got %v", result)
+	}
+}
+
+func TestVMTryCatchNoError(t *testing.T) {
+	// When no error occurs, catch block should NOT run.
+	src := `
+x = 0
+try:
+    x = 42
+catch (e):
+    x = 99
+end
+x
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 42 {
+		t.Errorf("expected 42, got %v (%T)", result, result)
+	}
+}
+
 func TestVMAllBuiltins(t *testing.T) {
 	cases := []struct {
 		name string
