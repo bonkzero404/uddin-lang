@@ -23,6 +23,23 @@ type Compiler struct {
 	// at the start of Compile (before any source statements are compiled).
 	// This allows Config.Vars to be visible to the compiler.
 	preSeededVars []string
+
+	// regTypes tracks the TypeHint for each register so the compiler can emit
+	// typed opcodes (e.g. OP_ADD_INT) when both operands are known-int.
+	regTypes map[uint8]TypeHint
+}
+
+// isIntReg reports whether register r is known to hold an int value.
+func (c *Compiler) isIntReg(r uint8) bool {
+	return c.regTypes != nil && c.regTypes[r] == HintInt
+}
+
+// markIntReg records that register r holds an int value.
+func (c *Compiler) markIntReg(r uint8) {
+	if c.regTypes == nil {
+		c.regTypes = make(map[uint8]TypeHint)
+	}
+	c.regTypes[r] = HintInt
 }
 
 // NewCompiler creates a fresh Compiler instance.
@@ -297,6 +314,10 @@ func (c *Compiler) compileExpr(expr Expression) (uint8, error) {
 		if r, ok := c.locals[e.Name]; ok {
 			dst := c.allocReg()
 			c.emit(Instruction{Op: OP_LOAD_VAR, Dst: dst, Src1: r})
+			// Propagate type hint so typed opcodes can be used downstream.
+			if c.isIntReg(r) {
+				c.markIntReg(dst)
+			}
 			return dst, nil
 		}
 		return 0, fmt.Errorf("compiler: undefined variable %q", e.Name)
@@ -377,8 +398,28 @@ func (c *Compiler) compileBinary(e *Binary) (uint8, error) {
 	if !ok {
 		return 0, fmt.Errorf("compiler: unsupported binary operator %v", e.Operator)
 	}
+	// Promote arithmetic ops to typed variants when both operands are known-int.
+	if c.isIntReg(left) && c.isIntReg(right) {
+		switch op {
+		case OP_ADD:
+			op = OP_ADD_INT
+		case OP_SUB:
+			op = OP_SUB_INT
+		case OP_MUL:
+			op = OP_MUL_INT
+		case OP_DIV:
+			op = OP_DIV_INT
+		case OP_MOD:
+			op = OP_MOD_INT
+		}
+	}
 	dst := c.allocReg()
 	c.emit(Instruction{Op: op, Dst: dst, Src1: left, Src2: right})
+	// Propagate int type to the destination register for typed arithmetic.
+	switch op {
+	case OP_ADD_INT, OP_SUB_INT, OP_MUL_INT, OP_DIV_INT, OP_MOD_INT:
+		c.markIntReg(dst)
+	}
 	return dst, nil
 }
 
@@ -485,6 +526,13 @@ func (c *Compiler) compileFunctionDef(s *FunctionDefinition) error {
 		sub.nextReg++
 	}
 	sub.fn.MaxRegs = sub.nextReg
+
+	// Mark int-annotated parameters so the sub-compiler can emit typed opcodes.
+	for i, hint := range s.ParamHints {
+		if hint == HintInt && i < len(s.Parameters) {
+			sub.markIntReg(uint8(i))
+		}
+	}
 
 	// Allow the sub-compiler to resolve recursive calls to this function.
 	// We allocate a register in the sub-function's locals for the function itself

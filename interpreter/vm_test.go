@@ -516,3 +516,63 @@ func BenchmarkTreeWalkerNestedFunctionCalls(b *testing.B) {
 		Execute(prog, twCfg)
 	}
 }
+
+func TestVMTypedIntAdd(t *testing.T) {
+	src := `
+fun add(a: int, b: int):
+    return a + b
+end
+add(3, 4)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	if len(fn.SubFunctions) == 0 {
+		t.Fatal("expected sub-function for add()")
+	}
+	innerFn := fn.SubFunctions[0]
+	hasAddInt := false
+	for _, instr := range innerFn.Code {
+		if instr.Op == OP_ADD_INT {
+			hasAddInt = true
+		}
+	}
+	if !hasAddInt {
+		t.Error("expected OP_ADD_INT for int+int annotated function, got generic OP_ADD")
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 7 {
+		t.Errorf("expected 7, got %v", result)
+	}
+}
+
+var fibTypedSource = []byte(`
+fun fib(n: int):
+    if (n <= 1) then:
+        return n
+    else:
+        return fib(n-1) + fib(n-2)
+    end
+end
+fib(10)
+`)
+
+func BenchmarkVMTypedIntFib(b *testing.B) {
+	prog, err := ParseProgram(fibTypedSource)
+	if err != nil {
+		b.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		b.Fatal("compile:", err)
+	}
+	b.ResetTimer()
+	for b.Loop() {
+		makeVM(TestConfig()).Execute(fn)
+	}
+}

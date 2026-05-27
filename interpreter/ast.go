@@ -350,11 +350,12 @@ func (s *ExpressionStatement) String() string {
 // FunctionDefinition represents a function declaration statement.
 // EXPERIMENTAL: Memoization feature is experimental and not recommended for production
 type FunctionDefinition struct {
-	pos        Position // Source position
-	Name       string   // Function name
-	Parameters []string // Parameter names
-	Ellipsis   bool     // Whether the function accepts variable arguments
-	Body       Block    // Function body
+	pos        Position   // Source position
+	Name       string     // Function name
+	Parameters []string   // Parameter names
+	ParamHints []TypeHint // Optional type hints, len == len(Parameters) when present
+	Ellipsis   bool       // Whether the function accepts variable arguments
+	Body       Block      // Function body
 	// EXPERIMENTAL: Whether the function should use memoization (experimental feature)
 	// WARNING: May consume significant memory and is not thread-safe
 	Memoized bool

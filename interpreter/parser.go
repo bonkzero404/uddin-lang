@@ -275,9 +275,11 @@ func (p *parser) fun_() Statement {
 	if p.tok == NAME {
 		name := p.val
 		p.next()
-		params, ellipsis := p.params()
+		var hints []TypeHint
+		params, ellipsis := p.paramsWithHints(&hints)
 		body := p.block()
-		return &FunctionDefinition{pos, name, params, ellipsis, body, false}
+		fd := &FunctionDefinition{pos: pos, Name: name, Parameters: params, ParamHints: hints, Ellipsis: ellipsis, Body: body, Memoized: false}
+		return fd
 	} else {
 		params, ellipsis := p.params()
 		body := p.block()
@@ -294,19 +296,48 @@ func (p *parser) memoFun_() Statement {
 	if p.tok == NAME {
 		name := p.val
 		p.next()
-		params, ellipsis := p.params()
+		var hints []TypeHint
+		params, ellipsis := p.paramsWithHints(&hints)
 		body := p.block()
-		return &FunctionDefinition{pos, name, params, ellipsis, body, true}
+		fd := &FunctionDefinition{pos: pos, Name: name, Parameters: params, ParamHints: hints, Ellipsis: ellipsis, Body: body, Memoized: true}
+		return fd
 	} else {
 		p.error("expected function name after 'memo fun'")
 		return nil
 	}
 }
 
+// parseTypeHintName maps a type name string to the corresponding TypeHint constant.
+func parseTypeHintName(name string) TypeHint {
+	switch name {
+	case "int":
+		return HintInt
+	case "float":
+		return HintFloat
+	case "string":
+		return HintString
+	case "bool":
+		return HintBool
+	case "array":
+		return HintArray
+	case "map":
+		return HintMap
+	case "void":
+		return HintVoid
+	default:
+		return HintUnknown
+	}
+}
+
 // params = LPAREN RPAREN |
 //
-//	LPAREN NAME (COMMA NAME)* ELLIPSIS? COMMA? RPAREN |
+//	LPAREN NAME (COLON NAME)? (COMMA NAME (COLON NAME)?)* ELLIPSIS? COMMA? RPAREN |
 func (p *parser) params() ([]string, bool) {
+	return p.paramsWithHints(nil)
+}
+
+// paramsWithHintsResult parses params and optionally collects type hints into the provided slice pointer.
+func (p *parser) paramsWithHints(hints *[]TypeHint) ([]string, bool) {
 	p.expect(LPAREN)
 	params := []string{}
 	gotComma := true
@@ -318,6 +349,19 @@ func (p *parser) params() ([]string, bool) {
 		param := p.val
 		p.expect(NAME)
 		params = SmartAppendString(params, param)
+		// Optional `: typename` annotation.
+		if p.tok == COLON {
+			p.next()
+			typeName := p.val
+			p.expect(NAME)
+			if hints != nil {
+				*hints = append(*hints, parseTypeHintName(typeName))
+			}
+		} else {
+			if hints != nil {
+				*hints = append(*hints, HintUnknown)
+			}
+		}
 		if p.tok == ELLIPSIS {
 			gotEllipsis = true
 			p.next()
