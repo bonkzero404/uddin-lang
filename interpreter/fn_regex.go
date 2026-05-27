@@ -82,14 +82,18 @@ func regexFindFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_find() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
-	pattern, ok := args[1].(string)
-	if !ok {
+	var re *coregex.Regexp
+	switch p := args[1].(type) {
+	case string:
+		var err error
+		re, err = coregex.Compile(p)
+		if err != nil {
+			return Value(fmt.Errorf("invalid regex pattern: %v", err))
+		}
+	case *coregex.Regexp:
+		re = p
+	default:
 		return Value(fmt.Errorf("regex_find() requires second argument to be a string pattern, not %s", typeName(args[1])))
-	}
-
-	re, err := coregex.Compile(pattern)
-	if err != nil {
-		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	match := re.FindString(text)
@@ -118,8 +122,17 @@ func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_find_all() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
-	pattern, ok := args[1].(string)
-	if !ok {
+	var re *coregex.Regexp
+	switch p := args[1].(type) {
+	case string:
+		var err error
+		re, err = coregex.Compile(p)
+		if err != nil {
+			return Value(fmt.Errorf("invalid regex pattern: %v", err))
+		}
+	case *coregex.Regexp:
+		re = p
+	default:
 		return Value(fmt.Errorf("regex_find_all() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
@@ -130,11 +143,6 @@ func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
 		} else {
 			return Value(fmt.Errorf("regex_find_all() requires third argument to be an integer (limit), not %s", typeName(args[2])))
 		}
-	}
-
-	re, err := coregex.Compile(pattern)
-	if err != nil {
-		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	matches := re.FindAllString(text, limit)
@@ -164,19 +172,23 @@ func regexReplaceFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_replace() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
-	pattern, ok := args[1].(string)
-	if !ok {
+	var re *coregex.Regexp
+	switch p := args[1].(type) {
+	case string:
+		var err error
+		re, err = coregex.Compile(p)
+		if err != nil {
+			return Value(fmt.Errorf("invalid regex pattern: %v", err))
+		}
+	case *coregex.Regexp:
+		re = p
+	default:
 		return Value(fmt.Errorf("regex_replace() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
 	replacement, ok := args[2].(string)
 	if !ok {
 		return Value(fmt.Errorf("regex_replace() requires third argument to be a string (replacement), not %s", typeName(args[2])))
-	}
-
-	re, err := coregex.Compile(pattern)
-	if err != nil {
-		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	result := re.ReplaceAllString(text, replacement)
@@ -201,8 +213,17 @@ func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_split() requires first argument to be a string, not %s", typeName(args[0])))
 	}
 
-	pattern, ok := args[1].(string)
-	if !ok {
+	var re *coregex.Regexp
+	switch p := args[1].(type) {
+	case string:
+		var err error
+		re, err = coregex.Compile(p)
+		if err != nil {
+			return Value(fmt.Errorf("invalid regex pattern: %v", err))
+		}
+	case *coregex.Regexp:
+		re = p
+	default:
 		return Value(fmt.Errorf("regex_split() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
@@ -213,11 +234,6 @@ func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
 		} else {
 			return Value(fmt.Errorf("regex_split() requires third argument to be an integer (limit), not %s", typeName(args[2])))
 		}
-	}
-
-	re, err := coregex.Compile(pattern)
-	if err != nil {
-		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
 
 	parts := re.Split(text, limit)
