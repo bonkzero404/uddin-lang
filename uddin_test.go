@@ -2,6 +2,7 @@ package uddin
 
 import (
 	"bytes"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -753,5 +754,34 @@ func TestEngine_NewWithConfig(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "cfg ok") {
 		t.Errorf("expected output to contain 'cfg ok', got %q", buf.String())
+	}
+}
+
+func TestEngine_ExecuteFile(t *testing.T) {
+	// Write a temp .din script
+	f, err := os.CreateTemp("", "uddin_test_*.din")
+	if err != nil {
+		t.Fatal("create temp file:", err)
+	}
+	defer os.Remove(f.Name())
+
+	_, err = f.WriteString(`print("hello from file")`)
+	if err != nil {
+		t.Fatal("write temp file:", err)
+	}
+	f.Close()
+
+	var buf bytes.Buffer
+	engine := New()
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+
+	_, err = engine.ExecuteFile(f.Name())
+	if err != nil {
+		t.Fatalf("ExecuteFile failed: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "hello from file") {
+		t.Errorf("expected 'hello from file' in output, got %q", buf.String())
 	}
 }
