@@ -60,6 +60,7 @@ const sidebars = {
     referenceSidebar: [
         'reference/index',
         'reference/syntax',
+        'reference/modules',
         'reference/builtin-functions',
         'reference/database-streaming',
         'reference/memory-optimization',

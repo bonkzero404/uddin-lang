@@ -18,6 +18,13 @@ Complete guide to Uddin language syntax including:
 - Operators and expressions
 - Module system
 
+### [Module System](./modules)
+Reference for the stdlib module system including:
+- Import syntax (`import "module"` / `import "module" as alias`)
+- All 9 built-in modules: regex, datetime, json, fs, http, waf, cdc, fact, database
+- Function reference for each module
+- Migration guide from flat global names (pre-v1.2.0)
+
 ### [Built-in Functions](./builtin-functions)
 Documentation for all built-in functions including:
 - String manipulation functions
