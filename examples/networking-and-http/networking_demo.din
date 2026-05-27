@@ -1,6 +1,8 @@
 // Demo of networking functionality in Uddin-Lang
 // Demonstrating TCP, UDP, and network utilities
 
+import "http"
+
 print("=== Uddin-Lang Networking Demo ===")
 
 // Demo 1: Network Utilities
@@ -8,7 +10,7 @@ print("\n--- Demo 1: Network Utilities ---")
 
 // Resolve hostname ke IP address
 print("Resolving google.com...")
-result = net_resolve("google.com")
+result = http.net_resolve("google.com")
 if (result.success) then:
     print("IP addresses for google.com:")
     for (i in range(len(result.ips))):
@@ -20,7 +22,7 @@ end
 
 // Ping test
 print("\nPing test to google.com:80...")
-ping_result = net_ping("google.com", 80, 3000)
+ping_result = http.net_ping("google.com", 80, 3000)
 if (ping_result["success"]) then:
     print("Ping successful! Time: " + str(ping_result["time_ms"]) + "ms")
 else:

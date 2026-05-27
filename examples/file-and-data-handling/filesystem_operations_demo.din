@@ -1,80 +1,82 @@
 // Test program for file system operations in Uddin Lang
 
+import "fs"
+
 print("=== Testing File System Operations ===")
 
 // Test 1: Create directory (cleanup first if exists)
-print("\n1. Testing mkdir:")
-if (file_exists("test_dir")) then:
-    rmdir("test_dir")
+print("\n1. Testing fs.mkdir:")
+if (fs.exists("test_dir")) then:
+    fs.rmdir("test_dir")
     print("Cleaned up existing directory")
 end
-mkdir("test_dir")
+fs.mkdir("test_dir")
 print("Directory 'test_dir' created successfully")
 
 // Test 2: Check if file/directory exists
-print("\n2. Testing file_exists:")
-print("test_dir exists:", file_exists("test_dir"))
-print("nonexistent.txt exists:", file_exists("nonexistent.txt"))
+print("\n2. Testing fs.exists:")
+print("test_dir exists:", fs.exists("test_dir"))
+print("nonexistent.txt exists:", fs.exists("nonexistent.txt"))
 
 // Test 3: Write file
-print("\n3. Testing write_file:")
-write_file("test_dir/sample.txt", "Hello, Uddin Lang!\nThis is a test file.")
+print("\n3. Testing fs.write:")
+fs.write("test_dir/sample.txt", "Hello, Uddin Lang!\nThis is a test file.")
 print("File 'test_dir/sample.txt' created")
 
 // Test 4: Check file size
-print("\n4. Testing file_size:")
-size = file_size("test_dir/sample.txt")
+print("\n4. Testing fs.size:")
+size = fs.size("test_dir/sample.txt")
 print("File size:", size, "bytes")
 
 // Test 5: Read file
-print("\n5. Testing read_file:")
-content = read_file("test_dir/sample.txt")
+print("\n5. Testing fs.read:")
+content = fs.read("test_dir/sample.txt")
 print("File content:", content)
 
 // Test 6: Get file information
-print("\n6. Testing file_modified:")
-modified = file_modified("test_dir/sample.txt")
+print("\n6. Testing fs.modified:")
+modified = fs.modified("test_dir/sample.txt")
 print("Last modified:", modified)
 
-print("\n7. Testing file_permissions:")
-perms = file_permissions("test_dir/sample.txt")
+print("\n7. Testing fs.permissions:")
+perms = fs.permissions("test_dir/sample.txt")
 print("File permissions:", perms)
 
 // Test 8: Copy file
-print("\n8. Testing copy_file:")
-copy_file("test_dir/sample.txt", "test_dir/copy.txt")
+print("\n8. Testing fs.copy:")
+fs.copy("test_dir/sample.txt", "test_dir/copy.txt")
 print("File copied to 'test_dir/copy.txt'")
 
 // Test 9: Move file
-print("\n9. Testing move_file:")
-move_file("test_dir/copy.txt", "test_dir/moved.txt")
+print("\n9. Testing fs.move:")
+fs.move("test_dir/copy.txt", "test_dir/moved.txt")
 print("File moved to 'test_dir/moved.txt'")
 
 // Test 10: List directory contents
-print("\n10. Testing list_dir:")
-files = list_dir("test_dir")
+print("\n10. Testing fs.list_dir:")
+files = fs.list_dir("test_dir")
 print("Files in test_dir:", files)
 
 // Test 11: Path operations
 print("\n11. Testing path operations:")
-full_path = path_join("test_dir", "subdir", "file.txt")
+full_path = fs.path_join("test_dir", "subdir", "file.txt")
 print("Joined path:", full_path)
-print("Directory name:", path_dirname(full_path))
-print("Base name:", path_basename(full_path))
-print("Extension:", path_ext(full_path))
+print("Directory name:", fs.path_dirname(full_path))
+print("Base name:", fs.path_basename(full_path))
+print("Extension:", fs.path_ext(full_path))
 
 // Test 12: Working directory
 print("\n12. Testing working directory:")
-current_dir = getcwd()
+current_dir = fs.getcwd()
 print("Current directory:", current_dir)
 
 // Test 13: Cleanup - delete files and directory
 print("\n13. Cleanup:")
-delete_file("test_dir/sample.txt")
-delete_file("test_dir/moved.txt")
+fs.delete("test_dir/sample.txt")
+fs.delete("test_dir/moved.txt")
 print("Files deleted")
 
-rmdir("test_dir")
+fs.rmdir("test_dir")
 print("Directory 'test_dir' removed")
 
 print("\n=== File System Operations Test Completed ===")

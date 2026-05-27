@@ -2,16 +2,19 @@
 // 20_json_handling_demo.din - JSON Parsing and Serialization Demo
 // =============================================================================
 
+import "json"
+import "datetime"
+
 fun main():
     print("=== JSON Handling Demo ===")
 
-    print("\n--- JSON PARSING (json_parse) ---")
+    print("\n--- JSON PARSING (json.parse) ---")
 
     // Parse simple JSON object
     json_string = '{"name": "John", "age": 30, "city": "New York"}'
     print("Original JSON string: " + json_string)
 
-    parsed_object = json_parse(json_string)
+    parsed_object = json.parse(json_string)
     print("Parsed object: " + str(parsed_object))
     print("Name: " + parsed_object.name)
     print("Age: " + str(parsed_object.age))
@@ -21,7 +24,7 @@ fun main():
     json_array = '[1, 2, 3, "hello", true, null]'
     print("\nOriginal JSON array: " + json_array)
 
-    parsed_array = json_parse(json_array)
+    parsed_array = json.parse(json_array)
     print("Parsed array: " + str(parsed_array))
     print("First element: " + str(parsed_array[0]))
     print("Array length: " + str(len(parsed_array)))
@@ -48,13 +51,13 @@ fun main():
     print("\n--- NESTED JSON PARSING ---")
     print("Parsing complex nested JSON...")
 
-    nested_data = json_parse(nested_json)
+    nested_data = json.parse(nested_json)
     print("User ID: " + str(nested_data.user.id))
     print("Full name: " + nested_data.user.profile.firstName + " " + nested_data.user.profile.lastName)
     print("Email: " + nested_data.user.profile.contacts[0].value)
     print("Theme: " + nested_data.settings.theme)
 
-    print("\n--- JSON SERIALIZATION (json_stringify) ---")
+    print("\n--- JSON SERIALIZATION (json.stringify) ---")
 
     // Create Uddin-Lang data structures
     person = {
@@ -73,12 +76,12 @@ fun main():
     print("Original Uddin-Lang object: " + str(person))
 
     // Convert to JSON string
-    json_output = json_stringify(person)
+    json_output = json.stringify(person)
     print("JSON string: " + json_output)
 
     // Array to JSON
     numbers = [1, 2, 3, 4, 5]
-    json_numbers = json_stringify(numbers)
+    json_numbers = json.stringify(numbers)
     print("Array as JSON: " + json_numbers)
 
     // Mixed data types
@@ -94,7 +97,7 @@ fun main():
         }
     }
 
-    mixed_json = json_stringify(mixed_data)
+    mixed_json = json.stringify(mixed_data)
     print("Mixed data as JSON: " + mixed_json)
 
     print("\n--- JSON ROUND-TRIP TEST ---")
@@ -104,11 +107,11 @@ fun main():
     print("Original: " + str(original))
 
     // Convert to JSON string
-    json_str = json_stringify(original)
+    json_str = json.stringify(original)
     print("As JSON: " + json_str)
 
     // Parse back to object
-    parsed_back = json_parse(json_str)
+    parsed_back = json.parse(json_str)
     print("Parsed back: " + str(parsed_back))
     print("Round-trip successful: " + str(parsed_back.message == original.message))
 
@@ -129,7 +132,7 @@ fun main():
         "features": ["auth", "logging", "monitoring"]
     }
 
-    config_json = json_stringify(config)
+    config_json = json.stringify(config)
     print("Config as JSON: " + config_json)
 
     // Example 2: API Response simulation
@@ -147,11 +150,11 @@ fun main():
         }
     }
 
-    response_json = json_stringify(api_response)
+    response_json = json.stringify(api_response)
     print("API Response JSON: " + response_json)
 
     // Parse and process the response
-    parsed_response = json_parse(response_json)
+    parsed_response = json.parse(response_json)
     print("Response status: " + parsed_response.status)
     print("Number of products: " + str(len(parsed_response.data)))
 
@@ -167,22 +170,22 @@ fun main():
     // Test invalid JSON
     try:
         invalid_json = '{"name": "John", "age": }'  // Missing value
-        json_parse(invalid_json)
+        json.parse(invalid_json)
     catch (error):
         print("Caught parsing error: " + str(error))
     end
 
     try:
         malformed_json = '{"unclosed": "string'
-        json_parse(malformed_json)
+        json.parse(malformed_json)
     catch (error):
         print("Caught malformed JSON error: " + str(error))
     end
 
     print("\n=== JSON Handling Demo Complete ===")
     print("Available JSON functions:")
-    print("- json_parse(json_string) - Parse JSON string to Uddin-Lang value")
-    print("- json_stringify(value) - Convert Uddin-Lang value to JSON string")
+    print("- json.parse(json_string) - Parse JSON string to Uddin-Lang value")
+    print("- json.stringify(value) - Convert Uddin-Lang value to JSON string")
     print("")
     print("Supported JSON types:")
     print("- Objects: {} -> map[string]Value")
@@ -198,7 +201,7 @@ end// Helper function to demonstrate JSON processing
 fun process_user_data(json_str):
     print("\n--- Processing User Data ---")
 
-    user = json_parse(json_str)
+    user = json.parse(json_str)
 
     print("Processing user: " + user.name)
     print("Age: " + str(user.age))
@@ -217,9 +220,9 @@ fun process_user_data(json_str):
     end
 
     // Add processing timestamp
-    user.processed_at = date_now()
+    user.processed_at = datetime.now()
 
-    return json_stringify(user)
+    return json.stringify(user)
 end
 
 // Example usage of the helper function

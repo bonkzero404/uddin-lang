@@ -2,8 +2,11 @@
 // Example of streaming with different column selection for each MySQL table
 // using binlog-based streaming with new table-column mapping format
 
+import "database"
+import "json"
+
 // Connect to MySQL database
-connResult = db_connect("mysql", "localhost", 3306, "testdb", "root", "password")
+connResult = database.connect("mysql", "localhost", 3306, "testdb", "root", "password")
 
 if (not connResult.success) then:
     print("❌ Failed to connect to MySQL database: " + connResult.error)
@@ -53,9 +56,9 @@ CREATE TABLE IF NOT EXISTS products (
 )`
 
 // Execute table creation
-db_execute(mysql_conn, usersTableSQL)
-db_execute(mysql_conn, ordersTableSQL)
-db_execute(mysql_conn, productsTableSQL)
+database.exec(mysql_conn, usersTableSQL)
+database.exec(mysql_conn, ordersTableSQL)
+database.exec(mysql_conn, productsTableSQL)
 
 print("✅ Tables created successfully!")
 print("")
@@ -73,7 +76,7 @@ fun on_data_change(channel, payload):
     print("Channel: " + channel)
 
     // Parse JSON payload
-    data = json_parse(payload)
+    data = json.parse(payload)
 
     print("Table: " + data.table)
     print("Operation: " + data.operation)
@@ -96,5 +99,4 @@ fun on_data_change(channel, payload):
 end
 
 // Streaming with new format: array of table-column objects
-streamResult = stream_tables(mysql_conn, ["users", "orders", "producrs"], on_data_change, table_columns)
-
+streamResult = database.mysql(mysql_conn, ["users", "orders", "producrs"], on_data_change, table_columns)

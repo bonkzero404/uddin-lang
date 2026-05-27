@@ -2,36 +2,38 @@
 // UDDIN-LANG RULE ENGINE: Fact Database & Working Memory Demo
 // ================================================
 
+import "fact"
+
 print("=== FACT DATABASE & WORKING MEMORY DEMO ===")
 print()
 
 // Clear any existing facts
-fact_clear()
+fact.clear()
 print("1. FACT STORAGE:")
 
 // Store customer facts
-fact_assert("customer", "john", {"age": 30, "status": "premium", "balance": 5000})
-fact_assert("customer", "mary", {"age": 25, "status": "regular", "balance": 1500})
-fact_assert("customer", "bob", {"age": 45, "status": "premium", "balance": 8000})
+fact.assert("customer", "john", {"age": 30, "status": "premium", "balance": 5000})
+fact.assert("customer", "mary", {"age": 25, "status": "regular", "balance": 1500})
+fact.assert("customer", "bob", {"age": 45, "status": "premium", "balance": 8000})
 
 // Store simple boolean facts
-fact_assert("system", "maintenance_mode")
-fact_assert("promotion", "holiday_sale")
+fact.assert("system", "maintenance_mode")
+fact.assert("promotion", "holiday_sale")
 
 print("Stored customer and system facts")
-print("Total facts: " + str(fact_count()))
-print("Customer facts: " + str(fact_count("customer")))
+print("Total facts: " + str(fact.count()))
+print("Customer facts: " + str(fact.count("customer")))
 print()
 
 // Query facts
 print("2. FACT RETRIEVAL:")
-john_data = fact_query("customer", "john")
+john_data = fact.query("customer", "john")
 print("John's data: " + str(john_data))
 
-all_customers = fact_query("customer")
+all_customers = fact.query("customer")
 print("All customers: " + str(all_customers))
 
-maintenance_active = fact_exists("system", "maintenance_mode")
+maintenance_active = fact.exists("system", "maintenance_mode")
 print("Maintenance mode active: " + str(maintenance_active))
 print()
 
@@ -42,8 +44,8 @@ customers = ["john", "mary", "bob"]
 i = 0
 while (i < len(customers)) {
     customer = customers[i]
-    if (fact_exists("customer", customer)) then {
-        customer_data = fact_query("customer", customer)
+    if (fact.exists("customer", customer)) then {
+        customer_data = fact.query("customer", customer)
 
         // Extract customer properties (simplified access)
         age = 30  // In real implementation, you'd extract from customer_data
@@ -80,7 +82,7 @@ while (i < len(customers)) {
         if (eligible) then {
             print("✓ " + customer + " is eligible for loan up to $" + str(max_loan))
             // Store eligibility as a fact
-            fact_assert("loan_eligible", customer, {"max_amount": max_loan, "status": status})
+            fact.assert("loan_eligible", customer, {"max_amount": max_loan, "status": status})
         } else {
             print("✗ " + customer + " is not eligible for loan")
         }
@@ -93,10 +95,10 @@ print()
 print("4. BUSINESS RULE: Dynamic Discount System")
 
 // Store discount rules as facts
-fact_assert("discount_rule", "premium_customer", {"percentage": 15, "min_purchase": 100})
-fact_assert("discount_rule", "regular_customer", {"percentage": 10, "min_purchase": 200})
-fact_assert("discount_rule", "holiday_sale", {"percentage": 5, "min_purchase": 50})
-fact_assert("discount_rule", "bulk_purchase", {"percentage": 20, "min_purchase": 1000})
+fact.assert("discount_rule", "premium_customer", {"percentage": 15, "min_purchase": 100})
+fact.assert("discount_rule", "regular_customer", {"percentage": 10, "min_purchase": 200})
+fact.assert("discount_rule", "holiday_sale", {"percentage": 5, "min_purchase": 50})
+fact.assert("discount_rule", "bulk_purchase", {"percentage": 20, "min_purchase": 1000})
 
 // Process customer orders
 orders = [
@@ -128,7 +130,7 @@ while (j < len(orders)) {
     }
 
     // Check holiday sale (always applicable if promotion active)
-    if (fact_exists("promotion", "holiday_sale") and amount >= 50) then {
+    if (fact.exists("promotion", "holiday_sale") and amount >= 50) then {
         total_discount = total_discount + 5
         applied_rules = applied_rules + ["holiday_sale"]
     }
@@ -153,7 +155,7 @@ while (j < len(orders)) {
     print("  Final: $" + str(final_amount) + " (saved $" + str(savings) + ")")
 
     // Store order result as fact
-    fact_assert("processed_order", customer, {
+    fact.assert("processed_order", customer, {
         "original_amount": amount,
         "discount_percent": total_discount,
         "final_amount": final_amount,
@@ -165,18 +167,18 @@ print()
 
 // Working memory analysis
 print("5. WORKING MEMORY ANALYSIS:")
-print("Total facts in memory: " + str(fact_count()))
-print("Customers: " + str(fact_count("customer")))
-print("Loan eligible: " + str(fact_count("loan_eligible")))
-print("Processed orders: " + str(fact_count("processed_order")))
-print("Discount rules: " + str(fact_count("discount_rule")))
+print("Total facts in memory: " + str(fact.count()))
+print("Customers: " + str(fact.count("customer")))
+print("Loan eligible: " + str(fact.count("loan_eligible")))
+print("Processed orders: " + str(fact.count("processed_order")))
+print("Discount rules: " + str(fact.count("discount_rule")))
 print()
 
 // Cleanup demo
 print("6. FACT CLEANUP:")
-removed_customers = fact_retract("customer")
+removed_customers = fact.retract("customer")
 print("Removed " + str(removed_customers) + " customer facts")
-print("Remaining facts: " + str(fact_count()))
+print("Remaining facts: " + str(fact.count()))
 print()
 
 print("=== Fact Database & Working Memory Demo Complete ===")

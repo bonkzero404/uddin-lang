@@ -2,12 +2,14 @@
 // UDDIN-LANG RULE ENGINE: Enhanced Date/Time Operations Demo
 // ================================================
 
+import "datetime"
+
 print("=== ENHANCED DATE/TIME OPERATIONS DEMO ===")
 print()
 
 // Working with timestamps
 print("1. TIMESTAMP OPERATIONS:")
-current_timestamp = date_now()
+current_timestamp = datetime.now()
 print("Current timestamp: " + current_timestamp)
 print()
 
@@ -16,15 +18,15 @@ print("2. DATE COMPARISON:")
 date1 = "2023-12-25T10:30:00Z"
 date2 = "2023-12-24T10:30:00Z"
 
-diff_hours = date_diff(date1, date2, "hours")
+diff_hours = datetime.diff(date1, date2, "hours")
 print("Difference in hours:")
 print(diff_hours)
 
-comparison = date_compare(date1, date2)
+comparison = datetime.compare(date1, date2)
 print("Comparison result (1=later, 0=same, -1=earlier):")
 print(comparison)
 
-is_between = date_between("2023-12-25T05:00:00Z", "2023-12-24T00:00:00Z", "2023-12-26T00:00:00Z")
+is_between = datetime.between("2023-12-25T05:00:00Z", "2023-12-24T00:00:00Z", "2023-12-26T00:00:00Z")
 print("Is date between range:")
 print(is_between)
 print()
@@ -35,7 +37,7 @@ check_time = "2023-12-25T14:30:00Z"
 office_start = "2023-12-25T09:00:00Z"
 office_end = "2023-12-25T17:00:00Z"
 
-is_office_hours = date_between(check_time, office_start, office_end)
+is_office_hours = datetime.between(check_time, office_start, office_end)
 if (is_office_hours) then {
     print("✓ Time " + check_time + " is within office hours")
 } else {
@@ -49,7 +51,7 @@ request_time = "2023-12-25T10:00:00Z"
 current_time = "2023-12-25T13:30:00Z"
 sla_hours = 4
 
-time_elapsed = date_diff(current_time, request_time, "hours")
+time_elapsed = datetime.diff(current_time, request_time, "hours")
 if (int(time_elapsed) > sla_hours) then {
     print("⚠ SLA VIOLATION: Request took")
     print(time_elapsed)
@@ -69,7 +71,7 @@ print("5. BUSINESS RULE: Age-based Discount")
 birth_date = "1990-12-25"
 current_date_simple = "2023-12-25"
 
-age_years = int(date_diff(current_date_simple, birth_date, "days")) / 365
+age_years = int(datetime.diff(current_date_simple, birth_date, "days")) / 365
 discount = 0
 
 if (age_years >= 65) then {
@@ -93,7 +95,7 @@ print("6. BUSINESS RULE: Event Scheduling")
 event_date = "2023-12-30T18:00:00Z"
 current_check = "2023-12-25T10:00:00Z"
 
-days_until_event = int(date_diff(event_date, current_check, "days"))
+days_until_event = int(datetime.diff(event_date, current_check, "days"))
 
 if (days_until_event <= 1) then {
     print("🚨 URGENT: Event is tomorrow or today!")
