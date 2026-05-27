@@ -1,6 +1,9 @@
 package interpreter
 
-import "testing"
+import (
+	"sync"
+	"testing"
+)
 
 func TestCompileProgram_Basic(t *testing.T) {
 	src := `x = 42
@@ -158,5 +161,75 @@ func TestCompileProgram_RegexPrecompile_InvalidPattern(t *testing.T) {
 	_, err = CompileProgram(prog, nil)
 	if err != nil {
 		t.Fatal("compile should succeed even with bad pattern:", err)
+	}
+}
+
+func BenchmarkCompiledProgram_NoPool(b *testing.B) {
+	src := `
+fun fib(n: int):
+    if (n <= 1) then:
+        return n
+    end
+    return fib(n - 1) + fib(n - 2)
+end
+fib(20)
+`
+	prog, _ := ParseProgram([]byte(src))
+	cp, _ := CompileProgram(prog, nil)
+	cfg := TestConfig()
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = ExecuteCompiledVM(cp, cfg, nil)
+	}
+}
+
+func BenchmarkCompiledProgram_WithPool(b *testing.B) {
+	src := `
+fun fib(n: int):
+    if (n <= 1) then:
+        return n
+    end
+    return fib(n - 1) + fib(n - 2)
+end
+fib(20)
+`
+	prog, _ := ParseProgram([]byte(src))
+	cp, _ := CompileProgram(prog, nil)
+	cfg := TestConfig()
+
+	var pool sync.Pool
+	pool.New = func() any { return NewVM(nil) }
+
+	b.ResetTimer()
+	for b.Loop() {
+		vm := pool.Get().(*VM)
+		_, _ = ExecuteCompiledVM(cp, cfg, vm)
+		pool.Put(vm)
+	}
+}
+
+func BenchmarkCompiledProgram_RegexRuntimeCompile(b *testing.B) {
+	// Pattern is a variable — compiled at runtime each call.
+	src := `is_regex_match(pattern, text)`
+	prog, _ := ParseProgram([]byte(src))
+	cp, _ := CompileProgram(prog, []string{"pattern", "text"})
+	cfg := TestConfig()
+	cfg.Vars = map[string]Value{"pattern": `^\d+$`, "text": "12345"}
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = ExecuteCompiledVM(cp, cfg, nil)
+	}
+}
+
+func BenchmarkCompiledProgram_RegexPrecompile(b *testing.B) {
+	// Pattern is a literal — pre-compiled at bytecode compile time.
+	src := `is_regex_match("^\\d+$", text)`
+	prog, _ := ParseProgram([]byte(src))
+	cp, _ := CompileProgram(prog, []string{"text"})
+	cfg := TestConfig()
+	cfg.Vars = map[string]Value{"text": "12345"}
+	b.ResetTimer()
+	for b.Loop() {
+		_, _ = ExecuteCompiledVM(cp, cfg, nil)
 	}
 }
