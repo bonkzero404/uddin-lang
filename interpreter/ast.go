@@ -960,17 +960,24 @@ func (s *Continue) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Import represents an import statement for importing .din files.
+// Import represents an import statement.
+// IsModule=true: import "database" → stdlib module lookup.
+// IsModule=false: import "file.din" → file execution (existing behavior).
 type Import struct {
-	pos      Position // Source position
-	Filename string   // The filename to import (as a string literal)
+	pos      Position
+	Path     string // module name ("database") or file path ("utils.din")
+	Alias    string // "" = use Path as variable name; non-empty = import ... as <Alias>
+	IsModule bool   // true when Path has no "/" and no ".din" suffix
 }
 
 func (s *Import) Position() Position { return s.pos }
 
 // String returns a string representation of the import statement.
 func (s *Import) String() string {
-	return fmt.Sprintf("import \"%s\"", s.Filename)
+	if s.Alias != "" {
+		return fmt.Sprintf("import %q as %s", s.Path, s.Alias)
+	}
+	return fmt.Sprintf("import %q", s.Path)
 }
 
 // NewAssign creates a new assignment statement

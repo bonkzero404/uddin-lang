@@ -78,6 +78,7 @@ const (
 	XOR      = 519
 	MEMO     = 520
 	ELIF     = 521
+	AS       = 522
 
 	// Literals and identifiers (sequential from 600)
 	INT   = 600
@@ -88,6 +89,7 @@ const (
 
 var keywordTokens = map[string]Token{
 	"and":      AND,
+	"as":       AS,
 	"break":    BREAK,
 	"catch":    CATCH,
 	"continue": CONTINUE,
@@ -151,6 +153,7 @@ var tokenNames = map[Token]string{
 	ELLIPSIS: "...",
 
 	AND:      "and",
+	AS:       "as",
 	BREAK:    "break",
 	CATCH:    "catch",
 	CONTINUE: "continue",

@@ -742,7 +742,7 @@ func TestMissingNodesForCoverage(t *testing.T) {
 
 	// Test Import node
 	importNode := &Import{
-		Filename: "test.din",
+		Path: "test.din", IsModule: false,
 		pos:      Position{Line: 3, Column: 1},
 	}
 	if importNode.Position().Line != 3 {
@@ -1285,7 +1285,7 @@ func testAllStatementTypes(t *testing.T) {
 
 	// Test Import
 	importStmt := &Import{
-		Filename: "test.din",
+		Path: "test.din", IsModule: false,
 		pos:      Position{Line: 18, Column: 1},
 	}
 	pos = importStmt.Position()
