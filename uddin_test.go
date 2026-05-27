@@ -815,3 +815,92 @@ func TestEngine_SetStdin(t *testing.T) {
 		t.Fatalf("execution after SetStdin failed: %v", err)
 	}
 }
+
+func TestEngine_StdlibJSON(t *testing.T) {
+	t.Run("parse", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "json"
+result = json.parse("{\"x\": 42}")
+print(result["x"])`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("json.parse failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), "42") {
+			t.Errorf("expected '42' in output, got %q", buf.String())
+		}
+	})
+
+	t.Run("stringify", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "json"
+print(json.stringify({"a": 1}))`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("json.stringify failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), `"a"`) {
+			t.Errorf(`expected '"a"' in output, got %q`, buf.String())
+		}
+	})
+}
+
+func TestEngine_StdlibRegex(t *testing.T) {
+	t.Run("is_match_true", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "regex"
+print(regex.is_match("^\\d+$", "12345"))`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("regex.is_match failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), "true") {
+			t.Errorf("expected 'true', got %q", buf.String())
+		}
+	})
+
+	t.Run("is_match_false", func(t *testing.T) {
+		var buf bytes.Buffer
+		engine := New()
+		engine.SetStdout(&buf)
+		engine.SetUnitTestMode(true)
+		src := `import "regex"
+print(regex.is_match("^\\d+$", "abc"))`
+		_, err := engine.ExecuteString(src)
+		if err != nil {
+			t.Fatalf("regex.is_match failed: %v", err)
+		}
+		if !strings.Contains(buf.String(), "false") {
+			t.Errorf("expected 'false', got %q", buf.String())
+		}
+	})
+}
+
+func TestEngine_TryCatch(t *testing.T) {
+	var buf bytes.Buffer
+	engine := New()
+	engine.SetStdout(&buf)
+	engine.SetUnitTestMode(true)
+
+	src := `try:
+    x = 1 / 0
+catch (err):
+    print("caught error")
+end`
+	_, err := engine.ExecuteString(src)
+	if err != nil {
+		t.Fatalf("try-catch execution failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "caught error") {
+		t.Errorf("expected 'caught error' in output, got %q", buf.String())
+	}
+}
