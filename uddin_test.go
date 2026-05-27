@@ -734,3 +734,24 @@ func TestStdlibModulesRegistered(t *testing.T) {
 		})
 	}
 }
+
+func TestEngine_NewWithConfig(t *testing.T) {
+	config := DefaultConfig()
+	config.IsUnitTest = true
+
+	engine := NewWithConfig(config)
+	if engine == nil {
+		t.Fatal("Expected non-nil engine")
+	}
+
+	// Verify it can execute code
+	var buf bytes.Buffer
+	engine.SetStdout(&buf)
+	_, err := engine.ExecuteString(`print("cfg ok")`)
+	if err != nil {
+		t.Fatalf("execution failed: %v", err)
+	}
+	if !strings.Contains(buf.String(), "cfg ok") {
+		t.Errorf("expected output to contain 'cfg ok', got %q", buf.String())
+	}
+}
