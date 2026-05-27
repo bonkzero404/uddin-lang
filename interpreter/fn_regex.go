@@ -15,26 +15,25 @@ import (
 // Returns true if the string matches the pattern, false otherwise
 // Example: is_regex_match("^-?\\d+\\.\\d+$", "3.14") -> true
 func isregexFunc(interp *interpreter, pos Position, args []Value) Value {
-	if err := ensureNumArgs(pos, "regex_match", args, 2); err != Value(nil) {
+	if err := ensureNumArgs(pos, "is_regex_match", args, 2); err != Value(nil) {
 		return err
 	}
-
-	// Check that first argument is a string (pattern)
-	if pattern, ok := args[0].(string); ok {
-		// Check that second argument is a string (target)
-		if str, ok := args[1].(string); ok {
-			// Compile the regular expression
-			re, err := coregex.Compile(pattern)
-			if err != nil {
-				// Return false if pattern is invalid
-				return false
-			}
-			// Check if the string matches the pattern
-			return re.MatchString(str)
-		}
-		panic(typeError(pos, "regex() requires second argument to be a string"))
+	str, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "is_regex_match() requires second argument to be a string"))
 	}
-	panic(typeError(pos, "regex() requires first argument to be a string"))
+	switch p := args[0].(type) {
+	case string:
+		re, err := coregex.Compile(p)
+		if err != nil {
+			return false
+		}
+		return re.MatchString(str)
+	case *coregex.Regexp:
+		return p.MatchString(str)
+	default:
+		panic(typeError(pos, "is_regex_match() requires first argument to be a string or pre-compiled pattern"))
+	}
 }
 
 // regexMatchFunc tests if a string matches a regular expression pattern
@@ -48,23 +47,22 @@ func regexMatchFunc(interp *interpreter, pos Position, args []Value) Value {
 	if len(args) != 2 {
 		return Value(fmt.Errorf("regex_match() requires exactly 2 arguments, got %d", len(args)))
 	}
-
 	text, ok := args[0].(string)
 	if !ok {
 		return Value(fmt.Errorf("regex_match() requires first argument to be a string, not %s", typeName(args[0])))
 	}
-
-	pattern, ok := args[1].(string)
-	if !ok {
+	switch p := args[1].(type) {
+	case string:
+		re, err := coregex.Compile(p)
+		if err != nil {
+			return Value(fmt.Errorf("invalid regex pattern: %v", err))
+		}
+		return Value(re.MatchString(text))
+	case *coregex.Regexp:
+		return Value(p.MatchString(text))
+	default:
 		return Value(fmt.Errorf("regex_match() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
-
-	re, err := coregex.Compile(pattern)
-	if err != nil {
-		return Value(fmt.Errorf("invalid regex pattern: %v", err))
-	}
-
-	return Value(re.MatchString(text))
 }
 
 // regexFindFunc finds the first match of a regular expression in a string

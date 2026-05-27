@@ -3,7 +3,27 @@ package interpreter
 import (
 	"fmt"
 	"os"
+
+	"github.com/coregx/coregex"
 )
+
+// isRegexBuiltin returns true for builtins that accept a regex pattern.
+func isRegexBuiltin(name string) bool {
+	switch name {
+	case "is_regex_match", "regex_match", "regex_find", "regex_find_all", "regex_replace", "regex_split":
+		return true
+	}
+	return false
+}
+
+// regexPatternArgIndex returns the argument index that holds the pattern for each regex builtin.
+// is_regex_match(pattern, str) → 0; all others (text, pattern) → 1.
+func regexPatternArgIndex(name string) int {
+	if name == "is_regex_match" {
+		return 0
+	}
+	return 1
+}
 
 // Compiler compiles a parsed AST into bytecode Functions.
 type Compiler struct {
@@ -668,8 +688,33 @@ func (c *Compiler) compileCall(e *Call) (uint8, error) {
 	}
 
 	// Compile each argument; collect result registers.
+	// For regex builtins with a string-literal pattern argument, pre-compile
+	// the pattern to *coregex.Regexp and store in constants — eliminates
+	// per-call compilation from the hot path.
 	argRegs := make([]uint8, len(e.Arguments))
+	var regexFnName string
+	if builtinCall {
+		if fnExpr, isVar := e.Function.(*Variable); isVar && isRegexBuiltin(fnExpr.Name) {
+			regexFnName = fnExpr.Name
+		}
+	}
 	for i, arg := range e.Arguments {
+		if regexFnName != "" && i == regexPatternArgIndex(regexFnName) {
+			if lit, ok := arg.(*Literal); ok {
+				if patStr, ok := lit.Value.(string); ok {
+					if re, err := coregex.Compile(patStr); err == nil {
+						constIdx := uint16(len(c.fn.Constants))
+						c.fn.Constants = append(c.fn.Constants, re)
+						r := c.allocReg()
+						c.emit(Instruction{Op: OP_LOAD_CONST, Dst: r,
+							Src1: uint8(constIdx >> 8), Src2: uint8(constIdx)})
+						argRegs[i] = r
+						continue
+					}
+					// Invalid pattern — fall through to normal compile.
+				}
+			}
+		}
 		r, err := c.compileExpr(arg)
 		if err != nil {
 			return 0, err
