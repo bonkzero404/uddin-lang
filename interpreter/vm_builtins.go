@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -78,6 +79,9 @@ func registerDirectBuiltins() {
 	registerVMBuiltinDirect("join", directJoin)
 	registerVMBuiltinDirect("int", directInt)
 	registerVMBuiltinDirect("str", directStr)
+	registerVMBuiltinDirect("waf_cidr_match", directWafCidrMatch)
+	registerVMBuiltinDirect("waf_path_match", directWafPathMatch)
+	registerVMBuiltinDirect("append", directAppend)
 }
 
 func directLen(_ *interpreter, pos Position, args []Value) Value {
@@ -231,7 +235,7 @@ func directJoin(_ *interpreter, pos Position, args []Value) Value {
 	}
 	parts := make([]string, len(*arr))
 	for i, v := range *arr {
-		parts[i] = fmt.Sprintf("%v", v)
+		parts[i] = toString(v, true)
 	}
 	return Value(strings.Join(parts, sep))
 }
@@ -288,4 +292,82 @@ func directStr(_ *interpreter, pos Position, args []Value) Value {
 	default:
 		return Value(fmt.Sprintf("%v", v))
 	}
+}
+
+func directWafCidrMatch(_ *interpreter, pos Position, args []Value) Value {
+	if len(args) != 2 {
+		panic(typeError(pos, "waf_cidr_match() requires 2 arguments, got %d", len(args)))
+	}
+	ipStr, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "waf_cidr_match() requires first argument to be a string (IP address)"))
+	}
+	cidrStr, ok := args[1].(string)
+	if !ok {
+		panic(typeError(pos, "waf_cidr_match() requires second argument to be a string (CIDR)"))
+	}
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return Value(false)
+	}
+	_, network, err := net.ParseCIDR(cidrStr)
+	if err != nil {
+		return Value(false)
+	}
+	return Value(network.Contains(ip))
+}
+
+func directWafPathMatch(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) != 1 {
+		panic(typeError(pos, "waf_path_match() requires 1 argument, got %d", len(args)))
+	}
+	pattern, ok := args[0].(string)
+	if !ok {
+		panic(typeError(pos, "waf_path_match() requires a string argument (pattern)"))
+	}
+	ctx := wafCtx(interp)
+	if ctx == nil {
+		return Value(false)
+	}
+	requestPath, _ := ctx["path"].(string)
+	return Value(PathGlobMatch(pattern, requestPath))
+}
+
+func directAppend(_ *interpreter, pos Position, args []Value) Value {
+	if len(args) < 1 {
+		panic(typeError(pos, "append() requires at least 1 argument, got %d", len(args)))
+	}
+	list, ok := args[0].(*[]Value)
+	if !ok {
+		panic(typeError(pos, "append() requires first argument to be an array"))
+	}
+	if len(args) == 1 {
+		return Value(nil)
+	}
+	toAppend := args[1:]
+	if cap(*list)-len(*list) < len(toAppend) {
+		newCap := len(*list) + len(toAppend)
+		if newCap > 100 {
+			pooled := GetPooledArray(newCap)
+			defer PutPooledArray(pooled)
+			var newList []Value
+			if cap(pooled) < newCap {
+				newList = make([]Value, len(*list), newCap)
+			} else {
+				newList = pooled[:len(*list)]
+			}
+			copy(newList, *list)
+			newList = SmartAppend(newList, toAppend...)
+			result := make([]Value, len(newList))
+			copy(result, newList)
+			*list = result
+		} else {
+			newList := make([]Value, len(*list), newCap)
+			copy(newList, *list)
+			*list = SmartAppend(newList, toAppend...)
+		}
+	} else {
+		*list = SmartAppend(*list, toAppend...)
+	}
+	return Value(nil)
 }

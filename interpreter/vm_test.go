@@ -1052,3 +1052,39 @@ func BenchmarkBuiltinDirect_Contains(b *testing.B) {
 		makeVM(cfg).Execute(fn)
 	}
 }
+
+func TestVMBuiltinDirect_WafCidrMatch(t *testing.T) {
+	src := `waf_cidr_match("10.0.0.5", "10.0.0.0/8")`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != true {
+		t.Errorf("expected true (10.0.0.5 in 10.0.0.0/8), got %v", result)
+	}
+}
+
+func TestVMBuiltinDirect_Append(t *testing.T) {
+	src := `
+arr = [1, 2, 3]
+append(arr, 4)
+len(arr)
+`
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatal("parse:", err)
+	}
+	fn, err := NewCompiler().Compile(prog)
+	if err != nil {
+		t.Fatal("compile:", err)
+	}
+	result := makeVM(TestConfig()).Execute(fn)
+	if result != 4 {
+		t.Errorf("expected 4, got %v", result)
+	}
+}

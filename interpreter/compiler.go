@@ -735,7 +735,11 @@ func (c *Compiler) compileCall(e *Call) (uint8, error) {
 
 	if builtinCall {
 		dst := c.allocReg()
-		c.emit(Instruction{Op: OP_CALL_BUILTIN, Dst: dst,
+		op := OP_CALL_BUILTIN
+		if int(builtinIdx) < len(vmBuiltinDirectTable) && vmBuiltinDirectTable[builtinIdx] != nil {
+			op = OP_CALL_BUILTIN_DIRECT
+		}
+		c.emit(Instruction{Op: op, Dst: dst,
 			Src1: uint8(builtinIdx >> 8), Src2: uint8(builtinIdx)})
 		// Meta-instruction: argc in Dst, argStart in Src1:Src2.
 		c.emit(Instruction{Op: OP_LOAD_CONST, Dst: uint8(len(e.Arguments)),
