@@ -712,6 +712,8 @@ func TestStdlibModulesRegistered(t *testing.T) {
 		{"waf", `import "waf"\nprint(waf.cidr_match("192.168.1.1", "192.168.1.0/24"))`, "true"},
 		{"cdc", `import "cdc"\ncdc.emit("test", {})\nprint(cdc.count("test"))`, "1"},
 		{"fact", `import "fact"\nfact.assert("cat", "k")\nprint(fact.exists("cat", "k"))`, "true"},
+		{"http", `import "http"\nprint(typeof(http.get))`, "function"},
+		{"database", `import "database"\nprint(typeof(database.connect))`, "function"},
 	}
 
 	for _, tt := range tests {
