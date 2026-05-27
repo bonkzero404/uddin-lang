@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"sync"
 
 	"github.com/bonkzero404/uddin-lang/interpreter"
 )
@@ -15,14 +16,20 @@ import (
 // Engine represents a UDDIN-LANG interpreter engine instance.
 // It provides a high-level interface for parsing and executing UDDIN-LANG code.
 type Engine struct {
-	config *interpreter.Config
+	config       *interpreter.Config
+	programCache sync.Map // *interpreter.Program → *interpreter.CompiledProgram
+	vmPool       sync.Pool
 }
 
 // New creates a new UDDIN-LANG engine with default configuration.
 func New() *Engine {
-	return &Engine{
+	e := &Engine{
 		config: interpreter.DefaultConfig(),
 	}
+	e.vmPool.New = func() any {
+		return interpreter.NewVM(nil)
+	}
+	return e
 }
 
 // NewWithConfig creates a new UDDIN-LANG engine with custom configuration.
@@ -30,9 +37,11 @@ func NewWithConfig(config *interpreter.Config) *Engine {
 	if config == nil {
 		config = interpreter.DefaultConfig()
 	}
-	return &Engine{
-		config: config,
+	e := &Engine{config: config}
+	e.vmPool.New = func() any {
+		return interpreter.NewVM(nil)
 	}
+	return e
 }
 
 // SetStdout sets the standard output for the engine.
@@ -95,8 +104,37 @@ func (e *Engine) EvaluateExpression(expr interpreter.Expression) (interpreter.Va
 }
 
 // ExecuteProgram executes a parsed program.
+// When VMEnabled, compiled bytecode is cached by *Program pointer — subsequent
+// calls with the same *Program skip compilation entirely.
 func (e *Engine) ExecuteProgram(prog *interpreter.Program) (*interpreter.Stats, error) {
-	return interpreter.Execute(prog, e.config)
+	if !e.config.VMEnabled {
+		return interpreter.Execute(prog, e.config)
+	}
+
+	// Build sorted var-name list for compilation (stable across calls).
+	varNames := make([]string, 0, len(e.config.Vars))
+	for k := range e.config.Vars {
+		varNames = append(varNames, k)
+	}
+
+	// Cache lookup by *Program pointer identity.
+	var cp *interpreter.CompiledProgram
+	if val, ok := e.programCache.Load(prog); ok {
+		cp = val.(*interpreter.CompiledProgram)
+	} else {
+		var err error
+		cp, err = interpreter.CompileProgram(prog, varNames)
+		if err != nil {
+			return nil, err
+		}
+		e.programCache.Store(prog, cp)
+	}
+
+	// Borrow a VM from the pool, use it, return it.
+	vm := e.vmPool.Get().(*interpreter.VM)
+	defer e.vmPool.Put(vm)
+
+	return interpreter.ExecuteCompiledVM(cp, e.config, vm)
 }
 
 // ExecuteString parses and executes UDDIN-LANG source code from a string.
