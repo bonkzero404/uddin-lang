@@ -69,6 +69,9 @@ const (
 	OP_TRY     // Src1=errReg; Dst:Src2=signed jump offset to catch block
 	OP_END_TRY // pop the innermost try handler (no error occurred)
 
+	// Module import
+	OP_IMPORT_MODULE // Dst=aliasReg; Src1<<8|Src2=constIdx(module name string)
+
 	// Sentinel
 	_OP_MAX
 )
@@ -103,6 +106,7 @@ func opName(op OpCode) string {
 		"MAKE_ARRAY", "MAKE_MAP", "SUBSCRIPT", "SET_INDEX",
 		"MAKE_FUNC", "CALL", "CALL_BUILTIN", "CALL_BUILTIN_DIRECT",
 		"TRY", "END_TRY",
+		"IMPORT_MODULE",
 	}
 	if int(op) < len(names) {
 		return names[op]

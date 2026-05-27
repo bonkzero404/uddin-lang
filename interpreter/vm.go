@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 const vmInitialRegCount = 256
@@ -424,6 +425,17 @@ func (vm *VM) run() (result Value) {
 			if len(vm.tryStack) > 0 {
 				vm.tryStack = vm.tryStack[:len(vm.tryStack)-1]
 			}
+
+		case OP_IMPORT_MODULE:
+			moduleName := frame.fn.Constants[instr.constIndex()].(string)
+			mod, ok := LookupModule(moduleName)
+			if !ok {
+				known := knownModuleNames()
+				panic(runtimeError(Position{},
+					"unknown module %q\n  available modules: %s",
+					moduleName, strings.Join(known, ", ")))
+			}
+			regs[instr.Dst] = buildNamespaceObject(mod, vm.interp)
 
 		default:
 			panic(runtimeError(Position{}, "VM: unimplemented opcode %s", opName(instr.Op)))

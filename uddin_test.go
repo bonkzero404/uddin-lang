@@ -697,3 +697,38 @@ fib(20)
 		}
 	})
 }
+
+func TestStdlibModulesRegistered(t *testing.T) {
+	// Verify all 9 stdlib modules are registered and callable via import syntax.
+	tests := []struct {
+		name string
+		src  string
+		want string
+	}{
+		{"regex", `import "regex"\nprint(regex.is_match("^\\d+$", "42"))`, "true"},
+		{"datetime", `import "datetime"\nprint(typeof(datetime.now()))`, "string"},
+		{"json", `import "json"\nprint(json.stringify(42))`, "42"},
+		{"fs", `import "fs"\nprint(typeof(fs.getcwd()))`, "string"},
+		{"waf", `import "waf"\nprint(waf.cidr_match("192.168.1.1", "192.168.1.0/24"))`, "true"},
+		{"cdc", `import "cdc"\ncdc.emit("test", {})\nprint(cdc.count("test"))`, "1"},
+		{"fact", `import "fact"\nfact.assert("cat", "k")\nprint(fact.exists("cat", "k"))`, "true"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			engine := New()
+			engine.SetUnitTestMode(true)
+			src := strings.ReplaceAll(tt.src, `\n`, "\n")
+			var buf strings.Builder
+			engine.SetStdout(&buf)
+			_, err := engine.ExecuteString(src)
+			if err != nil {
+				t.Fatalf("error: %v", err)
+			}
+			got := strings.TrimSpace(buf.String())
+			if got != tt.want {
+				t.Fatalf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

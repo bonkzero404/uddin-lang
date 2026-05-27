@@ -1561,6 +1561,20 @@ func Evaluate(expr Expression, config *Config) (v Value, stats *Stats, err error
 
 // executeVM routes execution through the bytecode VM instead of the tree-walker.
 func executeVM(prog *Program, config *Config) (stats *Stats, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch e := r.(type) {
+			case returnResult:
+				// top-level return — not an error
+			case ErrorInterpreter:
+				err = e
+			case error:
+				err = runtimeError(Position{}, "runtime error: %s", e.Error())
+			default:
+				err = runtimeError(Position{}, "unexpected runtime error")
+			}
+		}
+	}()
 	c := NewCompiler()
 
 	// Pre-seed variable names from Config.Vars so the compiler allocates registers
@@ -1661,25 +1675,35 @@ func Execute(prog *Program, config *Config) (stats *Stats, err error) {
 	return
 }
 
-// executeImport handles importing and executing .din files
+// executeImport handles import statements.
+// For stdlib modules (IsModule=true), builds a namespace object and binds it.
+// For file imports, reads and executes the .din file in the current scope.
 func (interp *interpreter) executeImport(s *Import) {
-	// Read the file content
-	content, err := os.ReadFile(s.Filename)
-	if err != nil {
-		// Convert to error instead of panic
-		panic(runtimeError(s.Position(), "failed to import file '%s': %s", s.Filename, err))
+	if s.IsModule {
+		mod, ok := LookupModule(s.Path)
+		if !ok {
+			known := knownModuleNames()
+			panic(runtimeError(s.pos,
+				"unknown module %q\n  available modules: %s",
+				s.Path, strings.Join(known, ", ")))
+		}
+		alias := s.Alias
+		if alias == "" {
+			alias = s.Path
+		}
+		ns := buildNamespaceObject(mod, interp)
+		interp.assign(alias, ns)
+		return
 	}
 
-	// Parse the imported file
+	content, err := os.ReadFile(s.Path)
+	if err != nil {
+		panic(runtimeError(s.Position(), "failed to import file '%s': %s", s.Path, err))
+	}
 	prog, err := ParseProgram(content)
 	if err != nil {
-		// Convert to error instead of panic
-		panic(runtimeError(s.Position(), "failed to parse imported file '%s': %s", s.Filename, err))
+		panic(runtimeError(s.Position(), "failed to parse imported file '%s': %s", s.Path, err))
 	}
-
-	// Execute the imported program
-	// Note: This will execute in the current scope, so variables and functions
-	// from the imported file will be available in the current context
 	for _, statement := range prog.Statements {
 		interp.executeStatement(statement)
 	}

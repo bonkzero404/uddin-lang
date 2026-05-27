@@ -18,6 +18,13 @@ Complete guide to Uddin language syntax including:
 - Operators and expressions
 - Module system
 
+### [Module System](./modules)
+Reference for the stdlib module system including:
+- Import syntax (`import "module"` / `import "module" as alias`)
+- All 9 built-in modules: regex, datetime, json, fs, http, waf, cdc, fact, database
+- Function reference for each module
+- Migration guide from flat global names (pre-v1.2.0)
+
 ### [Built-in Functions](./builtin-functions)
 Documentation for all built-in functions including:
 - String manipulation functions
@@ -43,6 +50,14 @@ Reference guide for real-time database streaming capabilities including:
 - Performance considerations
 
 
+
+### [Bytecode VM & Performance](./bytecode-vm)
+Internals of the bytecode virtual machine and performance APIs including:
+- VM architecture and opcode reference
+- `CALL_BUILTIN_DIRECT` fast-path builtins
+- Engine program cache and VM pool
+- Regex pre-compilation
+- Disassembling bytecode
 
 ### [Go Library](./library)
 Comprehensive guide to using UDDIN-LANG as a Go library including:

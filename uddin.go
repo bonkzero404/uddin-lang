@@ -12,6 +12,17 @@ import (
 	"sync"
 
 	"github.com/bonkzero404/uddin-lang/interpreter"
+
+	// stdlib modules — blank imports trigger init() which calls interpreter.RegisterModule.
+	_ "github.com/bonkzero404/uddin-lang/stdlib/cdc"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/database"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/datetime"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/fact"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/fs"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/http"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/json"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/regex"
+	_ "github.com/bonkzero404/uddin-lang/stdlib/waf"
 )
 
 // Engine represents a UDDIN-LANG interpreter engine instance.

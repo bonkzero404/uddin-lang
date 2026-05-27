@@ -3,6 +3,7 @@ package interpreter
 import (
 	"fmt"
 	"strconv"
+	"strings"
 )
 
 // Cache for commonly used error messages to reduce string formatting overhead
@@ -784,14 +785,29 @@ func (p *parser) continue_() Statement {
 	return &Continue{pos}
 }
 
-// import = IMPORT STR
+// import = IMPORT STR [AS IDENT]
 func (p *parser) import_() Statement {
 	pos := p.pos
 	p.expect(IMPORT)
 	if p.tok != STR {
-		p.error("import statement requires a string filename, got %s - example: import \"filename.din\"", p.tok)
+		p.error("import requires a string path or module name, got %s", p.tok)
 	}
-	filename := p.val
+	path := p.val
 	p.next()
-	return &Import{pos, filename}
+
+	alias := ""
+	if p.tok == AS {
+		p.next()
+		if p.tok != NAME {
+			p.error("import ... as requires an identifier, got %s", p.tok)
+		}
+		alias = p.val
+		p.next()
+	}
+
+	isModule := !strings.Contains(path, "/") &&
+		!strings.Contains(path, "\\") &&
+		!strings.HasSuffix(path, ".din")
+
+	return &Import{pos: pos, Path: path, Alias: alias, IsModule: isModule}
 }

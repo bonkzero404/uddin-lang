@@ -240,7 +240,7 @@ func testStatementNodes(t *testing.T) {
 
 	// Test Import
 	importStmt := &Import{
-		Filename: "test.din",
+		Path: "test.din", IsModule: false,
 		pos:      Position{Line: 11, Column: 1},
 	}
 	pos = importStmt.Position()

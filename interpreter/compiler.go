@@ -1043,21 +1043,31 @@ func (c *Compiler) compileFunctionExpr(e *FunctionExpression) (uint8, error) {
 	return dst, nil
 }
 
-// compileImport reads, parses, and inlines an imported .din file into the
-// current compiler at compile time. Imported symbols are visible in the same
-// scope as if the file were written inline — matching tree-walker semantics.
+// compileImport handles import statements at compile time.
+// Module imports emit OP_IMPORT_MODULE (runtime module lookup + namespace binding).
+// File imports read, parse, and inline the .din file into the current function.
 func (c *Compiler) compileImport(s *Import) error {
-	content, err := os.ReadFile(s.Filename)
+	if s.IsModule {
+		alias := s.Alias
+		if alias == "" {
+			alias = s.Path
+		}
+		aliasReg := c.localReg(alias)
+		nameIdx := c.addConst(s.Path)
+		c.emit(Instruction{Op: OP_IMPORT_MODULE, Dst: aliasReg, Src1: uint8(nameIdx >> 8), Src2: uint8(nameIdx)})
+		return nil
+	}
+	content, err := os.ReadFile(s.Path)
 	if err != nil {
-		return fmt.Errorf("import '%s': %w", s.Filename, err)
+		return fmt.Errorf("import '%s': %w", s.Path, err)
 	}
 	prog, err := ParseProgram(content)
 	if err != nil {
-		return fmt.Errorf("import '%s': parse error: %w", s.Filename, err)
+		return fmt.Errorf("import '%s': parse error: %w", s.Path, err)
 	}
 	for _, stmt := range prog.Statements {
 		if err := c.compileStatement(stmt); err != nil {
-			return fmt.Errorf("import '%s': %w", s.Filename, err)
+			return fmt.Errorf("import '%s': %w", s.Path, err)
 		}
 	}
 	return nil
