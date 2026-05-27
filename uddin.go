@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/bonkzero404/uddin-lang/interpreter"
@@ -116,6 +117,7 @@ func (e *Engine) ExecuteProgram(prog *interpreter.Program) (*interpreter.Stats, 
 	for k := range e.config.Vars {
 		varNames = append(varNames, k)
 	}
+	sort.Strings(varNames)
 
 	// Cache lookup by *Program pointer identity.
 	var cp *interpreter.CompiledProgram
