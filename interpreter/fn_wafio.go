@@ -264,6 +264,30 @@ func wafReturnFunc(interp *interpreter, pos Position, args []Value) Value {
 	panic(returnResult{pos: pos, value: Value(normalized)})
 }
 
+// wafBlockFunc implements waf_block([msg]) → (noreturn)
+func wafBlockFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) > 1 {
+		return Value(fmt.Errorf("waf_block() accepts at most 1 optional argument"))
+	}
+	return wafReturnFunc(interp, pos, []Value{"BLOCK"})
+}
+
+// wafAllowFunc implements waf_allow([msg]) → (noreturn)
+func wafAllowFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) > 1 {
+		return Value(fmt.Errorf("waf_allow() accepts at most 1 optional argument"))
+	}
+	return wafReturnFunc(interp, pos, []Value{"ALLOW"})
+}
+
+// wafLogFunc implements waf_log([msg]) → (noreturn)
+func wafLogFunc(interp *interpreter, pos Position, args []Value) Value {
+	if len(args) > 1 {
+		return Value(fmt.Errorf("waf_log() accepts at most 1 optional argument"))
+	}
+	return wafReturnFunc(interp, pos, []Value{"LOG"})
+}
+
 func init() {
 	builtins["waf_header"] = builtinFunction{wafHeaderFunc, "waf_header"}
 	builtins["waf_query"] = builtinFunction{wafQueryFunc, "waf_query"}
@@ -276,4 +300,8 @@ func init() {
 	builtins["waf_detected_any"] = builtinFunction{wafDetectedAnyFunc, "waf_detected_any"}
 	builtins["waf_detected_list"] = builtinFunction{wafDetectedListFunc, "waf_detected_list"}
 	builtins["waf_return"] = builtinFunction{wafReturnFunc, "waf_return"}
+	builtins["waf_block"] = builtinFunction{wafBlockFunc, "waf_block"}
+	builtins["waf_allow"] = builtinFunction{wafAllowFunc, "waf_allow"}
+	builtins["waf_log"] = builtinFunction{wafLogFunc, "waf_log"}
 }
+
