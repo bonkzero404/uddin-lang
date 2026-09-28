@@ -1,8 +1,10 @@
 package interpreter
 
 import (
+	"errors"
 	"reflect"
 	"regexp/syntax"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 	"unsafe"
@@ -79,6 +81,64 @@ func (interp *interpreter) charge(pos Position, n int) {
 		interp.stop(LimitMemory, pos)
 	}
 	interp.allocated += n
+}
+
+// maxErrorQuote bounds a script value quoted into an error message, and
+// maxCaughtError the message a sandboxed catch binds: a caught
+// "key not found" error used to carry a whole 1 MB key (quoted), and 200 of
+// them kept in a list cost 1.36 GiB at 16 charged bytes each.
+const (
+	maxErrorQuote  = 128
+	maxCaughtError = 1024
+)
+
+// errorQuote quotes s for an error message, cut to maxErrorQuote bytes.
+func errorQuote(s string) string {
+	if len(s) <= maxErrorQuote {
+		return strconv.Quote(s)
+	}
+	cut := maxErrorQuote
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return strconv.Quote(s[:cut]) + "... (" + strconv.Itoa(len(s)) + " bytes)"
+}
+
+// truncateMessage cuts msg to at most max bytes on a rune boundary, copying
+// so the full message is not kept alive.
+func truncateMessage(msg string, max int) string {
+	if len(msg) <= max {
+		return msg
+	}
+	cut := max
+	for cut > 0 && !utf8.RuneStart(msg[cut]) {
+		cut--
+	}
+	return strings.Clone(msg[:cut]) + "..."
+}
+
+// bindCaughtError is the value a sandboxed catch binds: the message cut to
+// maxCaughtError bytes and charged to the memory budget.
+func (interp *interpreter) bindCaughtError(pos Position, v Value) Value {
+	msg, ok := v.(string)
+	if !ok {
+		return v
+	}
+	msg = truncateMessage(msg, maxCaughtError)
+	interp.charge(pos, memWord+len(msg))
+	return msg
+}
+
+// sandboxErrorResult cuts the message of an error value a builtin returned
+// (a date or pattern that does not parse is quoted in it) to
+// maxCaughtError bytes.
+func sandboxErrorResult(res Value) Value {
+	if e, ok := res.(error); ok {
+		if msg := e.Error(); len(msg) > maxCaughtError {
+			return errors.New(truncateMessage(msg, maxCaughtError))
+		}
+	}
+	return res
 }
 
 // sumEst adds a fixed part to an estimate from mulLen, keeping -1 (overflow).
@@ -582,6 +642,10 @@ func resultBytes(name string, res Value, args []Value, budget int) int {
 			}
 		}
 		return memObject
+	case error:
+		// Builtins report bad input as an error value, whose message can
+		// quote that input (a date that does not parse, a regex).
+		return memWord + len(r.Error())
 	}
 	return 0
 }

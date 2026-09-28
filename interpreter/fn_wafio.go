@@ -258,7 +258,7 @@ func wafReturnFunc(interp *interpreter, pos Position, args []Value) Value {
 	case "ALLOW", "LOG", "BLOCK":
 		// valid
 	default:
-		return Value(fmt.Errorf("waf_return() invalid action %q: must be ALLOW, LOG, or BLOCK", action))
+		return Value(fmt.Errorf("waf_return() invalid action %s: must be ALLOW, LOG, or BLOCK", errorQuote(action)))
 	}
 	out := interp.stdout
 	if interp.verdict != nil {

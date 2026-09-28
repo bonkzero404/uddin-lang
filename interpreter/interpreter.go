@@ -67,6 +67,8 @@ type interpreter struct {
 	stopped bool
 	// nesting counts active blocks in a sandbox (Sandbox.MaxNesting)
 	nesting int
+	// regexWork counts the regex units charged against Sandbox.MaxRegexWork
+	regexWork int
 	// allocated counts the bytes charged against Sandbox.MaxAllocBytes
 	allocated int
 }
@@ -597,7 +599,7 @@ func evalSubscript(pos Position, container, subscript Value) Value {
 			if value, ok := c[s]; ok {
 				return value
 			}
-			panic(valueError(pos, "key not found: %q", s))
+			panic(valueError(pos, "key not found: %s", errorQuote(s)))
 		}
 		panic(typeError(pos, "object subscript must be a string"))
 	default:
@@ -1511,6 +1513,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 					// 	panic(r)
 					default:
 						errValue = fmt.Sprintf("%v", r)
+					}
+					if interp.sandbox != nil {
+						errValue = interp.bindCaughtError(s.Position(), errValue)
 					}
 
 					// Assign the error to the catch variable

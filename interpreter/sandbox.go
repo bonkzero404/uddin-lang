@@ -7,6 +7,8 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 )
 
 // Sandbox restricts one execution to what an embedding host allows. The
@@ -49,8 +51,14 @@ type Sandbox struct {
 	// 1 KiB per instruction, and repetition (a{100}) multiplies a short
 	// pattern's size.
 	MaxRegexProgram int
-	// Context aborts execution once it is done; checked every 256 operations
-	// and on every loop iteration.
+	// MaxRegexWork bounds the regex matching work of one execution, in RE2
+	// program instructions × input bytes read (0 = unlimited). Inside a
+	// sandbox the regex builtins run Go regexp over a reader that charges
+	// every byte, so a single call stops mid-match once the budget is spent:
+	// LimitError "regex_work". See sandbox_regex.go.
+	MaxRegexWork int
+	// Context aborts execution once it is done; checked every 256
+	// operations, on every loop iteration and before every builtin call.
 	Context context.Context
 }
 
@@ -359,43 +367,91 @@ func (interp *interpreter) evalTimesChecked(pos Position, l, r Value) Value {
 	return evalTimes(pos, l, r)
 }
 
-// approxSize estimates the serialized size of v (string bytes plus small
-// per-element overheads), stopping once it exceeds budget. The walk is
-// iterative and bounded by budget, so a huge fan-out of shared references or
-// a list that contains itself ends in a size error instead of an enormous
+// stringifySize bounds the size of v once stringified, stopping once it
+// exceeds budget. Strings nested in a list or map are quoted — %q for str,
+// print and join, JSON for json_stringify — and a quoted byte can take up to
+// six (a control byte becomes \u0000 in JSON, \x00 with %q; JSON also
+// escapes <, > and & and invalid UTF-8), so they are counted at their quoted
+// length; quoteTop quotes a top-level string too (json_stringify). The walk
+// is iterative and bounded by budget, so a huge fan-out of shared references
+// or a list that contains itself ends in a size error instead of an enormous
 // allocation or unbounded recursion.
-func approxSize(v Value, budget int) int {
+func stringifySize(v Value, budget int, json, quoteTop bool) int {
+	type item struct {
+		v      Value
+		quoted bool
+	}
 	n := 0
-	stack := []Value{v}
+	stack := []item{{v, quoteTop}}
 	for len(stack) > 0 && n <= budget {
 		cur := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
-		switch cur := cur.(type) {
+		switch c := cur.v.(type) {
 		case string:
-			n += len(cur) + 2
+			if cur.quoted {
+				n += quotedLen(c, json)
+			} else {
+				n += len(c)
+			}
 		case *[]Value:
 			n += 2
-			if cur != nil {
-				for _, e := range *cur {
-					n++
+			if c != nil {
+				for _, e := range *c {
+					n += 2 // separator
 					if n > budget {
 						break
 					}
-					stack = append(stack, e)
+					stack = append(stack, item{e, true})
 				}
 			}
 		case map[string]Value:
 			n += 2
-			for k, e := range cur {
-				n += len(k) + 3
+			for k, e := range c {
+				n += quotedLen(k, json) + 4 // ": " and a separator
 				if n > budget {
 					break
 				}
-				stack = append(stack, e)
+				stack = append(stack, item{e, true})
 			}
 		default:
-			n += 8
+			n += 24 // a number, bool or null
 		}
+	}
+	return n
+}
+
+// quotedLen bounds the length of s quoted by strconv.Quote (%q) or, with
+// json, by encoding/json with HTML escaping (goccy/go-json).
+func quotedLen(s string, json bool) int {
+	n := 2
+	for i := 0; i < len(s); {
+		c := s[i]
+		if c < utf8.RuneSelf {
+			switch {
+			case c == '"' || c == '\\':
+				n += 2
+			case c < 0x20 || c == 0x7f:
+				n += 6 // \u00XX; %q uses \xXX or \n
+			case json && (c == '<' || c == '>' || c == '&'):
+				n += 6
+			default:
+				n++
+			}
+			i++
+			continue
+		}
+		r, w := utf8.DecodeRuneInString(s[i:])
+		switch {
+		case r == utf8.RuneError && w == 1:
+			n += 6 // \ufffd; %q uses \xXX
+		case json && (r == '\u2028' || r == '\u2029'):
+			n += 6
+		case !json && !unicode.IsPrint(r):
+			n += 10 // \uXXXX or \UXXXXXXXX
+		default:
+			n += w
+		}
+		i += w
 	}
 	return n
 }
@@ -575,7 +631,7 @@ func (interp *interpreter) guardBuiltin(pos Position, name string, args []Value)
 			return
 		}
 		max := interp.sandbox.MaxValueLen
-		interp.sizeCheck(pos, mulLen(len(strArg(1)), len(*list))+approxSize(list, max))
+		interp.sizeCheck(pos, sumEst(stringifySize(list, max, false, false), mulLen(len(strArg(1)), len(*list))))
 	default:
 		if !stringifyBuiltins[name] {
 			return
@@ -584,8 +640,9 @@ func (interp *interpreter) guardBuiltin(pos Position, name string, args []Value)
 		// itself) can be far larger than any value the size checks saw.
 		max := interp.sandbox.MaxValueLen
 		total := 0
+		json := name == "json_stringify" || name == "xml_stringify"
 		for _, a := range args {
-			total += approxSize(a, max)
+			total += stringifySize(a, max, json, json)
 			if total > max {
 				break
 			}
@@ -611,6 +668,9 @@ func (interp *interpreter) guardBuiltin(pos Position, name string, args []Value)
 // dispatcher (its per-call write lock and name-based fallback are not
 // needed), same argument-count rule.
 func (interp *interpreter) callSandboxedBuiltin(bf builtinFunction, pos Position, args []Value) Value {
+	// A builtin can run long on large input: never start one after the
+	// deadline.
+	interp.checkDone()
 	if !interp.sandbox.Allowed[bf.Name] {
 		panic(nameError(pos, "builtin %q is not available", bf.Name))
 	}
@@ -635,7 +695,7 @@ func (interp *interpreter) callSandboxedBuiltin(bf builtinFunction, pos Position
 	// arguments (sandbox_memory.go).
 	reserved += interp.reserveBuiltin(pos, bf.Name, args)
 	before := snapshotContainers(args)
-	res := bf.call(interp, pos, args)
+	res := sandboxErrorResult(bf.call(interp, pos, args))
 	used := containerGrowth(before, args) + resultBytes(bf.Name, res, args, interp.sandbox.MaxAllocBytes)
 	interp.settle(pos, reserved, used)
 	return res

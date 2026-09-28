@@ -2,17 +2,67 @@ package interpreter
 
 import (
 	"bytes"
+	"fmt"
 	"runtime"
 	"strings"
 	"testing"
 )
+
+// K-53 review: a caught "key not found" error quoted the whole key, and the
+// catch variable was never charged — 200 caught errors on a 1 MB key kept
+// 1.36 GiB. The key is now quoted to 128 bytes and the bound message is
+// charged; an error value a builtin returns (a date that does not parse is
+// quoted in it) is cut and charged too.
+func TestSandboxCaughtErrorsBounded(t *testing.T) {
+	src := "k = \"a\" * 1000000\nm = {}\nl = []\ni = 0\nwhile (i < 200):\n" +
+		"    try:\n        x = m[k]\n    catch (e):\n        push(l, e)\n    end\n    i = i + 1\nend\n" +
+		"print(len(l), len(l[0]))\n"
+	alloc, out, err := allocDuring(t, memorySandbox(), src)
+	if err != nil {
+		t.Fatalf("caught errors: %v", err)
+	}
+	var n, size int
+	if _, scanErr := fmt.Sscan(strings.TrimSpace(out), &n, &size); scanErr != nil || n != 200 || size > 300 {
+		t.Fatalf("output %q: want 200 errors of at most 300 bytes", out)
+	}
+	if alloc > 64<<20 {
+		t.Errorf("allocated %d MiB", alloc>>20)
+	}
+
+	// An unparseable pattern comes back as an error value quoting it.
+	src = "p = \"(\" + (\"a\" * 3000)\nl = []\ni = 0\nwhile (i < 200):\n    push(l, regex_match(\"x\", p))\n    i = i + 1\nend\n" +
+		"print(len(str(l[0])))\n"
+	_, out, err = allocDuring(t, memorySandbox(), src)
+	if err != nil {
+		t.Fatalf("returned errors: %v", err)
+	}
+	if _, scanErr := fmt.Sscan(strings.TrimSpace(out), &size); scanErr != nil || size > maxCaughtError+64 {
+		t.Fatalf("returned error kept %q bytes", out)
+	}
+}
+
+// json_stringify escapes a control byte to six bytes (\u0001); the size
+// check used to count one.
+func TestSandboxJSONStringifyEscapes(t *testing.T) {
+	src := "s = char(1) * 200000\nx = json_stringify([s])\n"
+	if _, err := runSandboxed(t, memorySandbox(), src); limitReason(err) != LimitValueSize {
+		t.Fatalf("200 KB of control bytes stringifies to 1.2 MB: want value_size, got %v", err)
+	}
+	bs := `\`
+	want := `["a` + bs + `u003cb","` + bs + `u0001"]`
+	if out, err := runSandboxed(t, memorySandbox(), "print(json_stringify([\"a<b\", char(1)]))\n"); err != nil ||
+		strings.TrimSpace(out) != want {
+		t.Fatalf("small values: out=%q err=%v", out, err)
+	}
+}
 
 // memorySandbox has the limits the wafio WAF agent runs script rules with.
 func memorySandbox() *Sandbox {
 	sb := NewSandbox([]string{
 		"append", "push", "unshift", "len", "range", "str", "join", "split", "lower", "trim",
 		"map", "filter", "sort", "json_parse", "is_regex_match", "regex_match", "regex_find_all",
-		"regex_replace", "regex_split", "set_new", "set_add", "print",
+		"regex_replace", "regex_split", "regex_find", "set_new", "set_add", "print",
+		"date_parse", "char", "json_stringify", "push",
 	})
 	sb.MaxOps = 100_000
 	sb.MaxCallDepth = 64
