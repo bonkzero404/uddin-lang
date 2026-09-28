@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"unicode/utf8"
 )
 
 // Value represents any runtime value in the language.
@@ -66,6 +67,8 @@ type interpreter struct {
 	stopped bool
 	// nesting counts active blocks in a sandbox (Sandbox.MaxNesting)
 	nesting int
+	// allocated counts the bytes charged against Sandbox.MaxAllocBytes
+	allocated int
 }
 
 // returnResult is used to handle return statements in functions.
@@ -781,6 +784,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 				args = SmartAppend(args, interp.evaluate(a))
 			}
 			if e.Ellipsis {
+				interp.chargeSpread(e.Position(), args[len(args)-1])
 				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
 				args = args[:len(args)-1]
 				for iterator.HasNext() {
@@ -796,6 +800,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 				args = SmartAppend(args, interp.evaluate(a))
 			}
 			if e.Ellipsis {
+				interp.chargeSpread(e.Position(), args[len(args)-1])
 				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
 				args = args[:len(args)-1]
 				for iterator.HasNext() {
@@ -811,6 +816,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 				args = SmartAppend(args, interp.evaluate(a))
 			}
 			if e.Ellipsis {
+				interp.chargeSpread(e.Position(), args[len(args)-1])
 				iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
 				args = args[:len(args)-1]
 				for iterator.HasNext() {
@@ -827,6 +833,7 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 					args = SmartAppend(args, interp.evaluate(a))
 				}
 				if e.Ellipsis {
+					interp.chargeSpread(e.Position(), args[len(args)-1])
 					iterator := getIterator(e.Arguments[len(args)-1].Position(), args[len(args)-1])
 					args = args[:len(args)-1]
 					for iterator.HasNext() {
@@ -845,6 +852,9 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		panic(nameError(e.Position(), "name %q not found", e.Name))
 	case *List:
+		if interp.sandbox != nil {
+			interp.charge(e.Position(), memList+memWord*len(e.Values))
+		}
 		// Use CacheFriendlyArray if enabled, otherwise use pooled arrays
 		if IsCacheFriendlyStructuresEnabled() && len(e.Values) > 100 {
 			// Use CacheFriendlyArray for large arrays
@@ -868,6 +878,9 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		}
 		return Value(&values)
 	case *Map:
+		if interp.sandbox != nil {
+			interp.charge(e.Position(), memMap+memMapEnt*len(e.Items))
+		}
 		// Use CacheFriendlyMap if enabled, otherwise use pooled maps
 		if IsCacheFriendlyStructuresEnabled() && len(e.Items) > 50 {
 			// Use CacheFriendlyMap for large maps
@@ -1179,6 +1192,23 @@ type iteratorType interface {
 	Value() Value
 }
 
+// runeIterator yields the characters (runes) of a string, like
+// for _, r := range s: an invalid UTF-8 byte yields U+FFFD.
+type runeIterator struct {
+	s string
+	i int
+}
+
+func (ri *runeIterator) HasNext() bool {
+	return ri.i < len(ri.s)
+}
+
+func (ri *runeIterator) Value() Value {
+	r, n := utf8.DecodeRuneInString(ri.s[ri.i:])
+	ri.i += n
+	return Value(string(r))
+}
+
 type listIterator struct {
 	values []Value
 	index  int
@@ -1197,11 +1227,9 @@ func (li *listIterator) Value() Value {
 func getIterator(_ Position, value Value) iteratorType {
 	switch iterable := value.(type) {
 	case string:
-		strs := []Value{}
-		for _, r := range iterable {
-			strs = SmartAppend(strs, string(r))
-		}
-		return &listIterator{strs, 0}
+		// Characters are produced one at a time: building the whole list up
+		// front cost ~100 bytes per character before the first iteration.
+		return &runeIterator{s: iterable}
 	case *[]Value:
 		return &listIterator{*iterable, 0}
 	case map[string]Value:
@@ -1232,6 +1260,11 @@ func (interp *interpreter) assignSubscript(pos Position, container, subscript, v
 		}
 	case map[string]Value:
 		if s, ok := subscript.(string); ok {
+			if interp.sandbox != nil {
+				if _, exists := c[s]; !exists {
+					interp.charge(pos, memMapEnt)
+				}
+			}
 			c[s] = value
 			return nil
 		} else {
@@ -1414,6 +1447,7 @@ func (interp *interpreter) executeStatement(s Statement) {
 			}()
 
 			iterable := interp.evaluate(s.Iterable)
+			interp.chargeIteration(s.Iterable.Position(), iterable)
 			iterator := getIterator(s.Iterable.Position(), iterable)
 			for iterator.HasNext() {
 				interp.loopTick()

@@ -25,40 +25,10 @@ func appendFunc(interp *interpreter, pos Position, args []Value) Value {
 			return Value(nil)
 		}
 
-		// Optimize memory allocation by pre-calculating capacity
-		toAppend := args[1:]
-		if cap(*list)-len(*list) < len(toAppend) {
-			// Need to grow slice, allocate with exact capacity
-			newCap := len(*list) + len(toAppend)
-			// Use pooled arrays for large allocations (> 100 elements)
-			if newCap > 100 {
-				pooled := GetPooledArray(newCap)
-				defer PutPooledArray(pooled)
-				// Ensure we have enough capacity
-				var newList []Value
-				if cap(pooled) < newCap {
-					// Pool didn't have enough capacity, use direct allocation
-					newList = make([]Value, len(*list), newCap)
-				} else {
-					// Reslice to current length (safe because capacity is sufficient)
-					newList = pooled[:len(*list)]
-				}
-				copy(newList, *list)
-				newList = SmartAppend(newList, toAppend...)
-				// Copy result back to original list (pool already returned via defer)
-				result := make([]Value, len(newList))
-				copy(result, newList)
-				*list = result
-			} else {
-				// Small allocations: use direct allocation
-				newList := make([]Value, len(*list), newCap)
-				copy(newList, *list)
-				*list = SmartAppend(newList, toAppend...)
-			}
-		} else {
-			// Sufficient capacity, direct append
-			*list = SmartAppend(*list, toAppend...)
-		}
+		// Go's amortized growth: appending n elements one call at a time
+		// costs O(n). Growing to the exact length on every call copied the
+		// whole list each time, O(n^2) bytes.
+		*list = append(*list, args[1:]...)
 		return Value(nil)
 	}
 
@@ -587,18 +557,8 @@ func pushFunc(interp *interpreter, pos Position, args []Value) Value {
 		panic(typeError(pos, "push() requires first argument to be an array"))
 	}
 
-	// Optimize memory allocation by pre-calculating capacity
-	toPush := args[1:]
-	if cap(*arr)-len(*arr) < len(toPush) {
-		// Need to grow slice, allocate with exact capacity
-		newCap := len(*arr) + len(toPush)
-		newArr := make([]Value, len(*arr), newCap)
-		copy(newArr, *arr)
-		*arr = append(newArr, toPush...)
-	} else {
-		// Sufficient capacity, direct append
-		*arr = append(*arr, toPush...)
-	}
+	// Amortized growth (see appendFunc).
+	*arr = append(*arr, args[1:]...)
 	return Value(nil)
 }
 

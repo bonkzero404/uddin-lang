@@ -32,9 +32,23 @@ type Sandbox struct {
 	// small, which also bounds the unwinding of a stopped run.
 	MaxNesting int
 	// MaxValueLen bounds the length (bytes for strings, elements for lists)
-	// of a value built by +, *, range, join, replace, regex_replace, repeat
-	// or str_pad (0 = unlimited). The check runs before the allocation.
+	// of a value built by +, *, range, split, join, replace, regex_replace,
+	// repeat or str_pad (0 = unlimited). The check runs before the
+	// allocation.
 	MaxValueLen int
+	// MaxAllocBytes bounds the bytes one execution may allocate for values
+	// (0 = unlimited): string and list results, list, map, set, stack and
+	// queue growth, literals, builtin results. The count is cumulative, so it
+	// also bounds the run's peak; builtins that allocate more than they
+	// return reserve a worst-case estimate before they run. Over budget the
+	// run stops with LimitError "memory". See sandbox_memory.go.
+	MaxAllocBytes int
+	// MaxRegexProgram bounds the compiled size (regexp/syntax instructions)
+	// of a pattern passed to a regex builtin (0 = unlimited); a larger one
+	// stops the run with LimitError "regex_size". Compiling costs about
+	// 1 KiB per instruction, and repetition (a{100}) multiplies a short
+	// pattern's size.
+	MaxRegexProgram int
 	// Context aborts execution once it is done; checked every 256 operations
 	// and on every loop iteration.
 	Context context.Context
@@ -315,20 +329,24 @@ func mulLen(size, count int) int {
 	return size * count
 }
 
-// guardBinary checks + and * before they allocate.
+// guardBinary checks + and * before they allocate: the value length bound,
+// then the memory budget.
 func (interp *interpreter) guardBinary(pos Position, op Token, l, r Value) {
-	if interp.sandbox.MaxValueLen <= 0 {
-		return
-	}
 	switch op {
 	case PLUS:
-		interp.sizeCheck(pos, valueLen(l)+valueLen(r))
-	case TIMES:
-		if n, ok := l.(int); ok {
-			interp.sizeCheck(pos, mulLen(valueLen(r), n))
-		} else if n, ok := r.(int); ok {
-			interp.sizeCheck(pos, mulLen(valueLen(l), n))
+		if interp.sandbox.MaxValueLen > 0 {
+			interp.sizeCheck(pos, valueLen(l)+valueLen(r))
 		}
+		interp.charge(pos, concatBytes(l, r))
+	case TIMES:
+		if interp.sandbox.MaxValueLen > 0 {
+			if n, ok := l.(int); ok {
+				interp.sizeCheck(pos, mulLen(valueLen(r), n))
+			} else if n, ok := r.(int); ok {
+				interp.sizeCheck(pos, mulLen(valueLen(l), n))
+			}
+		}
+		interp.charge(pos, repeatBytes(l, r))
 	}
 }
 
@@ -608,7 +626,19 @@ func (interp *interpreter) callSandboxedBuiltin(bf builtinFunction, pos Position
 		interp.guardDeep(pos, args...)
 	}
 	interp.guardBuiltin(pos, bf.Name, args)
-	return bf.call(interp, pos, args)
+	reserved := interp.guardRegex(pos, bf.Name, args)
+	if interp.sandbox.MaxAllocBytes <= 0 {
+		return bf.call(interp, pos, args)
+	}
+	// Memory: reserve for the amplifiers, then charge what the call really
+	// made — the fresh part of the result and the growth of its container
+	// arguments (sandbox_memory.go).
+	reserved += interp.reserveBuiltin(pos, bf.Name, args)
+	before := snapshotContainers(args)
+	res := bf.call(interp, pos, args)
+	used := containerGrowth(before, args) + resultBytes(bf.Name, res, args, interp.sandbox.MaxAllocBytes)
+	interp.settle(pos, reserved, used)
+	return res
 }
 
 var (
