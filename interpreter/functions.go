@@ -108,6 +108,9 @@ func (f *userFunction) call(interp *interpreter, pos Position, args []Value) Val
 	var returnValue Value = nil
 	func() {
 		defer func() {
+			if interp.stopped {
+				return // a sandbox stop unwinds without being caught
+			}
 			if r := recover(); r != nil {
 				if ret, ok := r.(returnResult); ok {
 					returnValue = ret.value

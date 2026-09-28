@@ -27,6 +27,10 @@ type Sandbox struct {
 	MaxOps int
 	// MaxCallDepth bounds user-function nesting (0 = unlimited).
 	MaxCallDepth int
+	// MaxNesting bounds the blocks (if/while/for/try/function bodies) active
+	// at once, across calls (0 = unlimited). It keeps the Go stack of a run
+	// small, which also bounds the unwinding of a stopped run.
+	MaxNesting int
 	// MaxValueLen bounds the length (bytes for strings, elements for lists)
 	// of a value built by +, *, range, join, replace, regex_replace, repeat
 	// or str_pad (0 = unlimited). The check runs before the allocation.
@@ -56,6 +60,7 @@ func (s *Sandbox) WithContext(ctx context.Context) *Sandbox {
 const (
 	LimitOps       = "op_limit"
 	LimitCallDepth = "call_depth"
+	LimitNesting   = "nesting"
 	LimitValueSize = "value_size"
 	LimitValueTree = "value_depth" // nesting past maxValueDepth, or a value that contains itself
 	LimitCanceled  = "canceled"
@@ -206,6 +211,27 @@ func (w *refWalker) expr(e Expression) {
 	}
 }
 
+// stop ends a sandboxed run with a LimitError. It sets interp.stopped first:
+// every deferred recover() on the way up (loops, try/catch, calls) checks the
+// flag and returns without recovering, so the one panic unwinds the whole
+// stack in a single pass. Catching and re-raising at each level made
+// unwinding a deep stack take seconds of CPU after the deadline.
+func (interp *interpreter) stop(reason string, pos Position) {
+	interp.stopped = true
+	panic(LimitError{Reason: reason, pos: pos})
+}
+
+// enterBlock tracks the blocks active at once against MaxNesting; the
+// returned func undoes it.
+func (interp *interpreter) enterBlock() func() {
+	interp.nesting++
+	if max := interp.sandbox.MaxNesting; max > 0 && interp.nesting > max {
+		interp.nesting--
+		interp.stop(LimitNesting, interp.currentPos)
+	}
+	return func() { interp.nesting-- }
+}
+
 // tick counts one operation and enforces the sandbox's op budget and context.
 func (interp *interpreter) tick() {
 	interp.stats.Ops++
@@ -214,7 +240,7 @@ func (interp *interpreter) tick() {
 		return
 	}
 	if sb.MaxOps > 0 && interp.stats.Ops > sb.MaxOps {
-		panic(LimitError{Reason: LimitOps, pos: interp.currentPos})
+		interp.stop(LimitOps, interp.currentPos)
 	}
 	if interp.done != nil && interp.stats.Ops&255 == 0 {
 		interp.checkDone()
@@ -228,7 +254,7 @@ func (interp *interpreter) checkDone() {
 	}
 	select {
 	case <-interp.done:
-		panic(LimitError{Reason: LimitCanceled, pos: interp.currentPos})
+		interp.stop(LimitCanceled, interp.currentPos)
 	default:
 	}
 }
@@ -248,7 +274,7 @@ func (interp *interpreter) enterCall(pos Position) func() {
 	interp.callDepth++
 	if max := interp.sandbox.MaxCallDepth; max > 0 && interp.callDepth > max {
 		interp.callDepth--
-		panic(LimitError{Reason: LimitCallDepth, pos: pos})
+		interp.stop(LimitCallDepth, pos)
 	}
 	return func() { interp.callDepth-- }
 }
@@ -256,7 +282,7 @@ func (interp *interpreter) enterCall(pos Position) func() {
 // sizeCheck panics when n exceeds the sandbox's value-length bound.
 func (interp *interpreter) sizeCheck(pos Position, n int) {
 	if max := interp.sandbox.MaxValueLen; max > 0 && (n < 0 || n > max) {
-		panic(LimitError{Reason: LimitValueSize, pos: pos})
+		interp.stop(LimitValueSize, pos)
 	}
 }
 
@@ -415,14 +441,14 @@ func (interp *interpreter) guardDeep(pos Position, vals ...Value) {
 		}
 		interp.tick()
 		if visited++; visited > nodeCap {
-			panic(LimitError{Reason: LimitValueSize, pos: pos})
+			interp.stop(LimitValueSize, pos)
 		}
 		id, kids, ok := containerOf(f.v)
 		if !ok {
 			continue
 		}
 		if f.depth > maxValueDepth || (id != 0 && onPath[id]) {
-			panic(LimitError{Reason: LimitValueTree, pos: pos})
+			interp.stop(LimitValueTree, pos)
 		}
 		if id != 0 {
 			onPath[id] = true

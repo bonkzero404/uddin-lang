@@ -2,7 +2,9 @@ package interpreter
 
 import (
 	"bytes"
+	"context"
 	"errors"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -27,6 +29,9 @@ func TestParseNestingIsAnError(t *testing.T) {
 		"ternary":      "x = " + strings.Repeat("true ? ", n) + "1" + strings.Repeat(" : 0", n),
 		"subscripts":   "x = a" + strings.Repeat("[0]", n),
 		"args_nesting": "x = " + strings.Repeat("f(", n) + strings.Repeat(")", n),
+		"try":          strings.Repeat("try:\n", 4_360) + "x = 1\n" + strings.Repeat("catch (e):\n    x = 2\nend\n", 4_360),
+		"try_braces":   strings.Repeat("try {\n", 4_360) + "x = 1\n" + strings.Repeat("} catch (e) {\n    x = 2\n}\n", 4_360),
+		"while":        strings.Repeat("while (true) {\n", 4_360) + "x = 1\n" + strings.Repeat("}\n", 4_360),
 	}
 	for name, src := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -38,7 +43,8 @@ func TestParseNestingIsAnError(t *testing.T) {
 		})
 	}
 	// Ordinary nesting still parses.
-	ok := "x = " + strings.Repeat("(", 100) + "1" + strings.Repeat(")", 100) + "\ny = 1" + strings.Repeat(" + 1", 100)
+	ok := "x = " + strings.Repeat("(", 100) + "1" + strings.Repeat(")", 100) + "\ny = 1" + strings.Repeat(" + 1", 100) + "\n" +
+		strings.Repeat("try:\n", 50) + "x = 1\n" + strings.Repeat("catch (e):\n    x = 2\nend\n", 50)
 	if _, err := ParseProgram([]byte(ok)); err != nil {
 		t.Fatalf("100 levels must parse: %v", err)
 	}
@@ -108,5 +114,68 @@ func TestVerdictChannel(t *testing.T) {
 	}
 	if v, out := run(`waf_block()`); v != "BLOCK" || out != "" {
 		t.Errorf("waf_block: verdict=%q stdout=%q", v, out)
+	}
+}
+
+// nestedLoopRecursion is the reviewer's shape: g nests `loops` while-loops
+// and calls f from the innermost one; f calls g. Every level used to catch
+// the sandbox stop and re-raise it, so unwinding tens of thousands of frames
+// took seconds of CPU after the deadline.
+func nestedLoopRecursion(loops int) string {
+	return "fun f(k) {\n    g(k - 1)\n}\nfun g(k) {\n" +
+		strings.Repeat("while (true) {\n", loops) + "f(k)\n" + strings.Repeat("}\n", loops) +
+		"}\ng(100)\n"
+}
+
+// A stopped run must unwind in O(depth) with trivial per-level work: the
+// execution returns promptly after the deadline even from a very deep stack.
+func TestSandboxStopUnwindsFast(t *testing.T) {
+	src := nestedLoopRecursion(450)
+	prog, err := ParseProgram([]byte(src))
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	for _, tc := range []struct {
+		name string
+		sb   func() *Sandbox
+	}{
+		// The deadline hits while tens of thousands of loop frames are live.
+		{"deadline", func() *Sandbox {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Millisecond)
+			t.Cleanup(cancel)
+			return NewSandbox(nil).WithContext(ctx)
+		}},
+		// The call-depth limit stops it at 64 x 450 nested loops.
+		{"call_depth", func() *Sandbox {
+			sb := NewSandbox(nil)
+			sb.MaxCallDepth = 64
+			return sb
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := DefaultConfig()
+			cfg.Stdout = io.Discard
+			cfg.Sandbox = tc.sb()
+			start := time.Now()
+			_, err := Execute(prog, cfg)
+			if limitReason(err) == "" {
+				t.Fatalf("want a sandbox stop, got %v", err)
+			}
+			if d := time.Since(start); d > 500*time.Millisecond {
+				t.Fatalf("stopped run took %v to return", d)
+			}
+		})
+	}
+}
+
+// Runtime nesting (blocks plus calls) is bounded by Sandbox.MaxNesting.
+func TestSandboxMaxNesting(t *testing.T) {
+	sb := NewSandbox(nil)
+	sb.MaxNesting = 100
+	if _, err := runSandboxed(t, sb, nestedLoopRecursion(60)); limitReason(err) != LimitNesting {
+		t.Fatalf("want %s, got %v", LimitNesting, err)
+	}
+	if _, err := runSandboxed(t, sb, "i = 0\nwhile (i < 3) {\n    if (true) then {\n        i = i + 1\n    }\n}\n"); err != nil {
+		t.Fatalf("shallow nesting: %v", err)
 	}
 }

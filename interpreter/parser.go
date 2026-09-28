@@ -117,6 +117,10 @@ func (p *parser) statements(end Token) Block {
 //	call subscript ASSIGN expression |
 //	call dot ASSIGN expression
 func (p *parser) statement() Statement {
+	// Every statement construct nests (try bodies parse their statements
+	// directly, not through block()), so each one counts.
+	p.enter()
+	defer p.leave()
 	switch p.tok {
 	case MEMO:
 		return p.memoFun_()

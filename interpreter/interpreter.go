@@ -61,6 +61,11 @@ type interpreter struct {
 	callDepth int
 	// verdict receives waf_* verdicts when set (Config.Verdict)
 	verdict io.Writer
+	// stopped is set by stop() just before a sandbox LimitError is raised;
+	// deferred recovers then let the panic pass (see stop)
+	stopped bool
+	// nesting counts active blocks in a sandbox (Sandbox.MaxNesting)
+	nesting int
 }
 
 // returnResult is used to handle return statements in functions.
@@ -679,6 +684,9 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 	}
 
 	defer func() {
+		if interp.stopped {
+			return // a sandbox stop unwinds without being caught
+		}
 		if r := recover(); r != nil {
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
@@ -1158,6 +1166,9 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 }
 
 func (interp *interpreter) executeBlock(block Block) {
+	if interp.sandbox != nil {
+		defer interp.enterBlock()()
+	}
 	for _, s := range block {
 		interp.executeStatement(s)
 	}
@@ -1336,6 +1347,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 	case *While:
 		func() {
 			defer func() {
+				if interp.stopped {
+					return // a sandbox stop unwinds without being caught
+				}
 				if r := recover(); r != nil {
 					if r == "__break__" {
 						// Normal break, just exit the loop
@@ -1355,6 +1369,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 					}
 					func() {
 						defer func() {
+							if interp.stopped {
+								return // a sandbox stop unwinds without being caught
+							}
 							if r := recover(); r != nil {
 								switch r.(type) {
 								case BreakException:
@@ -1383,6 +1400,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 	case *For:
 		func() {
 			defer func() {
+				if interp.stopped {
+					return // a sandbox stop unwinds without being caught
+				}
 				if r := recover(); r != nil {
 					if r == "__break__" {
 						// Normal break, just exit the loop
@@ -1400,6 +1420,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 				interp.assign(s.Name, iterator.Value())
 				func() {
 					defer func() {
+						if interp.stopped {
+							return // a sandbox stop unwinds without being caught
+						}
 						if r := recover(); r != nil {
 							switch r.(type) {
 							case BreakException:
@@ -1425,6 +1448,9 @@ func (interp *interpreter) executeStatement(s Statement) {
 		// Execute the try block and catch any errors
 		func() {
 			defer func() {
+				if interp.stopped {
+					return // a sandbox stop unwinds without being caught
+				}
 				if r := recover(); r != nil {
 					// A sandbox stop ends the script; catch cannot resume it.
 					if _, stopped := r.(LimitError); stopped {
