@@ -416,7 +416,9 @@ func mapFunc(interp *interpreter, pos Position, args []Value) Value {
 	}
 
 	// For small arrays, use sequential processing to avoid overhead
-	if len(*arr) < 100 {
+	// A sandbox runs callbacks sequentially: worker goroutines use cloned
+	// interpreters that would escape its op budget and cancellation.
+	if len(*arr) < 100 || interp.sandbox != nil {
 		result := make([]Value, len(*arr))
 		for i, v := range *arr {
 			result[i] = interp.callFunction(pos, fn, []Value{v})
@@ -463,7 +465,9 @@ func filterFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Note: Concurrent execution is available but disabled for thread safety
 	// TODO: Implement thread-safe interpreter access for concurrent execution
 	// For now, using sequential execution for all array sizes
-	if len(*arr) < 100 {
+	// A sandbox runs callbacks sequentially: worker goroutines use cloned
+	// interpreters that would escape its op budget and cancellation.
+	if len(*arr) < 100 || interp.sandbox != nil {
 		result := make([]Value, 0)
 		for _, v := range *arr {
 			if IsTruthy(interp.callFunction(pos, fn, []Value{v})) {
@@ -521,7 +525,9 @@ func reduceFunc(interp *interpreter, pos Position, args []Value) Value {
 	// Note: Concurrent execution is available but disabled for thread safety
 	// TODO: Implement thread-safe interpreter access for concurrent execution
 	// For now, using sequential execution for all array sizes
-	if len(*arr) < 100 {
+	// A sandbox runs callbacks sequentially: worker goroutines use cloned
+	// interpreters that would escape its op budget and cancellation.
+	if len(*arr) < 100 || interp.sandbox != nil {
 		accumulator := initialValue
 		for _, v := range *arr {
 			accumulator = interp.callFunction(pos, fn, []Value{accumulator, v})

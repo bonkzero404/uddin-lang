@@ -97,6 +97,10 @@ type Config struct {
 	// Memoization configures memoization behavior
 	// If nil, defaults to DefaultMemoizationConfig()
 	Memoization *MemoizationConfig
+
+	// Sandbox, when non-nil, restricts builtins and bounds the execution
+	// (see sandbox.go). nil keeps the full, unbounded language.
+	Sandbox *Sandbox
 }
 
 // DefaultConfig returns a configuration with sensible defaults

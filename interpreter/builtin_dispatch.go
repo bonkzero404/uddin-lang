@@ -278,6 +278,10 @@ func GetGlobalSpecializedBuiltins() *SpecializedBuiltinFunctions {
 	return globalSpecializedBuiltins
 }
 
+// builtinDispatcherOnce makes newInterpreter register the builtins once per
+// process.
+var builtinDispatcherOnce sync.Once
+
 // InitializeBuiltinDispatcher initializes the builtin function dispatcher with all builtin functions
 // Uses metadata map for automatic configuration instead of hardcoded switch statements
 func InitializeBuiltinDispatcher() {

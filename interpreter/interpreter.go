@@ -53,6 +53,12 @@ type interpreter struct {
 	optimizer *ConstantFolder
 	// DirectOutput controls whether print() writes directly to os.Stdout
 	DirectOutput bool
+	// sandbox restricts builtins and bounds execution (nil = unrestricted)
+	sandbox *Sandbox
+	// done is the sandbox context's Done channel (nil = no cancellation)
+	done <-chan struct{}
+	// callDepth counts nested user-function calls in a sandbox
+	callDepth int
 }
 
 // returnResult is used to handle return statements in functions.
@@ -121,6 +127,11 @@ func ensureIntToFloats(l, r Value) (float64, float64) {
 	return lf, rf
 }
 
+// maxEqualDepth bounds nested list/map comparison: a list that contains
+// itself would otherwise recurse until the Go stack overflows, a fatal error
+// no recover() can catch.
+const maxEqualDepth = 1000
+
 // evalEqual evaluates equality between two values of any type.
 // It implements deep equality for composite types like arrays and maps.
 //
@@ -132,6 +143,13 @@ func ensureIntToFloats(l, r Value) (float64, float64) {
 // Returns:
 //   - A boolean Value indicating whether the values are equal
 func evalEqual(pos Position, l, r Value) Value {
+	return evalEqualDepth(pos, l, r, 0)
+}
+
+func evalEqualDepth(pos Position, l, r Value, depth int) Value {
+	if depth > maxEqualDepth {
+		panic(valueError(pos, "comparison nested too deeply"))
+	}
 	// Try fast evaluation first for simple types
 	if result, handled := GetFastEvaluator().FastEvalEqual(l, r); handled {
 		return result
@@ -184,7 +202,7 @@ func evalEqual(pos Position, l, r Value) Value {
 			}
 			// Compare each element recursively
 			for i, elem := range *l {
-				if !evalEqual(pos, elem, (*r)[i]).(bool) {
+				if !evalEqualDepth(pos, elem, (*r)[i], depth+1).(bool) {
 					return Value(false)
 				}
 			}
@@ -200,7 +218,7 @@ func evalEqual(pos Position, l, r Value) Value {
 			}
 			// Compare each key-value pair recursively
 			for k, v := range l {
-				if !evalEqual(pos, v, r[k]).(bool) {
+				if !evalEqualDepth(pos, v, r[k], depth+1).(bool) {
 					return Value(false)
 				}
 			}
@@ -306,6 +324,11 @@ func evalLess(pos Position, l, r Value) Value {
 func (interp *interpreter) evalPlus(pos Position, l, r Value) Value {
 	// Track operation for performance monitoring
 	TrackOperation("plus")
+
+	// A sandbox bounds string/list growth before the concatenation allocates.
+	if interp.sandbox != nil {
+		interp.guardBinary(pos, PLUS, l, r)
+	}
 
 	// Try fast numeric evaluation first to avoid any boxing
 	if result, handled := GetFastEvaluator().FastEvalPlus(l, r); handled {
@@ -619,7 +642,9 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 	// Check memoization cache for functions marked with memo
 	// Only cache functions that are explicitly memoized and return non-nil values
-	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized {
+	// A sandbox ignores memo: the fallback cache is process-global and would
+	// share results between unrelated scripts.
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && interp.sandbox == nil {
 		if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
 			memoKey := FastHash(uf.Name, args)
 			if cached, exists := interp.productionMemoCache.Get(memoKey); exists {
@@ -635,7 +660,13 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 	// Handle builtin functions with dispatcher
 	if bf, ok := f.(builtinFunction); ok {
+		if interp.sandbox != nil {
+			return interp.callSandboxedBuiltin(bf, pos, args)
+		}
 		return CallBuiltinWithDispatcher(bf, interp, pos, args)
+	}
+	if interp.sandbox != nil {
+		defer interp.enterCall(pos)()
 	}
 
 	defer func() {
@@ -643,7 +674,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 			if result, ok := r.(returnResult); ok {
 				ret = result.value
 				// Cache the result for memoization only if function is marked as memoized and result is not nil
-				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil {
+				if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && ret != nil && interp.sandbox == nil {
 					if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
 						memoKey := FastHash(uf.Name, args)
 						interp.productionMemoCache.Set(memoKey, ret)
@@ -662,7 +693,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 	// Cache the result for memoization only if function is marked as memoized and result is not nil
 	// This prevents caching functions with side effects that return nil
-	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && result != nil {
+	if uf, ok := f.(*userFunction); ok && uf.Name != "" && uf.Memoized && result != nil && interp.sandbox == nil {
 		if interp.productionMemoCache != nil && interp.productionMemoCache.IsEnabled() {
 			memoKey := FastHash(uf.Name, args)
 			interp.productionMemoCache.Set(memoKey, result)
@@ -677,7 +708,7 @@ func (interp *interpreter) callFunction(pos Position, f functionType, args []Val
 
 func (interp *interpreter) evaluate(expr Expression) Value {
 	interp.currentPos = expr.Position()
-	interp.stats.Ops++
+	interp.tick()
 
 	// Try constant folding optimization first
 	if interp.optimizer != nil {
@@ -688,6 +719,10 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 
 	switch e := expr.(type) {
 	case *Binary:
+		if interp.sandbox != nil && e.Operator == TIMES {
+			// Size-check before * allocates (string/list repetition).
+			return interp.evalTimesChecked(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
+		}
 		if e.Operator == PLUS {
 			return interp.evalPlus(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
 		} else if f, ok := binaryEvalFuncs[e.Operator]; ok {
@@ -1076,6 +1111,11 @@ func (interp *interpreter) lookup(name string) (Value, bool) {
 		}
 	}
 
+	// A sandbox only sees the builtins placed in its scope.
+	if interp.sandbox != nil {
+		return nil, false
+	}
+
 	// Check builtin dispatcher for functions not in environment
 	dispatcher := GetGlobalBuiltinDispatcher()
 	if _, exists := dispatcher.dispatchTable[name]; exists {
@@ -1205,7 +1245,7 @@ func (interp *interpreter) evaluateAssignmentValue(operator Token, target any, v
 	case MINUSEQUAL:
 		return evalMinus(value.Position(), currentValue, rightValue)
 	case TIMESEQUAL:
-		return evalTimes(value.Position(), currentValue, rightValue)
+		return interp.evalTimesChecked(value.Position(), currentValue, rightValue)
 	case DIVIDEEQUAL:
 		return evalDivide(value.Position(), currentValue, rightValue)
 	case MODULOEQUAL:
@@ -1234,7 +1274,7 @@ func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, cont
 	case MINUSEQUAL:
 		return evalMinus(value.Position(), currentValue, rightValue)
 	case TIMESEQUAL:
-		return evalTimes(value.Position(), currentValue, rightValue)
+		return interp.evalTimesChecked(value.Position(), currentValue, rightValue)
 	case DIVIDEEQUAL:
 		return evalDivide(value.Position(), currentValue, rightValue)
 	case MODULOEQUAL:
@@ -1245,7 +1285,7 @@ func (interp *interpreter) evaluateSubscriptAssignmentValue(operator Token, cont
 }
 
 func (interp *interpreter) executeStatement(s Statement) {
-	interp.stats.Ops++
+	interp.tick()
 	// Track current position for better error reporting
 	interp.currentPos = s.Position()
 	switch s := s.(type) {
@@ -1292,6 +1332,7 @@ func (interp *interpreter) executeStatement(s Statement) {
 			}()
 
 			for {
+				interp.loopTick()
 				cond := interp.evaluate(s.Condition)
 				if c, ok := cond.(bool); ok {
 					if !c {
@@ -1340,6 +1381,7 @@ func (interp *interpreter) executeStatement(s Statement) {
 			iterable := interp.evaluate(s.Iterable)
 			iterator := getIterator(s.Iterable.Position(), iterable)
 			for iterator.HasNext() {
+				interp.loopTick()
 				interp.assign(s.Name, iterator.Value())
 				func() {
 					defer func() {
@@ -1369,6 +1411,10 @@ func (interp *interpreter) executeStatement(s Statement) {
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
+					// A sandbox stop ends the script; catch cannot resume it.
+					if _, stopped := r.(LimitError); stopped {
+						panic(r)
+					}
 					// Pop the try scope
 					interp.popScope()
 
@@ -1483,12 +1529,19 @@ func (interp *interpreter) execute(prog *Program) {
 
 func newInterpreter(config *Config) *interpreter {
 	interp := new(interpreter)
+	interp.sandbox = config.Sandbox
+	if interp.sandbox != nil && interp.sandbox.Context != nil {
+		interp.done = interp.sandbox.Context.Done()
+	}
 
-	// Set global memory layout configuration
-	if config.MemoryLayout != nil {
-		SetGlobalMemoryLayoutConfig(config.MemoryLayout)
-	} else {
-		SetGlobalMemoryLayoutConfig(DefaultMemoryLayoutConfig())
+	// Set global memory layout configuration. Only a real change is written:
+	// concurrent executions used to rewrite it on every run.
+	layout := config.MemoryLayout
+	if layout == nil {
+		layout = DefaultMemoryLayoutConfig()
+	}
+	if cur := GetGlobalMemoryLayoutConfig(); cur == nil || *cur != *layout {
+		SetGlobalMemoryLayoutConfig(layout)
 	}
 
 	// Initialize optimization caches
@@ -1510,11 +1563,15 @@ func newInterpreter(config *Config) *interpreter {
 	if IsVariableLookupCacheEnabled() {
 		interp.variableLookupCache = NewVariableLookupCache(GetVariableLookupCacheSize())
 	}
-	// Initialize expression optimizer
-	interp.optimizer = NewConstantFolder(GetGlobalExpressionOptimizer())
+	// Initialize expression optimizer. A sandbox skips constant folding: it
+	// would evaluate + and * on literals before the sandbox's size check.
+	if interp.sandbox == nil {
+		interp.optimizer = NewConstantFolder(GetGlobalExpressionOptimizer())
+	}
 
-	// Initialize builtin dispatcher
-	InitializeBuiltinDispatcher()
+	// Initialize the builtin dispatcher once per process: re-registering on
+	// every run grew its table without bound and raced with dispatch.
+	builtinDispatcherOnce.Do(InitializeBuiltinDispatcher)
 
 	// Use CompactEnvironment if enabled, otherwise use regular vars
 	if IsCompactEnvironmentEnabled() {
@@ -1523,6 +1580,9 @@ func newInterpreter(config *Config) *interpreter {
 		// Note: CompactEnvironment already has one scope from NewCompactEnvironment()
 		// Add builtin functions to the global scope
 		for name, builtin := range builtins {
+			if interp.sandbox != nil && !interp.sandbox.Allowed[name] {
+				continue
+			}
 			interp.compactEnv.Assign(name, builtin)
 		}
 		// Add mathematical constants
@@ -1543,6 +1603,9 @@ func newInterpreter(config *Config) *interpreter {
 		// Add builtin functions directly to the first scope
 		interp.mutex.Lock()
 		for k, v := range builtins {
+			if interp.sandbox != nil && !interp.sandbox.Allowed[k] {
+				continue
+			}
 			interp.vars[0][k] = v
 		}
 		// Add mathematical constants
@@ -1564,17 +1627,28 @@ func newInterpreter(config *Config) *interpreter {
 	interp.stdin = config.Stdin
 	if interp.stdin == nil {
 		interp.stdin = os.Stdin
+		if interp.sandbox != nil {
+			interp.stdin = strings.NewReader("")
+		}
 	}
 	interp.stdinReader = bufio.NewReader(interp.stdin)
 	interp.stdout = config.Stdout
 	if interp.stdout == nil {
 		interp.stdout = os.Stdout
+		if interp.sandbox != nil {
+			interp.stdout = io.Discard
+		}
 	}
 	interp.exit = config.Exit
 	if interp.exit == nil {
 		interp.exit = os.Exit
 	}
-	interp.DirectOutput = config.DirectOutput
+	if interp.sandbox != nil {
+		// Never the host process: exit() is not allowlisted, and a sandbox
+		// must not be able to end the embedding program regardless.
+		interp.exit = func(int) {}
+	}
+	interp.DirectOutput = config.DirectOutput && interp.sandbox == nil
 	interp.inUnitTest = config.IsUnitTest
 	return interp
 }
@@ -1649,6 +1723,9 @@ func Execute(prog *Program, config *Config) (stats *Stats, err error) {
 
 // executeImport handles importing and executing .din files
 func (interp *interpreter) executeImport(s *Import) {
+	if interp.sandbox != nil {
+		panic(nameError(s.Position(), "import is not available"))
+	}
 	// Read the file content
 	content, err := os.ReadFile(s.Filename)
 	if err != nil {

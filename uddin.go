@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/bonkzero404/uddin-lang/interpreter"
 )
@@ -23,6 +24,26 @@ func New() *Engine {
 	return &Engine{
 		config: interpreter.DefaultConfig(),
 	}
+}
+
+// NewSandboxed creates an engine whose executions run inside sb: only
+// sb.Allowed builtins are reachable, import fails, and the op budget, call
+// depth, value size and context in sb bound every run (see
+// interpreter.Sandbox). Stdin is empty, stdout is discarded until SetStdout,
+// and exit never reaches the host process.
+func NewSandboxed(sb *interpreter.Sandbox) *Engine {
+	config := interpreter.DefaultConfig()
+	config.Stdin = strings.NewReader("")
+	config.Stdout = io.Discard
+	config.Exit = func(int) {}
+	config.Sandbox = sb
+	return &Engine{config: config}
+}
+
+// NewRestricted creates a sandboxed engine that allows only the named
+// builtins, with no execution bounds; use NewSandboxed to set them.
+func NewRestricted(allow []string) *Engine {
+	return NewSandboxed(interpreter.NewSandbox(allow))
 }
 
 // NewWithConfig creates a new UDDIN-LANG engine with custom configuration.

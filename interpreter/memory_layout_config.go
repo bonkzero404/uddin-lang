@@ -1,5 +1,7 @@
 package interpreter
 
+import "sync/atomic"
+
 // MemoryLayoutConfig controls the memory layout optimization features
 // EXPERIMENTAL: This configuration is experimental and may have stability issues
 type MemoryLayoutConfig struct {
@@ -77,61 +79,71 @@ func ExperimentalMemoryLayoutConfig() *MemoryLayoutConfig {
 	}
 }
 
-// Global memory layout configuration
-var globalMemoryLayoutConfig = DefaultMemoryLayoutConfig()
+// Global memory layout configuration. Atomic: every interpreter reads it and
+// concurrent executions may set it.
+// A package-level initializer (not init()) so any other package variable
+// whose initializer reads the configuration is ordered after it.
+var globalMemoryLayoutConfig = func() *atomic.Pointer[MemoryLayoutConfig] {
+	p := new(atomic.Pointer[MemoryLayoutConfig])
+	p.Store(DefaultMemoryLayoutConfig())
+	return p
+}()
 
 // SetGlobalMemoryLayoutConfig sets the global memory layout configuration
 func SetGlobalMemoryLayoutConfig(config *MemoryLayoutConfig) {
-	globalMemoryLayoutConfig = config
+	if config == nil {
+		config = DefaultMemoryLayoutConfig()
+	}
+	globalMemoryLayoutConfig.Store(config)
 }
 
 // GetGlobalMemoryLayoutConfig returns the global memory layout configuration
 func GetGlobalMemoryLayoutConfig() *MemoryLayoutConfig {
-	return globalMemoryLayoutConfig
+	return globalMemoryLayoutConfig.Load()
 }
 
 // ResetGlobalMemoryLayoutConfig resets the global memory layout configuration to default
 // This function should be called in test cleanup to prevent test interference
 func ResetGlobalMemoryLayoutConfig() {
-	globalMemoryLayoutConfig = DefaultMemoryLayoutConfig()
+	globalMemoryLayoutConfig.Store(DefaultMemoryLayoutConfig())
 }
 
 // IsTaggedValuesEnabled returns true if TaggedValue optimization is enabled
 func IsTaggedValuesEnabled() bool {
-	return globalMemoryLayoutConfig.EnableTaggedValues
+	return globalMemoryLayoutConfig.Load().EnableTaggedValues
 }
 
 // IsCompactEnvironmentEnabled returns true if CompactEnvironment optimization is enabled
 func IsCompactEnvironmentEnabled() bool {
-	return globalMemoryLayoutConfig.EnableCompactEnvironment
+	return globalMemoryLayoutConfig.Load().EnableCompactEnvironment
 }
 
 // IsCacheFriendlyStructuresEnabled returns true if cache-friendly structures are enabled
 func IsCacheFriendlyStructuresEnabled() bool {
-	return globalMemoryLayoutConfig.EnableCacheFriendlyStructures
+	return globalMemoryLayoutConfig.Load().EnableCacheFriendlyStructures
 }
 
 // IsVariableLookupCacheEnabled returns true if variable lookup cache is enabled
 func IsVariableLookupCacheEnabled() bool {
-	return globalMemoryLayoutConfig.EnableVariableLookupCache
+	return globalMemoryLayoutConfig.Load().EnableVariableLookupCache
 }
 
 // GetVariableLookupCacheSize returns the configured variable lookup cache size
 func GetVariableLookupCacheSize() int {
-	return globalMemoryLayoutConfig.VariableLookupCacheSize
+	return globalMemoryLayoutConfig.Load().VariableLookupCacheSize
 }
 
 // IsMemoryLeakDetectionEnabled returns true if memory leak detection is enabled
 func IsMemoryLeakDetectionEnabled() bool {
-	return globalMemoryLayoutConfig.EnableMemoryLeakDetection
+	return globalMemoryLayoutConfig.Load().EnableMemoryLeakDetection
 }
 
 // GetMemoryLeakDetectionInterval returns the configured memory leak detection interval in seconds
 func GetMemoryLeakDetectionInterval() int {
-	return globalMemoryLayoutConfig.MemoryLeakDetectionInterval
+	return globalMemoryLayoutConfig.Load().MemoryLeakDetectionInterval
 }
 
 // IsAutoCleanupMemoryLeaksEnabled returns true if automatic cleanup of memory leaks is enabled
 func IsAutoCleanupMemoryLeaksEnabled() bool {
-	return globalMemoryLayoutConfig.AutoCleanupMemoryLeaks
+	return globalMemoryLayoutConfig.Load().AutoCleanupMemoryLeaks
 }
