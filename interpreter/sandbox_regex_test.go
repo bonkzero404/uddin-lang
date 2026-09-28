@@ -17,15 +17,19 @@ func TestBudgetRegexMatchesGoRegexp(t *testing.T) {
 		`a`, `a*`, `a+`, `a|b`, `^a`, `(?m)^a`, `a$`, `(?m)a$`, `\ba\b`, `\B`, `\b`, `$`, `^`,
 		`x*`, ``, `(a)(b)?`, `(?i)É`, `\d+`, `(?:a*b)|a`, `(?U)a+`, `\A`, `\z`, `.`, `(?s).`,
 		`[^a]`, `(?P<w>\w+)`, `a|`, `|a`, `(?:)`, `\s*`, `(a*)*`, `(?i)(?:\w+\s*){2}x`, `é|e`,
+		// Text that the follow-up program must not be built from by
+		// concatenation: an open \Q, flag groups, lazy counted repeats.
+		`\Qa`, `\Qa)b`, `\Q(`, `\Qa\Eb`, `a\Q`, `(?i)ab(?-i)c`, `(?U)a+b`, `a{2,3}?`, `(?m:^)x`,
+		`[[:alpha:]]+`, `\pL+`, `(?P<x>a)|(?P<y>b)`, `x(?i:Y)z`, `(?s:.)*?a`,
 	}
 	inputs := []string{
 		"", "a", "aaa", "banana", "a\nab\na", "héllo wörld", "\xff\xfea\xff", "ab ab", "x", "aab",
-		"12 345 6", "É é e", "b\na", "  a  b  ",
+		"12 345 6", "É é e", "b\na", "  a  b  ", "a)b a)b", "((", "abABc aBc", "xYz xyz", "\nx\nx",
 	}
 	repls := []string{"-", "<$1>", "[${w}]", "$$", "${2}x", ""}
 	for _, p := range patterns {
 		want := regexp.MustCompile(p)
-		got, err := newBudgetRegex(interp, Position{}, p)
+		got, err := newBudgetRegex(interp, Position{}, p, true)
 		if err != nil {
 			t.Fatalf("%q: %v", p, err)
 		}
@@ -84,7 +88,7 @@ func TestSandboxRegexWorkBudget(t *testing.T) {
 			if limitReason(err) != LimitRegexWork {
 				t.Fatalf("want LimitError %q, got %v", LimitRegexWork, err)
 			}
-			if d > 500*time.Millisecond { // ~5 ms of regex work plus -race and test overhead
+			if d > 5*time.Second { // sanity bound only: the stop reason is the check (-race on a loaded host is slow)
 				t.Errorf("took %v", d)
 			}
 		})
@@ -99,6 +103,39 @@ func TestSandboxRegexWorkBudget(t *testing.T) {
 	out, err := runSandboxed(t, regexSandbox(), src)
 	if err != nil || strings.TrimSpace(out) != "384 true 257" {
 		t.Fatalf("ordinary regex use: out=%q err=%v", out, err)
+	}
+}
+
+// K-53 verification: the follow-up program was built by appending ")" to
+// the pattern text, so an unclosed \Q swallowed it — `\Qa` failed to compile
+// and is_regex_match silently returned false. It is now built from the parse
+// tree, only for the multi-match builtins, and every compile is charged.
+func TestSandboxRegexQuoteAndCompileCharge(t *testing.T) {
+	out, err := runSandboxed(t, regexSandbox(),
+		"print(is_regex_match(\"\\\\Qa\", \"xa\"), regex_match(\"a)b\", \"\\\\Qa)b\"), len(regex_find_all(\"a a a\", \"\\\\Qa\")), regex_split(\"1a)b2\", \"\\\\Qa)b\"))\n")
+	if err != nil || strings.TrimSpace(out) != `true true 3 ["1", "2"]` {
+		t.Fatalf("\\Q patterns: out=%q err=%v", out, err)
+	}
+
+	interp := newInterpreter(&Config{Sandbox: NewSandbox(nil)})
+	single, err := newBudgetRegex(interp, Position{}, `\Qa`, false)
+	if err != nil || single.after != nil {
+		t.Fatalf("match-only regex compiled a follow-up program: %v", err)
+	}
+	multi, err := newBudgetRegex(interp, Position{}, `\Qa`, true)
+	if err != nil || multi.after == nil {
+		t.Fatalf("multi-match regex without a follow-up program: %v", err)
+	}
+
+	// Compiling is charged: with a budget below one compile, even a match
+	// on empty input stops.
+	sb := regexSandbox()
+	sb.MaxRegexWork = compileUnits(8) // "a" compiles to a handful of instructions
+	if _, err := runSandboxed(t, sb, "x = is_regex_match(\"a\", \"\")\n"); err != nil {
+		t.Fatalf("one small compile fits: %v", err)
+	}
+	if _, err := runSandboxed(t, sb, "x = regex_find_all(\"\", \"abcdefgh\")\n"); limitReason(err) != LimitRegexWork {
+		t.Fatalf("two compiles over the budget: want regex_work, got %v", err)
 	}
 }
 

@@ -22,7 +22,7 @@ func isregexFunc(interp *interpreter, pos Position, args []Value) Value {
 		// Check that second argument is a string (target)
 		if str, ok := args[1].(string); ok {
 			// Compile the regular expression
-			re, err := interp.compileRegex(pos, pattern)
+			re, err := interp.compileRegex(pos, pattern, false)
 			if err != nil {
 				// Return false if pattern is invalid
 				return false
@@ -57,7 +57,7 @@ func regexMatchFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_match() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
-	re, err := interp.compileRegex(pos, pattern)
+	re, err := interp.compileRegex(pos, pattern, false)
 	if err != nil {
 		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
@@ -87,7 +87,7 @@ func regexFindFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_find() requires second argument to be a string pattern, not %s", typeName(args[1])))
 	}
 
-	re, err := interp.compileRegex(pos, pattern)
+	re, err := interp.compileRegex(pos, pattern, false)
 	if err != nil {
 		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
@@ -132,7 +132,7 @@ func regexFindAllFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	}
 
-	re, err := interp.compileRegex(pos, pattern)
+	re, err := interp.compileRegex(pos, pattern, true)
 	if err != nil {
 		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
@@ -174,7 +174,7 @@ func regexReplaceFunc(interp *interpreter, pos Position, args []Value) Value {
 		return Value(fmt.Errorf("regex_replace() requires third argument to be a string (replacement), not %s", typeName(args[2])))
 	}
 
-	re, err := interp.compileRegex(pos, pattern)
+	re, err := interp.compileRegex(pos, pattern, true)
 	if err != nil {
 		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}
@@ -215,7 +215,7 @@ func regexSplitFunc(interp *interpreter, pos Position, args []Value) Value {
 		}
 	}
 
-	re, err := interp.compileRegex(pos, pattern)
+	re, err := interp.compileRegex(pos, pattern, true)
 	if err != nil {
 		return Value(fmt.Errorf("invalid regex pattern: %v", err))
 	}

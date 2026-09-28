@@ -240,14 +240,21 @@ func (interp *interpreter) chargeSpread(pos Position, v Value) {
 	interp.charge(pos, memWord*n)
 }
 
-// regexPatternArg is the index of the pattern argument of each regex builtin.
-var regexPatternArg = map[string]int{
-	"is_regex_match": 0,
-	"regex_match":    1,
-	"regex_find":     1,
-	"regex_find_all": 1,
-	"regex_replace":  1,
-	"regex_split":    1,
+// regexBuiltin describes a regex builtin: the index of its pattern argument,
+// and whether it searches past the first match (find_all, replace, split),
+// which compiles a second program (sandbox_regex.go).
+type regexBuiltin struct {
+	pattern int
+	multi   bool
+}
+
+var regexPatternArg = map[string]regexBuiltin{
+	"is_regex_match": {0, false},
+	"regex_match":    {1, false},
+	"regex_find":     {1, false},
+	"regex_find_all": {1, true},
+	"regex_replace":  {1, true},
+	"regex_split":    {1, true},
 }
 
 // regexProgramSize estimates the compiled size (instructions) of pattern,
@@ -307,15 +314,17 @@ func regexProgramEstimate(re *syntax.Regexp, limit int) int {
 // its length (regexBytesPerInst per allowed instruction; parsing alone costs
 // about 250 bytes per pattern byte), then its program size against
 // Sandbox.MaxRegexProgram, charging the parse and the compile to the memory
-// budget. Every regex builtin compiles its pattern on each call, so the
+// budget (twice for the multi-match builtins, which compile a second
+// program). Every regex builtin compiles its pattern on each call, so the
 // charge is transient: it returns the bytes charged, which the caller
-// settles against what the call keeps.
+// settles against what the call keeps. Compile time is charged to the
+// regex work budget where the program is compiled (sandbox_regex.go).
 func (interp *interpreter) guardRegex(pos Position, name string, args []Value) int {
-	i, isRegex := regexPatternArg[name]
-	if !isRegex || i >= len(args) {
+	rb, isRegex := regexPatternArg[name]
+	if !isRegex || rb.pattern >= len(args) {
 		return 0
 	}
-	pattern, ok := args[i].(string)
+	pattern, ok := args[rb.pattern].(string)
 	if !ok {
 		return 0
 	}
@@ -340,6 +349,9 @@ func (interp *interpreter) guardRegex(pos Position, name string, args []Value) i
 		interp.stop(LimitRegexSize, pos)
 	}
 	compile := sumEst(memRegexBase, mulLen(memRegexInst, insts))
+	if rb.multi {
+		compile = sumEst(compile, compile)
+	}
 	interp.charge(pos, compile)
 	return parse + compile
 }

@@ -26,8 +26,9 @@ type regexEngine interface {
 // compileRegex compiles a regex builtin's pattern: coregex outside a
 // sandbox; inside one, Go regexp (RE2) with every byte it reads counted
 // against Sandbox.MaxRegexWork. coregex has no work bound: one match of
-// (?i)(?:\w+\s*){50}x against 4 KiB took 267 ms.
-func (interp *interpreter) compileRegex(pos Position, pattern string) (regexEngine, error) {
+// (?i)(?:\w+\s*){50}x against 4 KiB took 267 ms. multi: the builtin searches
+// past the first match (find_all, replace, split).
+func (interp *interpreter) compileRegex(pos Position, pattern string, multi bool) (regexEngine, error) {
 	if interp.sandbox == nil {
 		re, err := coregex.Compile(pattern)
 		if err != nil {
@@ -35,7 +36,18 @@ func (interp *interpreter) compileRegex(pos Position, pattern string) (regexEngi
 		}
 		return re, nil
 	}
-	return newBudgetRegex(interp, pos, pattern)
+	return newBudgetRegex(interp, pos, pattern, multi)
+}
+
+// Compiling costs regex work too: Go compiles at up to ~225 ns per program
+// instruction, and a work unit is ~6.4 ns.
+const (
+	regexCompileUnitsBase    = 64
+	regexCompileUnitsPerInst = 40
+)
+
+func compileUnits(insts int) int {
+	return sumEst(regexCompileUnitsBase, mulLen(regexCompileUnitsPerInst, insts))
 }
 
 // budgetRegex runs Go regexp over a counting reader: every byte a search
@@ -50,37 +62,46 @@ type budgetRegex struct {
 	pos    Position
 	re     *regexp.Regexp
 	insts  int
-	// after searches from a later position with the rune before it as
-	// context: \A(?s:.)(?s:.*?)(pattern). The lazy prefix makes it the
-	// leftmost match, group 1 is the pattern, and \A, ^ and \b inside the
-	// pattern see the real previous rune.
+	// after (multi-match builtins only) searches from a later position with
+	// the rune before it as context: \A(?s:.)(?s:.)*?(pattern). The lazy
+	// prefix makes it the leftmost match, group 1 is the pattern, and \A, ^
+	// and \b inside the pattern see the real previous rune.
 	after      *regexp.Regexp
 	afterInsts int
 }
 
-func newBudgetRegex(interp *interpreter, pos Position, pattern string) (*budgetRegex, error) {
-	re, err := regexp.Compile(pattern)
+func newBudgetRegex(interp *interpreter, pos Position, pattern string, multi bool) (*budgetRegex, error) {
+	tree, err := syntax.Parse(pattern, syntax.Perl) // what regexp.Compile parses, same error
 	if err != nil {
 		return nil, err
 	}
-	after, err := regexp.Compile(`\A(?s:.)(?s:.*?)(` + pattern + `)`)
-	if err != nil {
+	b := &budgetRegex{interp: interp, pos: pos, insts: treeInsts(tree)}
+	interp.chargeRegexWork(pos, compileUnits(b.insts))
+	if b.re, err = regexp.Compile(pattern); err != nil {
 		return nil, err
 	}
-	return &budgetRegex{
-		interp: interp, pos: pos,
-		re: re, insts: progInsts(pattern),
-		after: after, afterInsts: progInsts(`\A(?s:.)(?s:.*?)(` + pattern + `)`),
-	}, nil
+	if !multi {
+		return b, nil
+	}
+	// Built from the parsed tree, never by appending to the pattern text: a
+	// pattern ending inside \Q... would take an appended ")" as a literal.
+	wrap := &syntax.Regexp{Op: syntax.OpConcat, Sub: []*syntax.Regexp{
+		{Op: syntax.OpBeginText},
+		{Op: syntax.OpAnyChar},
+		{Op: syntax.OpStar, Flags: syntax.NonGreedy, Sub: []*syntax.Regexp{{Op: syntax.OpAnyChar}}},
+		{Op: syntax.OpCapture, Cap: 1, Sub: []*syntax.Regexp{tree}},
+	}}
+	b.afterInsts = treeInsts(wrap)
+	interp.chargeRegexWork(pos, compileUnits(b.afterInsts))
+	if b.after, err = regexp.Compile(wrap.String()); err != nil {
+		return nil, err
+	}
+	return b, nil
 }
 
-// progInsts is the compiled instruction count of a pattern that already
-// compiled (guardRegex bounded its size first).
-func progInsts(pattern string) int {
-	re, err := syntax.Parse(pattern, syntax.Perl)
-	if err != nil {
-		return 1
-	}
+// treeInsts is the compiled instruction count of a parsed pattern
+// (guardRegex bounded its size first).
+func treeInsts(re *syntax.Regexp) int {
 	prog, err := syntax.Compile(re.Simplify())
 	if err != nil || len(prog.Inst) == 0 {
 		return 1
@@ -128,6 +149,9 @@ func (b *budgetRegex) search(s string, pos int) []int {
 	if pos == 0 {
 		b.interp.chargeRegexWork(b.pos, b.insts) // setup, even for an empty input
 		return b.re.FindReaderSubmatchIndex(&countingReader{s: s, insts: b.insts, interp: b.interp, pos: b.pos})
+	}
+	if b.after == nil {
+		panic("uddin: multi-match search on a single-match regex")
 	}
 	_, w := utf8.DecodeLastRuneInString(s[:pos])
 	start := pos - w
