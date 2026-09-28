@@ -381,6 +381,9 @@ func sortFunc(interp *interpreter, pos Position, args []Value) Value {
 		for i, v := range *list {
 			key := interp.callFunction(pos, keyFunc, []Value{v})
 			pairs[i] = pair{v, key}
+			if interp.sandbox != nil {
+				interp.guardDeep(pos, key) // keys are compared deeply below
+			}
 		}
 
 		// Sort by keys

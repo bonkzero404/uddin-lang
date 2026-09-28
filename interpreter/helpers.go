@@ -13,6 +13,16 @@ import (
 //
 // Returns a string representation of the value
 func toString(value Value, quoteStr bool) string {
+	return toStringDepth(value, quoteStr, 0)
+}
+
+// toStringDepth is toString with a nesting bound: a list that contains itself
+// used to recurse until the Go stack overflowed. Past maxEqualDepth levels the
+// rest of the value prints as "...".
+func toStringDepth(value Value, quoteStr bool, depth int) string {
+	if depth > maxEqualDepth {
+		return "..."
+	}
 	var s string
 	switch v := value.(type) {
 	case nil:
@@ -44,7 +54,7 @@ func toString(value Value, quoteStr bool) string {
 			if i > 0 {
 				concat.WriteString(", ")
 			}
-			concat.WriteString(toString(val, true))
+			concat.WriteString(toStringDepth(val, true, depth+1))
 		}
 		concat.WriteString("]")
 		s = concat.String()
@@ -57,7 +67,7 @@ func toString(value Value, quoteStr bool) string {
 			if i > 0 {
 				concat.WriteString(", ")
 			}
-			concat.WriteString(toString(val, true))
+			concat.WriteString(toStringDepth(val, true, depth+1))
 		}
 		concat.WriteString("]")
 		s = concat.String()
@@ -65,7 +75,7 @@ func toString(value Value, quoteStr bool) string {
 		// Convert object key-value pairs recursively - optimized
 		strs := make([]string, 0, len(v))
 		for k, val := range v {
-			item := fmt.Sprintf("%q: %s", k, toString(val, true))
+			item := fmt.Sprintf("%q: %s", k, toStringDepth(val, true, depth+1))
 			strs = SmartAppendString(strs, item)
 		}
 		sort.Strings(strs) // Ensure str(output) is consistent
@@ -87,7 +97,7 @@ func toString(value Value, quoteStr bool) string {
 		} else {
 			strs := make([]string, 0, len(*v))
 			for k, val := range *v {
-				item := fmt.Sprintf("%q: %s", k, toString(val, true))
+				item := fmt.Sprintf("%q: %s", k, toStringDepth(val, true, depth+1))
 				strs = SmartAppendString(strs, item)
 			}
 			sort.Strings(strs) // Ensure str(output) is consistent

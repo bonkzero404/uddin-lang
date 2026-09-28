@@ -101,6 +101,11 @@ type Config struct {
 	// Sandbox, when non-nil, restricts builtins and bounds the execution
 	// (see sandbox.go). nil keeps the full, unbounded language.
 	Sandbox *Sandbox
+
+	// Verdict, when non-nil, receives the verdicts of waf_return, waf_block,
+	// waf_allow and waf_log instead of Stdout, so nothing print() writes can
+	// pass for a verdict.
+	Verdict io.Writer
 }
 
 // DefaultConfig returns a configuration with sensible defaults

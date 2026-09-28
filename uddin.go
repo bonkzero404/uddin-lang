@@ -61,6 +61,12 @@ func (e *Engine) SetStdout(w io.Writer) {
 	e.config.Stdout = w
 }
 
+// SetVerdict directs the verdicts of waf_return, waf_block, waf_allow and
+// waf_log to w instead of stdout (see interpreter.Config.Verdict).
+func (e *Engine) SetVerdict(w io.Writer) {
+	e.config.Verdict = w
+}
+
 // SetStdin sets the standard input for the engine.
 func (e *Engine) SetStdin(r io.Reader) {
 	e.config.Stdin = r

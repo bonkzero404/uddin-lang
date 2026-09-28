@@ -114,7 +114,6 @@ func TestSandboxValueSize(t *testing.T) {
 		"str_fanout":      "s = \"a\" * 1000000\nl = [s] * 1000\nx = str(l)\n",
 		"print_fanout":    "s = \"a\" * 1000000\nl = [s] * 1000\nprint(l)\n",
 		"json_fanout":     "s = \"a\" * 1000000\nl = [s] * 1000\nx = json_stringify(l)\n",
-		"str_cycle":       "l = [1]\npush(l, l)\nx = str(l)\n",
 		"string_times":    "s = \"a\" * 1000000000000\n",
 		"times_overflow":  "s = \"ab\" * 4611686018427387904\n",
 		"list_times":      "l = [1] * 100000000\n",
@@ -138,17 +137,33 @@ func TestSandboxValueSize(t *testing.T) {
 	}
 }
 
-// Comparing a list that contains itself used to recurse until the Go stack
-// overflowed (fatal, not recoverable); it is now a runtime error.
-func TestCyclicComparisonIsAnError(t *testing.T) {
-	sb := NewSandbox([]string{"push", "contains"})
+// Outside a sandbox too, comparing a list that contains itself used to
+// recurse until the Go stack overflowed (fatal, not recoverable); it is now a
+// runtime error, and printing it is cut off.
+func TestCyclicValuesOutsideSandbox(t *testing.T) {
+	run := func(src string) (string, error) {
+		prog, err := ParseProgram([]byte(src))
+		if err != nil {
+			t.Fatalf("parse: %v", err)
+		}
+		var out bytes.Buffer
+		cfg := DefaultConfig()
+		cfg.Stdout = &out
+		_, err = Execute(prog, cfg)
+		return out.String(), err
+	}
+	cyclic := "a = [0, 1]\na[0] = a\nb = [0]\nb[0] = b\n"
 	for _, src := range []string{
-		"l = [1]\npush(l, l)\nm = [1]\npush(m, m)\nx = (l == m)\n",
-		"l = [1]\npush(l, l)\nm = [1]\npush(m, m)\nx = contains([l], m)\n",
+		cyclic + "c = [0]\nc[0] = c\nx = (b == c)\n",
+		cyclic + "x = (a < b)\n",
+		cyclic + "c = [0]\nc[0] = c\nx = contains([b], c)\n",
 	} {
-		if _, err := runSandboxed(t, sb, src); err == nil || !strings.Contains(err.Error(), "nested too deeply") {
+		if _, err := run(src); err == nil || !strings.Contains(err.Error(), "nested too deeply") {
 			t.Errorf("%q: got %v", src, err)
 		}
+	}
+	if out, err := run(cyclic + "print(a)\n"); err != nil || !strings.Contains(out, "...") {
+		t.Errorf("print of a cyclic list: out=%.40q err=%v", out, err)
 	}
 }
 

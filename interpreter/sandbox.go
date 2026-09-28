@@ -3,6 +3,7 @@ package interpreter
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -56,6 +57,7 @@ const (
 	LimitOps       = "op_limit"
 	LimitCallDepth = "call_depth"
 	LimitValueSize = "value_size"
+	LimitValueTree = "value_depth" // nesting past maxValueDepth, or a value that contains itself
 	LimitCanceled  = "canceled"
 )
 
@@ -354,6 +356,114 @@ func approxSize(v Value, budget int) int {
 	return n
 }
 
+// maxValueDepth bounds the nesting of a value that a sandboxed comparison,
+// sort or stringification walks.
+const maxValueDepth = 256
+
+// deepBuiltins compare, sort, search or stringify nested values; their
+// arguments go through guardDeep first. stringifyBuiltins also build a string
+// from the whole value and get the output-size check.
+var (
+	stringifyBuiltins = map[string]bool{
+		"str": true, "print": true, "println": true, "input": true,
+		"json_stringify": true, "xml_stringify": true, "mode": true,
+	}
+	deepBuiltins = map[string]bool{
+		"str": true, "print": true, "println": true, "input": true,
+		"json_stringify": true, "xml_stringify": true, "mode": true,
+		"join": true, "sort": true, "index_of": true, "last_index_of": true,
+		"contains": true, "find": true, "set_remove": true, "max": true, "min": true,
+	}
+)
+
+// guardDeep bounds an operation that walks nested values (==, <, in, sort,
+// contains, str, mode, ...). It walks every node the operation could visit —
+// a sub-list shared twice is visited twice, as the operation would — and each
+// node costs one op, so the op budget and the context bound the work: a list
+// of shared halves doubled 40 times (2^40 nodes) stops the script instead of
+// burning a core long after its deadline. A value that contains itself, or
+// nests deeper than maxValueDepth, stops it too, before the recursive
+// operation could overflow the Go stack. The walk itself is iterative.
+func (interp *interpreter) guardDeep(pos Position, vals ...Value) {
+	type frame struct {
+		v     Value
+		depth int
+		leave uintptr // non-zero: this container's subtree is done
+	}
+	var stack []frame
+	for _, v := range vals {
+		if _, _, ok := containerOf(v); ok {
+			stack = append(stack, frame{v: v, depth: 1})
+		}
+	}
+	if len(stack) == 0 {
+		return
+	}
+	// Backstop when the sandbox has no op budget: the walk itself is bounded.
+	nodeCap := interp.sandbox.MaxValueLen
+	if nodeCap <= 0 {
+		nodeCap = 1 << 20
+	}
+	onPath := map[uintptr]bool{}
+	visited := 0
+	for len(stack) > 0 {
+		f := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if f.leave != 0 {
+			delete(onPath, f.leave)
+			continue
+		}
+		interp.tick()
+		if visited++; visited > nodeCap {
+			panic(LimitError{Reason: LimitValueSize, pos: pos})
+		}
+		id, kids, ok := containerOf(f.v)
+		if !ok {
+			continue
+		}
+		if f.depth > maxValueDepth || (id != 0 && onPath[id]) {
+			panic(LimitError{Reason: LimitValueTree, pos: pos})
+		}
+		if id != 0 {
+			onPath[id] = true
+			stack = append(stack, frame{leave: id})
+		}
+		for _, k := range kids {
+			stack = append(stack, frame{v: k, depth: f.depth + 1})
+		}
+	}
+}
+
+// containerOf returns the identity (0 when it has none) and the elements of a
+// list or map value; ok is false for scalars.
+func containerOf(v Value) (id uintptr, kids []Value, ok bool) {
+	switch c := v.(type) {
+	case *[]Value:
+		if c == nil {
+			return 0, nil, true
+		}
+		return reflect.ValueOf(c).Pointer(), *c, true
+	case []Value:
+		return 0, c, true
+	case map[string]Value:
+		kids = make([]Value, 0, len(c))
+		for _, e := range c {
+			kids = append(kids, e)
+		}
+		return reflect.ValueOf(c).Pointer(), kids, true
+	}
+	return 0, nil, false
+}
+
+// isComparison reports the operators that walk nested operands.
+func isComparison(op Token) bool {
+	switch op {
+	case EQUAL, NOTEQUAL, LT, LTE, GT, GTE, IN:
+		return true
+	}
+	return false
+}
+
 // rangeArgBound keeps range() arithmetic far from int overflow.
 const rangeArgBound = 1 << 40
 
@@ -422,7 +532,10 @@ func (interp *interpreter) guardBuiltin(pos Position, name string, args []Value)
 		}
 		max := interp.sandbox.MaxValueLen
 		interp.sizeCheck(pos, mulLen(len(strArg(1)), len(*list))+approxSize(list, max))
-	case "str", "print", "println", "json_stringify":
+	default:
+		if !stringifyBuiltins[name] {
+			return
+		}
 		// Stringifying a list of shared references (or a list containing
 		// itself) can be far larger than any value the size checks saw.
 		max := interp.sandbox.MaxValueLen
@@ -464,6 +577,9 @@ func (interp *interpreter) callSandboxedBuiltin(bf builtinFunction, pos Position
 			plural = "s"
 		}
 		panic(typeError(pos, "%s() requires %d arg%s, got %d", bf.Name, meta.ArgCount, plural, len(args)))
+	}
+	if deepBuiltins[bf.Name] {
+		interp.guardDeep(pos, args...)
 	}
 	interp.guardBuiltin(pos, bf.Name, args)
 	return bf.call(interp, pos, args)

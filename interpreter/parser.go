@@ -41,7 +41,25 @@ type parser struct {
 	tok       Token
 	val       string
 	nodePool  *ASTNodePool // Pool for AST nodes to reduce allocations
+	depth     int          // current nesting, bounded by MaxParseDepth
 }
+
+// MaxParseDepth bounds how deeply a program may nest expressions, blocks,
+// operator chains and call/subscript chains. The parser and the evaluator are
+// recursive: without a bound, a few megabytes of "(((" overflow the Go stack,
+// a fatal error no recover() can catch. Over the bound is a parse error.
+const MaxParseDepth = 1000
+
+// enter records one more nesting level and fails the parse past
+// MaxParseDepth; leave undoes it.
+func (p *parser) enter() {
+	p.depth++
+	if p.depth > MaxParseDepth {
+		p.error("program nested too deeply (more than %d levels)", MaxParseDepth)
+	}
+}
+
+func (p *parser) leave() { p.depth-- }
 
 func (p *parser) next() {
 	p.pos, p.tok, p.val = p.tokenizer.Next()
@@ -141,6 +159,8 @@ func (p *parser) statement() Statement {
 
 // block = (LBRACE statement* RBRACE) | (COLON statement* END)
 func (p *parser) block() Block {
+	p.enter()
+	defer p.leave()
 	switch p.tok {
 	case LBRACE:
 		p.expect(LBRACE)
@@ -172,6 +192,8 @@ func (p *parser) block() Block {
 //	IF LPAREN expression RPAREN THEN block ELSE block |
 //	IF LPAREN expression RPAREN THEN block ELSE if
 func (p *parser) if_() Statement {
+	p.enter() // an elif chain nests one if per branch
+	defer p.leave()
 	pos := p.pos
 	if p.tok == ELIF {
 		p.expect(ELIF)
@@ -338,7 +360,10 @@ func (p *parser) params() ([]string, bool) {
 
 func (p *parser) binary(parseFunc func() Expression, operators ...Token) Expression {
 	expr := parseFunc()
+	chain := 0
 	for p.matches(operators...) {
+		p.enter() // the chain nests left: a+b+c = (a+b)+c
+		chain++
 		op := p.tok
 		pos := p.pos
 		p.next()
@@ -354,11 +379,14 @@ func (p *parser) binary(parseFunc func() Expression, operators ...Token) Express
 			expr = &Binary{pos, expr, op, right}
 		}
 	}
+	p.depth -= chain
 	return expr
 }
 
 // expression = xor (OR xor)*
 func (p *parser) expression() Expression {
+	p.enter()
+	defer p.leave()
 	return p.binary(p.xor, OR)
 }
 
@@ -377,6 +405,8 @@ func (p *parser) not() Expression {
 	if p.tok == NOT {
 		pos := p.pos
 		p.next()
+		p.enter()
+		defer p.leave()
 		operand := p.not()
 		return &Unary{pos, NOT, operand}
 	}
@@ -431,6 +461,8 @@ func (p *parser) power() Expression {
 		op := p.tok
 		pos := p.pos
 		p.next()
+		p.enter()
+		defer p.leave()
 		right := p.power() // Right-associative: recurse to power, not negative
 		expr = &Binary{pos, expr, op, right}
 	}
@@ -442,6 +474,8 @@ func (p *parser) negative() Expression {
 	if p.tok == MINUS {
 		pos := p.pos
 		p.next()
+		p.enter()
+		defer p.leave()
 		operand := p.negative()
 		return &Unary{pos, MINUS, operand}
 	}
@@ -457,7 +491,11 @@ func (p *parser) negative() Expression {
 // dot       = DOT NAME
 func (p *parser) call() Expression {
 	expr := p.primary()
+	chain := 0
+	defer func() { p.depth -= chain }()
 	for p.matches(LPAREN, LBRACKET, DOT) {
+		p.enter() // f()()[0] nests left like an operator chain
+		chain++
 		switch p.tok {
 		case LPAREN:
 			pos := p.pos
@@ -693,8 +731,7 @@ func (p *parser) mapKey() Expression {
 func ParseExpression(input []byte) (e Expression, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// Convert to parser.Error or re-panic
-			err = r.(Error)
+			e, err = nil, asParseError(r)
 		}
 	}()
 	t := NewTokenizer(input)
@@ -713,8 +750,7 @@ func ParseExpression(input []byte) (e Expression, err error) {
 func ParseProgram(input []byte) (prog *Program, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			// Convert to parser.Error or re-panic
-			err = r.(Error)
+			prog, err = nil, asParseError(r)
 		}
 	}()
 	t := NewTokenizer(input)
@@ -724,6 +760,16 @@ func ParseProgram(input []byte) (prog *Program, err error) {
 	}
 	p.next()
 	return p.program(), nil
+}
+
+// asParseError turns a recovered parser panic into an Error. Anything other
+// than the parser's own Error (a bug on some odd input) used to re-panic and
+// crash the embedding process.
+func asParseError(r any) error {
+	if e, ok := r.(Error); ok {
+		return e
+	}
+	return Error{Position{Line: 1, Column: 1}, fmt.Sprintf("parse failed: %v", r)}
 }
 
 // break = BREAK

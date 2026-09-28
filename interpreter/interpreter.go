@@ -59,6 +59,8 @@ type interpreter struct {
 	done <-chan struct{}
 	// callDepth counts nested user-function calls in a sandbox
 	callDepth int
+	// verdict receives waf_* verdicts when set (Config.Verdict)
+	verdict io.Writer
 }
 
 // returnResult is used to handle return statements in functions.
@@ -295,6 +297,13 @@ func evalIn(pos Position, l, r Value) Value {
 // Returns:
 //   - A boolean Value indicating whether l < r
 func evalLess(pos Position, l, r Value) Value {
+	return evalLessDepth(pos, l, r, 0)
+}
+
+func evalLessDepth(pos Position, l, r Value, depth int) Value {
+	if depth > maxEqualDepth {
+		panic(valueError(pos, "comparison nested too deeply"))
+	}
 	// Try fast evaluation first for simple types
 	if result, handled := GetFastEvaluator().FastEvalLess(l, r); handled {
 		return result
@@ -307,8 +316,8 @@ func evalLess(pos Position, l, r Value) Value {
 		if r, ok := r.(*[]Value); ok {
 			// Compare elements pairwise until a difference is found
 			for i := 0; i < len(*l) && i < len(*r); i++ {
-				if !evalEqual(pos, (*l)[i], (*r)[i]).(bool) {
-					return evalLess(pos, (*l)[i], (*r)[i])
+				if !evalEqualDepth(pos, (*l)[i], (*r)[i], depth+1).(bool) {
+					return evalLessDepth(pos, (*l)[i], (*r)[i], depth+1)
 				}
 			}
 			// If all common elements are equal, shorter array is less
@@ -722,6 +731,12 @@ func (interp *interpreter) evaluate(expr Expression) Value {
 		if interp.sandbox != nil && e.Operator == TIMES {
 			// Size-check before * allocates (string/list repetition).
 			return interp.evalTimesChecked(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
+		}
+		if interp.sandbox != nil && isComparison(e.Operator) {
+			// Bound the walk over nested operands before comparing.
+			l, r := interp.evaluate(e.Left), interp.evaluate(e.Right)
+			interp.guardDeep(e.Position(), l, r)
+			return binaryEvalFuncs[e.Operator](e.Position(), l, r)
 		}
 		if e.Operator == PLUS {
 			return interp.evalPlus(e.Position(), interp.evaluate(e.Left), interp.evaluate(e.Right))
@@ -1649,6 +1664,7 @@ func newInterpreter(config *Config) *interpreter {
 		interp.exit = func(int) {}
 	}
 	interp.DirectOutput = config.DirectOutput && interp.sandbox == nil
+	interp.verdict = config.Verdict
 	interp.inUnitTest = config.IsUnitTest
 	return interp
 }

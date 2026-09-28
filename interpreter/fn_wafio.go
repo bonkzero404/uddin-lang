@@ -260,7 +260,11 @@ func wafReturnFunc(interp *interpreter, pos Position, args []Value) Value {
 	default:
 		return Value(fmt.Errorf("waf_return() invalid action %q: must be ALLOW, LOG, or BLOCK", action))
 	}
-	fmt.Fprintf(interp.stdout, "%s", normalized)
+	out := interp.stdout
+	if interp.verdict != nil {
+		out = interp.verdict
+	}
+	fmt.Fprintf(out, "%s", normalized)
 	panic(returnResult{pos: pos, value: Value(normalized)})
 }
 
