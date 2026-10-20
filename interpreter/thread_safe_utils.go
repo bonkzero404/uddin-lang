@@ -6,17 +6,16 @@ import "sync"
 // This function extracts the common thread-safe interpreter creation logic
 func createThreadSafeInterpreter(interp *interpreter, pos Position) *interpreter {
 	threadInterp := &interpreter{
-		vars:        make([]map[string]Value, len(interp.vars)),
-		mutex:       sync.RWMutex{},
-		args:        interp.args,
-		stdin:       interp.stdin,
-		stdinReader: interp.stdinReader,
-		stdout:      interp.stdout,
-		exit:        interp.exit,
-		stats:       Stats{},
-		inUnitTest:  interp.inUnitTest,
-		currentPos:  pos,
-		memoCache:   make(map[string]Value),
+		vars:       make([]map[string]Value, len(interp.vars)),
+		mutex:      sync.RWMutex{},
+		args:       interp.args,
+		stdin:      interp.stdin,
+		stdout:     interp.stdout,
+		exit:       interp.exit,
+		stats:      Stats{},
+		inUnitTest: interp.inUnitTest,
+		currentPos: pos,
+		memoCache:  make(map[string]Value),
 		// Pools are now managed globally via UnifiedPoolManager
 		// No need for per-interpreter pools
 		variableLookupCache: nil, // Disable cache for thread safety

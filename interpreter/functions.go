@@ -161,6 +161,21 @@ func (f builtinFunction) name() string {
 	return fmt.Sprintf("<builtin %s>", f.Name)
 }
 
+var builtinValuesOnce sync.Once
+var builtinValues map[string]Value
+
+// Box immutable function definitions once; each execution still owns its
+// variable scope, so aliases and shadowing cannot affect another run.
+func scopeBuiltins() map[string]Value {
+	builtinValuesOnce.Do(func() {
+		builtinValues = make(map[string]Value, len(builtins))
+		for name, builtin := range builtins {
+			builtinValues[name] = builtin
+		}
+	})
+	return builtinValues
+}
+
 var builtins = map[string]builtinFunction{
 	// Core System Functions
 	"import":  {importFunc, "import"},

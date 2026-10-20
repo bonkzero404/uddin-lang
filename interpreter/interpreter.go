@@ -1,7 +1,6 @@
 package interpreter
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"maps"
@@ -32,8 +31,6 @@ type interpreter struct {
 	args []string
 	// stdin is the input stream for the read() builtin
 	stdin io.Reader
-	// stdinReader is a persistent bufio.Reader for stdin
-	stdinReader *bufio.Reader
 	// stdout is the output stream for the print() builtin
 	stdout io.Writer
 	// exit is the function called by the exit() builtin
@@ -1652,6 +1649,7 @@ func newInterpreter(config *Config) *interpreter {
 	// Initialize the builtin dispatcher once per process: re-registering on
 	// every run grew its table without bound and raced with dispatch.
 	builtinDispatcherOnce.Do(InitializeBuiltinDispatcher)
+	availableBuiltins := scopeBuiltins()
 
 	// Use CompactEnvironment if enabled, otherwise use regular vars
 	if IsCompactEnvironmentEnabled() {
@@ -1659,7 +1657,7 @@ func newInterpreter(config *Config) *interpreter {
 		// Initialize with empty global scope
 		// Note: CompactEnvironment already has one scope from NewCompactEnvironment()
 		// Add builtin functions to the global scope
-		for name, builtin := range builtins {
+		for name, builtin := range availableBuiltins {
 			if interp.sandbox != nil && !interp.sandbox.Allowed[name] {
 				continue
 			}
@@ -1679,14 +1677,21 @@ func newInterpreter(config *Config) *interpreter {
 			interp.compactEnv.Assign(k, v)
 		}
 	} else {
-		interp.pushScope(make(map[string]Value))
+		builtinCount := len(availableBuiltins)
+		if interp.sandbox != nil {
+			builtinCount = min(builtinCount, len(interp.sandbox.Allowed))
+		}
+		interp.pushScope(make(map[string]Value, builtinCount+8+len(config.Vars)))
 		// Add builtin functions directly to the first scope
 		interp.mutex.Lock()
-		for k, v := range builtins {
-			if interp.sandbox != nil && !interp.sandbox.Allowed[k] {
-				continue
+		if interp.sandbox == nil {
+			maps.Copy(interp.vars[0], availableBuiltins)
+		} else {
+			for name, allowed := range interp.sandbox.Allowed {
+				if builtin, ok := availableBuiltins[name]; allowed && ok {
+					interp.vars[0][name] = builtin
+				}
 			}
-			interp.vars[0][k] = v
 		}
 		// Add mathematical constants
 		interp.vars[0]["PI"] = Value(math.Pi)
@@ -1711,7 +1716,6 @@ func newInterpreter(config *Config) *interpreter {
 			interp.stdin = strings.NewReader("")
 		}
 	}
-	interp.stdinReader = bufio.NewReader(interp.stdin)
 	interp.stdout = config.Stdout
 	if interp.stdout == nil {
 		interp.stdout = os.Stdout
