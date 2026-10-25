@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 )
 
@@ -437,5 +438,51 @@ func TestWAFBuiltinsRegistered(t *testing.T) {
 		if _, ok := builtins[name]; !ok {
 			t.Errorf("builtin %q not registered", name)
 		}
+	}
+}
+
+// -- waf_field / waf_values / waf_json ----------------------------------------
+
+func TestWafFieldAndValuesCallTheHostResolver(t *testing.T) {
+	interp := makeTestInterp(map[string]any{
+		"field":        func(f string) string { return "v:" + f },
+		"field_values": func(f string) []string { return []string{"a", f} },
+	})
+	if got := wafFieldFunc(interp, noPos, []Value{"param:user.email"}); got != Value("v:param:user.email") {
+		t.Errorf("waf_field = %v", got)
+	}
+	list, ok := wafValuesFunc(interp, noPos, []Value{"form:tags"}).(*[]Value)
+	if !ok || len(*list) != 2 || (*list)[1] != Value("form:tags") {
+		t.Errorf("waf_values = %v", list)
+	}
+}
+
+func TestWafFieldWithoutHostResolver(t *testing.T) {
+	interp := makeTestInterp(map[string]any{})
+	if got := wafFieldFunc(interp, noPos, []Value{"param:x"}); got != Value("") {
+		t.Errorf("waf_field without resolver = %v, want empty string", got)
+	}
+	if list, ok := wafValuesFunc(interp, noPos, []Value{"param:x"}).(*[]Value); !ok || len(*list) != 0 {
+		t.Errorf("waf_values without resolver = %v, want empty list", list)
+	}
+	if got := wafJSONFunc(interp, noPos, nil); got != nil {
+		t.Errorf("waf_json without a JSON body = %v, want null", got)
+	}
+}
+
+func TestWafJSONConvertsHostNumbersAndCopies(t *testing.T) {
+	doc := map[string]any{"items": []any{map[string]any{"qty": json.Number("3"), "price": json.Number("1.5")}}}
+	interp := makeTestInterp(map[string]any{"json": doc})
+	got, ok := wafJSONFunc(interp, noPos, nil).(map[string]Value)
+	if !ok {
+		t.Fatalf("waf_json = %T", got)
+	}
+	item := (*got["items"].(*[]Value))[0].(map[string]Value)
+	if item["qty"] != Value(3) || item["price"] != Value(1.5) {
+		t.Errorf("numbers: %v", item)
+	}
+	item["qty"] = Value(9) // a script's change never reaches the host's parse
+	if doc["items"].([]any)[0].(map[string]any)["qty"] != json.Number("3") {
+		t.Error("waf_json returned the host document instead of a copy")
 	}
 }

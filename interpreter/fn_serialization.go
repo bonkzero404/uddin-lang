@@ -75,6 +75,16 @@ func jsonToValue(data any) Value {
 			return Value(int(val))
 		}
 		return Value(val)
+	case json.Number:
+		// A host decoder with UseNumber (WAFio's waf_json): an exact integer
+		// stays an int; anything else a float, or its text when out of range.
+		if i, err := val.Int64(); err == nil && int64(int(i)) == i {
+			return Value(int(i))
+		}
+		if f, err := val.Float64(); err == nil {
+			return Value(f)
+		}
+		return Value(val.String())
 	case bool:
 		return Value(val)
 	case string:

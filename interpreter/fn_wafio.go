@@ -123,6 +123,64 @@ func wafBodyContainsFunc(interp *interpreter, pos Position, args []Value) Value 
 	return Value(strings.Contains(body, needle))
 }
 
+// wafFieldFunc implements waf_field(field) → string
+// Returns the request part a WAFio custom rule condition field names —
+// "param:user.email", "json:/items/*/sku", "form:tags", "multipart:avatar",
+// "query:id", "header:x-api-key", "body" … — resolved by the host exactly as
+// for a GUI rule condition (_waf_ctx["field"]). Several values are joined as
+// the condition sees them; "" when the part is absent.
+func wafFieldFunc(interp *interpreter, pos Position, args []Value) Value {
+	if err := ensureNumArgs(pos, "waf_field", args, 1); err != Value(nil) {
+		return err
+	}
+	field, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("waf_field() requires a string argument, not %s", typeName(args[0])))
+	}
+	ctx := wafCtx(interp)
+	resolve, _ := ctx["field"].(func(string) string)
+	if resolve == nil {
+		return Value("")
+	}
+	return Value(resolve(field))
+}
+
+// wafValuesFunc implements waf_values(field) → list of strings
+// Like waf_field, one entry per value (every value of a repeated name, every
+// array element a JSON pointer "*" names); an empty list when absent.
+func wafValuesFunc(interp *interpreter, pos Position, args []Value) Value {
+	if err := ensureNumArgs(pos, "waf_values", args, 1); err != Value(nil) {
+		return err
+	}
+	field, ok := args[0].(string)
+	if !ok {
+		return Value(fmt.Errorf("waf_values() requires a string argument, not %s", typeName(args[0])))
+	}
+	result := []Value{}
+	ctx := wafCtx(interp)
+	if resolve, _ := ctx["field_values"].(func(string) []string); resolve != nil {
+		for _, v := range resolve(field) {
+			result = append(result, Value(v))
+		}
+	}
+	return Value(&result)
+}
+
+// wafJSONFunc implements waf_json() → object|list|scalar|null
+// Returns the request's JSON body as parsed by the host (its whole parse
+// window, not the 4 KB body variable), or null when the body is not JSON.
+// Each call returns a fresh copy.
+func wafJSONFunc(interp *interpreter, pos Position, args []Value) Value {
+	if err := ensureNumArgs(pos, "waf_json", args, 0); err != Value(nil) {
+		return err
+	}
+	ctx := wafCtx(interp)
+	if ctx == nil || ctx["json"] == nil {
+		return Value(nil)
+	}
+	return jsonToValue(ctx["json"])
+}
+
 // wafCIDRMatchFunc implements waf_cidr_match(ip, cidr) → bool
 // Checks whether the given IP address falls within the CIDR range.
 func wafCIDRMatchFunc(interp *interpreter, pos Position, args []Value) Value {
@@ -296,6 +354,9 @@ func init() {
 	builtins["waf_header"] = builtinFunction{wafHeaderFunc, "waf_header"}
 	builtins["waf_query"] = builtinFunction{wafQueryFunc, "waf_query"}
 	builtins["waf_body_contains"] = builtinFunction{wafBodyContainsFunc, "waf_body_contains"}
+	builtins["waf_field"] = builtinFunction{wafFieldFunc, "waf_field"}
+	builtins["waf_values"] = builtinFunction{wafValuesFunc, "waf_values"}
+	builtins["waf_json"] = builtinFunction{wafJSONFunc, "waf_json"}
 	builtins["waf_cidr_match"] = builtinFunction{wafCIDRMatchFunc, "waf_cidr_match"}
 	builtins["waf_path_match"] = builtinFunction{wafPathMatchFunc, "waf_path_match"}
 	builtins["waf_score"] = builtinFunction{wafScoreFunc, "waf_score"}
@@ -308,4 +369,3 @@ func init() {
 	builtins["waf_allow"] = builtinFunction{wafAllowFunc, "waf_allow"}
 	builtins["waf_log"] = builtinFunction{wafLogFunc, "waf_log"}
 }
-
